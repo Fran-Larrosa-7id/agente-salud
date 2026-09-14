@@ -1,0 +1,92 @@
+:root {
+  /* Color — navy structural, teal single accent, mint/sky calm fills */
+  --navy-900: #0b2545;
+  --navy-800: #12305c;
+  --navy-700: #1a3d6d;
+  --navy-500: #385a86;
+  --teal-700: #095f57;
+  --teal-600: #0c7f74;
+  --teal-500: #0f9b8e;
+  --teal-100: #d8f0ec;
+  --mint-100: #e3f5f0;
+  --sky-50: #f5fafd;
+  --sky-100: #eaf3fb;
+  --white: #ffffff;
+  --gray-50: #f7f9fb;
+  --gray-100: #eef2f5;
+  --gray-200: #e2e8ed;
+  --gray-300: #cdd7de;
+  --gray-400: #71808a;
+  --gray-600: #5b6b76;
+  --gray-900: #1b2734;
+  --amber-700: #6e4610;
+  --amber-600: #a86a1d;
+  --amber-100: #faf0e0;
+  --red-600: #b6402f;
+  --red-100: #fbe9e6;
+  --green-700: #197a52;
+  --green-100: #e1f5eb;
+
+  /* Semantic */
+  --ink: var(--navy-900);
+  --ink-soft: var(--gray-600);
+  --accent: var(--teal-500);
+  --accent-strong: var(--teal-600);
+  --surface: var(--white);
+  --surface-page: var(--gray-50);
+  --surface-muted: var(--sky-50);
+  --line: var(--gray-200);
+  --line-strong: var(--gray-300);
+
+  /* Type */
+  --font-body: -apple-system, 'Segoe UI', 'Helvetica Neue', Roboto, Arial, sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.625rem;
+  --fs-2xl: 2rem;
+  --lh-tight: 1.2;
+  --lh-normal: 1.5;
+  --tracking-caps: 0.08em;
+
+  /* Space (8px base) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* Radius — soft, never exaggerated */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+
+  /* Shadow — discreet */
+  --shadow-sm: 0 1px 2px rgba(11, 37, 69, 0.06);
+  --shadow-md: 0 4px 16px rgba(11, 37, 69, 0.08);
+  --shadow-lg: 0 12px 32px rgba(11, 37, 69, 0.12);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+
+  --focus-ring: 0 0 0 3px rgba(15, 155, 142, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

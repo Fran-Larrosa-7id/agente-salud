@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding de Pacientes — Panel institucional</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/institucion.css">
+</head>
+<body class="institucion">
+<a class="skip-link" href="#main">Saltar al contenido</a>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand"><span class="dot"></span> Onboarding de Pacientes</div>
+    <div class="topbar-right">
+      <span class="topbar-date num">Lunes 15 de septiembre</span>
+      <a class="topbar-exit" href="index.html">Salir de la demo</a>
+    </div>
+  </header>
+
+  <main class="main" id="main">
+    <div class="page-head">
+      <h1>Clínica San Rafael</h1>
+      <p>Estado de pre-admisión de los pacientes de hoy.</p>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-card-label">Pacientes de hoy</div>
+        <div class="stat-card-value num" id="statTotal">0</div>
+        <div class="stat-card-foot">Turnos agendados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Onboarding completo</div>
+        <div class="stat-card-value accent num" id="statListos">0</div>
+        <div class="stat-card-foot">Listos para atender</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Pendientes</div>
+        <div class="stat-card-value warn num" id="statPendientes">0</div>
+        <div class="stat-card-foot">Información o documentación</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Requieren revisión</div>
+        <div class="stat-card-value danger num" id="statRevision">0</div>
+        <div class="stat-card-foot">Necesitan validación manual</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Pacientes</h2>
+          <span class="field-hint num" id="tableCount">0 pacientes</span>
+        </div>
+        <div class="filter-bar">
+          <div class="search-input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input class="input" id="searchInput" type="search" placeholder="Buscar por nombre o DNI...">
+          </div>
+          <select class="select select-sm" id="profFilter">
+            <option value="">Todos los profesionales</option>
+          </select>
+        </div>
+        <div class="filter-bar" style="border-bottom: none">
+          <div class="filter-chip-group" id="statusFilters">
+            <button class="filter-chip is-active" data-status="">Todos</button>
+            <button class="filter-chip" data-status="listo">Completos</button>
+            <button class="filter-chip" data-status="pendiente">Pendientes</button>
+            <button class="filter-chip" data-status="revision">Revisión requerida</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="patient-table">
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Turno</th>
+                <th>Profesional</th>
+                <th>Progreso</th>
+                <th>Documentación</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="patientTableBody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="emptyState" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <div class="empty-state-title">Sin resultados</div>
+          <p>No encontramos pacientes que coincidan con este filtro o búsqueda.</p>
+        </div>
+      </section>
+
+      <aside style="display:flex; flex-direction:column; gap: var(--sp-6);">
+        <section class="panel">
+          <div class="panel-head"><h2>Próximos turnos</h2></div>
+          <div class="side-list" id="proximosTurnos"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Actividad reciente</h2></div>
+          <div class="side-list" id="actividadReciente"></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="drawerName">
+  <div style="position:relative;">
+    <button class="drawer-close" id="drawerClose" aria-label="Cerrar detalle">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="drawer-head">
+      <div class="eyebrow" id="drawerDni"></div>
+      <div class="drawer-name" id="drawerName"></div>
+      <div class="drawer-meta" id="drawerMeta"></div>
+      <div class="drawer-progress-row">
+        <div class="progress-track"><div class="progress-fill" id="drawerProgressBar"></div></div>
+        <span class="num" style="font-weight:700; font-size: var(--fs-sm)" id="drawerProgressValue"></span>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-section" id="drawerAlert"></div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Estado del onboarding</div>
+      <div id="drawerChecklist"></div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Información clínica</div>
+      <div id="drawerClinical"></div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Documentos</div>
+      <div id="drawerDocs"></div>
+    </div>
+  </div>
+  <div class="drawer-actions">
+    <button class="btn btn-accent btn-block" id="actionRequestDocs">Solicitar documentación</button>
+    <button class="btn btn-secondary btn-block" id="actionMarkReviewed">Marcar como revisado</button>
+    <button class="btn btn-ghost btn-block" id="actionRemind">Enviar recordatorio</button>
+  </div>
+</aside>
+
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script src="js/data.js"></script>
+<script src="js/institucion.js"></script>
+</body>
+</html>

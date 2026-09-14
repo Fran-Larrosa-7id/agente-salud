@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding de Pacientes — Pre-admisión</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/paciente.css">
+</head>
+<body class="paciente">
+<a class="skip-link" href="#screen-body">Saltar al contenido</a>
+<div class="phone-frame">
+
+  <div class="top-context" id="topContext">
+    <span class="eyebrow" id="topContextClinic">Clínica San Rafael</span>
+    <strong id="topContextStep" hidden>Paso 1 de 7</strong>
+  </div>
+
+  <!-- 1. Bienvenida -->
+  <section class="screen is-active" id="screen-bienvenida" aria-labelledby="t-bienvenida">
+    <div class="screen-body" id="screen-body">
+      <div class="welcome-hero-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h1 class="screen-title">Hola, María 👋</h1>
+      <p class="screen-sub">Preparemos tu próxima consulta. Completar estos datos antes de tu llegada te llevará aproximadamente 4 minutos.</p>
+
+      <div class="welcome-card">
+        <div class="welcome-row"><span class="k">Profesional</span><span class="v">Dr. Juan Pérez</span></div>
+        <div class="welcome-row"><span class="k">Especialidad</span><span class="v">Traumatología</span></div>
+        <div class="welcome-row"><span class="k">Fecha</span><span class="v num">15 de septiembre</span></div>
+        <div class="welcome-row"><span class="k">Horario</span><span class="v num">10:30 hs</span></div>
+      </div>
+
+      <span class="duration-chip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        Aproximadamente 4 minutos
+      </span>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" data-next="estado">Comenzar</button>
+    </div>
+  </section>
+
+  <!-- 2. Estado general -->
+  <section class="screen" id="screen-estado" aria-labelledby="t-estado">
+    <div class="screen-body">
+      <h1 class="screen-title" id="t-estado">Tu pre-admisión</h1>
+      <div class="overview-progress-head">
+        <span class="overview-progress-value num" id="overviewPercent">0%</span>
+        <span class="field-hint">completado</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="overviewBar" style="transform:scaleX(0)"></div></div>
+
+      <div class="phase-card">
+        <div class="phase-rail" id="phaseRail"></div>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" data-next="personales">Continuar</button>
+    </div>
+  </section>
+
+  <!-- 3. Datos personales -->
+  <section class="screen" id="screen-personales" aria-labelledby="t-personales">
+    <div class="screen-body">
+      <h1 class="screen-title" id="t-personales">Datos personales</h1>
+      <p class="screen-sub">Usamos esta información para identificarte y contactarte si es necesario.</p>
+      <form class="form-grid" novalidate>
+        <div class="form-row-2">
+          <div class="field">
+            <label class="field-label" for="f-nombre">Nombre</label>
+            <input class="input" id="f-nombre" type="text" value="María" autocomplete="given-name">
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-apellido">Apellido</label>
+            <input class="input" id="f-apellido" type="text" value="González" autocomplete="family-name">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label class="field-label" for="f-dni">DNI</label>
+            <input class="input num" id="f-dni" type="text" value="32.104.887" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-nac">Fecha de nacimiento</label>
+            <input class="input num" id="f-nac" type="text" value="14/03/1988" inputmode="numeric">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="f-tel">Teléfono</label>
+          <input class="input num" id="f-tel" type="tel" value="11 4455-2298" autocomplete="tel">
+        </div>
+        <div class="field">
+          <label class="field-label" for="f-mail">Email</label>
+          <input class="input" id="f-mail" type="email" value="maria.gonzalez@mail.com" autocomplete="email">
+        </div>
+        <div class="form-section-label" style="margin-top: var(--sp-2)">Contacto de emergencia</div>
+        <div class="form-row-2">
+          <div class="field">
+            <label class="field-label" for="f-emerg-nombre">Nombre</label>
+            <input class="input" id="f-emerg-nombre" type="text" value="Carlos González">
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-emerg-tel">Teléfono</label>
+            <input class="input num" id="f-emerg-tel" type="tel" value="11 3399-1120">
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" data-next="cobertura">Continuar</button>
+    </div>
+  </section>
+
+  <!-- 4. Cobertura médica -->
+  <section class="screen" id="screen-cobertura" aria-labelledby="t-cobertura">
+    <div class="screen-body">
+      <h1 class="screen-title" id="t-cobertura">Cobertura médica</h1>
+      <p class="screen-sub">Datos de tu obra social o prepaga.</p>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field-label" for="f-obra">Obra social / prepaga</label>
+          <select class="select" id="f-obra">
+            <option selected>OSDE</option>
+            <option>Swiss Medical</option>
+            <option>Galeno</option>
+            <option>Medifé</option>
+            <option>IOMA</option>
+            <option>PAMI</option>
+          </select>
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label class="field-label" for="f-plan">Plan</label>
+            <input class="input" id="f-plan" type="text" value="310">
+          </div>
+          <div class="field">
+            <label class="field-label" for="f-afiliado">N° de afiliado</label>
+            <input class="input num" id="f-afiliado" type="text" value="0032104887 00">
+          </div>
+        </div>
+        <div class="form-section-label" style="margin-top: var(--sp-2)">Credencial</div>
+        <div class="uploader" tabindex="0" role="button" data-upload="credencial">
+          <svg class="uploader-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-4 4-3-3-5 5"/></svg>
+          <div class="uploader-title">Subir foto de la credencial</div>
+          <div class="uploader-hint">Tocá para usar la cámara o elegir un archivo</div>
+        </div>
+        <div id="credencialResult"></div>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" data-next="clinica">Continuar</button>
+    </div>
+  </section>
+
+  <!-- 5. Información clínica -->
+  <section class="screen" id="screen-clinica" aria-labelledby="t-clinica">
+    <div class="screen-body">
+      <h1 class="screen-title" id="t-clinica">Información clínica</h1>
+      <p class="screen-sub">Ayudanos a tu profesional a conocer tu historial antes de la consulta.</p>
+
+      <div class="form-section">
+        <div class="form-section-label">Antecedentes</div>
+        <div class="field">
+          <textarea class="textarea" placeholder="Ej: hipertensión, cirugías previas...">Hipertensión arterial controlada.</textarea>
+          <span class="field-hint">Breve. No hace falta detallar toda tu historia clínica.</span>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Alergias</div>
+        <label class="check-row">
+          <input type="checkbox" id="noAlergias">
+          <span>No tengo alergias conocidas</span>
+        </label>
+        <div id="alergiaList">
+          <div class="med-card">
+            <div><div class="med-name">Penicilina</div></div>
+            <button class="btn-ghost btn btn-sm" aria-label="Quitar alergia">✕</button>
+          </div>
+        </div>
+        <button class="add-link"><span>+</span> Agregar alergia</button>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-label">Medicación actual</div>
+        <div id="medList">
+          <div class="med-card">
+            <div>
+              <div class="med-name">Losartán</div>
+              <div class="med-detail">50 mg · 1 vez al día</div>
+            </div>
+            <button class="btn-ghost btn btn-sm" aria-label="Quitar medicamento">✕</button>
+          </div>
+        </div>
+        <button class="add-link"><span>+</span> Agregar medicamento</button>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" data-next="documentacion">Continuar</button>
+    </div>
+  </section>
+
+  <!-- 6. Documentación -->
+  <section class="screen" id="screen-documentacion" aria-labelledby="t-documentacion">
+    <div class="screen-body">
+      <h1 class="screen-title" id="t-documentacion">Documentación</h1>
+      <p class="screen-sub">Subí los documentos solicitados. Podés sacarles una foto o elegirlos desde tu galería.</p>
+
+      <div class="uploader" tabindex="0" role="button" data-upload="doc" style="margin-bottom: var(--sp-6)">
+        <svg class="uploader-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+        <div class="uploader-title">Arrastrá o tocá para subir</div>
+        <div class="uploader-hint">DNI, credencial, orden médica, estudios previos</div>
+      </div>
+
+      <div id="docList">
+        <div class="doc-row">
+          <div class="doc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <div class="doc-info">
+            <div class="doc-name">DNI_frente.jpg</div>
+            <div class="doc-meta">Cargado</div>
+          </div>
+          <span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Cargado</span>
+        </div>
+        <div class="doc-row">
+          <div class="doc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <div class="doc-info">
+            <div class="doc-name">credencial_osde.jpg</div>
+            <div class="doc-meta">Cargado</div>
+          </div>
+          <span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Cargado</span>
+        </div>
+        <div class="doc-row" id="ordenMedicaRow">
+          <div class="doc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <div class="doc-info">
+            <div class="doc-name">Orden médica</div>
+            <div class="doc-meta" id="ordenMedicaMeta">Pendiente</div>
+          </div>
+          <span class="badge badge-pending" id="ordenMedicaBadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>Pendiente</span>
+        </div>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" data-next="revision">Continuar</button>
+    </div>
+  </section>
+
+  <!-- 7. Revisión -->
+  <section class="screen" id="screen-revision" aria-labelledby="t-revision">
+    <div class="screen-body">
+      <h1 class="screen-title" id="t-revision">Ya casi terminamos</h1>
+      <p class="screen-sub">Revisá que todo esté correcto antes de enviar.</p>
+
+      <div class="review-item" data-goto="personales">
+        <span class="review-item-name">Datos personales</span>
+        <span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Completo</span>
+      </div>
+      <div class="review-item" data-goto="cobertura">
+        <span class="review-item-name">Cobertura médica</span>
+        <span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Completo</span>
+      </div>
+      <div class="review-item" data-goto="clinica">
+        <span class="review-item-name">Antecedentes y medicación</span>
+        <span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Completo</span>
+      </div>
+      <div class="review-item" data-goto="documentacion">
+        <span class="review-item-name">Documentación</span>
+        <span class="badge badge-pending" id="revisionDocBadge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>1 pendiente</span>
+      </div>
+
+      <div class="alert alert-warning" id="ordenMedicaAlert" style="margin-top: var(--sp-5)">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        <div>
+          <div class="alert-title">Falta orden médica</div>
+          <div>Podés continuar y subirla más tarde, o volver a la sección de documentación.</div>
+        </div>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" data-next="consentimiento">Continuar</button>
+    </div>
+  </section>
+
+  <!-- 8. Consentimiento -->
+  <section class="screen" id="screen-consentimiento" aria-labelledby="t-consentimiento">
+    <div class="screen-body">
+      <h1 class="screen-title" id="t-consentimiento">Antes de enviar</h1>
+      <p class="screen-sub">Solo necesitamos tu confirmación.</p>
+
+      <div class="welcome-card">
+        <label class="check-row">
+          <input type="checkbox" id="consent1" checked>
+          <span>Confirmo que la información ingresada es correcta.</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="consent2" checked>
+          <span>Acepto que mis datos sean utilizados por la institución para preparar mi atención médica.</span>
+        </label>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-accent btn-block" id="submitBtn" data-next="final">Enviar y confirmar</button>
+    </div>
+  </section>
+
+  <!-- 9. Finalización -->
+  <section class="screen" id="screen-final" aria-labelledby="t-final">
+    <div class="screen-body">
+      <div class="success-wrap">
+        <div class="success-badge">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        </div>
+        <h1 id="t-final">Todo listo ✓</h1>
+        <p>Tu información fue enviada correctamente. Cuando llegues a la clínica no será necesario volver a completar estos datos.</p>
+
+        <div class="appointment-card">
+          <div class="welcome-row"><span class="k">Profesional</span><span class="v">Dr. Juan Pérez</span></div>
+          <div class="welcome-row"><span class="k">Dirección</span><span class="v">Av. Callao 1234, CABA</span></div>
+          <div class="welcome-row"><span class="k">Fecha</span><span class="v num">15 de septiembre · 10:30 hs</span></div>
+          <div class="welcome-row"><span class="k">Estado</span><span class="v"><span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Listo para atender</span></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="sticky-cta">
+      <button class="btn btn-secondary btn-block" data-next="estado">Ver resumen</button>
+      <a class="btn btn-ghost btn-block" href="index.html" style="margin-top: var(--sp-2)">Volver al inicio de la demo</a>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script src="js/data.js"></script>
+<script src="js/paciente.js"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Triage / Evaluador de Riesgo — Demo</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<style>
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-6);
+    background: linear-gradient(180deg, var(--sky-50) 0%, var(--surface-page) 100%);
+  }
+  .selector { width: 100%; max-width: 760px; }
+  .selector-head { text-align: center; margin-bottom: var(--sp-10); }
+  .selector-mark { display: inline-flex; align-items: center; gap: var(--sp-2); font-weight: 800; font-size: var(--fs-lg); color: var(--navy-900); margin-bottom: var(--sp-6); }
+  .selector-mark .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .selector-head h1 { font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -0.01em; color: var(--navy-900); margin-bottom: var(--sp-2); }
+  .selector-head p { color: var(--ink-soft); font-size: var(--fs-md); }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-5); }
+  @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+  .demo-card {
+    background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: var(--sp-8) var(--sp-6); text-align: left; cursor: pointer; display: block;
+    text-decoration: none; color: inherit;
+    transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
+    box-shadow: var(--shadow-sm);
+  }
+  .demo-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--accent); }
+  .demo-card-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+  .demo-icon { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--mint-100); color: var(--teal-600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .demo-card h2 { font-size: var(--fs-lg); font-weight: 700; color: var(--navy-900); }
+  .demo-card p { color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: var(--sp-5); }
+  .demo-cta { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-sm); color: var(--accent-strong); }
+  .selector-foot { text-align: center; margin-top: var(--sp-8); font-size: var(--fs-xs); color: var(--gray-600); }
+  .selector-tip { text-align: center; margin-top: var(--sp-4); font-size: var(--fs-sm); color: var(--teal-600); font-weight: 600; }
+</style>
+</head>
+<body>
+<main class="selector">
+  <div class="selector-head">
+    <div class="selector-mark"><span class="dot"></span> Triage / Evaluador de Riesgo</div>
+    <h1>Elegí qué demo querés ver</h1>
+    <p>Prototipo conceptual — autoevaluación de síntomas para el paciente y priorización de guardia para la institución.</p>
+  </div>
+  <div class="cards">
+    <a class="demo-card" href="evaluacion.html">
+      <div class="demo-card-head">
+        <div class="demo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a5 5 0 015 5c0 2.5-2 4-2 6v1H9v-1c0-2-2-3.5-2-6a5 5 0 015-5z"/><path d="M9 21h6M10 18h4"/></svg></div>
+        <h2>Evaluación (paciente)</h2>
+      </div>
+      <p>Cuestionario paso a paso: motivo de consulta, preguntas de alarma e intensidad del síntoma, con resultado de clasificación de riesgo.</p>
+      <span class="demo-cta">Iniciar evaluación →</span>
+    </a>
+    <a class="demo-card" href="panel.html">
+      <div class="demo-card-head">
+        <div class="demo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v5"/></svg></div>
+        <h2>Panel de triage</h2>
+      </div>
+      <p>Board de guardia: pacientes priorizados por nivel de riesgo y tiempo de espera, con acción para marcar atendido.</p>
+      <span class="demo-cta">Ver panel →</span>
+    </a>
+  </div>
+  <p class="selector-tip">Tip: abrí "Evaluación" y "Panel" en dos pestañas — al completar una evaluación, aparece sola en el panel.</p>
+  <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · no es asesoramiento médico real · Vertical Salud</p>
+</main>
+</body>
+</html>

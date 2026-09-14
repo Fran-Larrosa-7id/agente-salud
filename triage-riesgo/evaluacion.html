@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluación de síntomas — Triage</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="css/triage.css">
+</head>
+<body>
+<header class="tr-topbar">
+  <div class="tr-mark"><span class="dot"></span> Evaluación de síntomas</div>
+  <a class="tr-back" href="index.html">← Volver</a>
+</header>
+<p class="tr-disclaimer">Prototipo de demostración — no reemplaza una evaluación médica real.</p>
+
+<main class="tr-shell">
+
+  <section id="stepNombre">
+    <div class="tr-step-count">Paso 1 de 4</div>
+    <h1 class="tr-title">¿Cómo te llamás?</h1>
+    <p class="tr-sub">Para poder identificarte en la sala de espera.</p>
+    <div class="field" style="margin-bottom: var(--sp-6)">
+      <input class="input" id="inputNombre" type="text" placeholder="Nombre y apellido" value="Roberto Aguirre">
+    </div>
+    <button class="btn btn-accent btn-block" id="btnNombreContinuar" type="button">Continuar</button>
+  </section>
+
+  <section id="stepMotivo" hidden>
+    <div class="tr-step-count">Paso 2 de 4</div>
+    <h1 class="tr-title">¿Cuál es tu síntoma principal?</h1>
+    <p class="tr-sub">Elegí la opción que mejor describe por qué venís a la consulta hoy.</p>
+    <div id="motivosList"></div>
+  </section>
+
+  <section id="stepPreguntas" hidden>
+    <div class="tr-step-count">Paso 3 de 4</div>
+    <h1 class="tr-title">Algunas preguntas más</h1>
+    <p class="tr-sub">Respondé con sinceridad, nos ayuda a priorizar tu atención.</p>
+    <div id="preguntasList"></div>
+    <button class="btn btn-accent btn-block" id="btnPreguntasContinuar" type="button" disabled>Continuar</button>
+  </section>
+
+  <section id="stepIntensidad" hidden>
+    <div class="tr-step-count">Paso 4 de 4</div>
+    <h1 class="tr-title">¿Qué tan intenso es el síntoma?</h1>
+    <p class="tr-sub">0 es nada de molestia, 10 es lo más fuerte que imaginás.</p>
+    <div class="tr-slider-value" id="intensidadValue">5</div>
+    <input class="tr-slider" id="inputIntensidad" type="range" min="0" max="10" value="5">
+    <div class="tr-slider-labels"><span>0 — Nada</span><span>10 — Insoportable</span></div>
+    <button class="btn btn-accent btn-block" id="btnVerResultado" type="button">Ver resultado</button>
+  </section>
+
+  <section id="stepResultado" hidden>
+    <div class="tr-result-banner" id="resultBanner">
+      <div class="tr-result-label">Clasificación de riesgo</div>
+      <div class="tr-result-nivel" id="resultNivel"></div>
+      <div class="tr-result-accion" id="resultAccion"></div>
+    </div>
+    <button class="btn btn-accent btn-block" id="btnSumarCola" type="button">Sumarme a la cola de guardia</button>
+    <p id="confirmacionCola" style="text-align:center; margin-top: var(--sp-5); color: var(--ink-soft); font-size: var(--fs-sm)" hidden></p>
+  </section>
+
+</main>
+<script src="js/triage-data.js"></script>
+<script src="js/triage-state.js"></script>
+<script src="js/evaluacion.js"></script>
+</body>
+</html>

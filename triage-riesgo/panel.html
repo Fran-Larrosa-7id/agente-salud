@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de triage — Priorización de guardia</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="css/triage.css">
+</head>
+<body>
+<header class="tr-topbar">
+  <div class="tr-mark"><span class="dot"></span> Panel de triage</div>
+  <a class="tr-back" href="index.html">← Volver</a>
+</header>
+<main class="tr-panel">
+  <div class="tr-panel-head">
+    <div class="wa-section-title" style="margin:0; font-size: var(--fs-md); font-weight:700; color:var(--navy-900)">Cola de guardia — priorizada por riesgo</div>
+    <button class="btn btn-ghost btn-sm" id="btnReset" type="button">Reiniciar demo</button>
+  </div>
+  <div class="tr-legend" id="trLegend"></div>
+  <div id="board"></div>
+</main>
+<script src="js/triage-data.js"></script>
+<script src="js/triage-state.js"></script>
+<script>
+  document.getElementById('trLegend').innerHTML = Object.values(TR_NIVELES)
+    .sort((a, b) => a.orden - b.orden)
+    .map((n) => `<span class="tr-legend-item"><span class="tr-legend-dot" style="background: var(--triage-${n.id})"></span>${n.nombre}</span>`).join('');
+
+  function render() {
+    const state = trGetState();
+    const pendientes = state.cola
+      .filter((p) => p.estado === 'esperando')
+      .sort((a, b) => {
+        const oa = TR_NIVELES[a.nivelId].orden, ob = TR_NIVELES[b.nivelId].orden;
+        return oa !== ob ? oa - ob : a.ts - b.ts;
+      });
+
+    const board = document.getElementById('board');
+    board.innerHTML = pendientes.length
+      ? pendientes.map((p) => {
+          const nivel = TR_NIVELES[p.nivelId];
+          return `<div class="tr-board-row">
+            <div class="tr-board-bar" style="background: var(--triage-${p.nivelId})"></div>
+            <div class="tr-board-nombre">${p.nombre}</div>
+            <div class="tr-board-motivo">${p.motivoLabel}</div>
+            <span class="badge" style="background: var(--triage-${p.nivelId}); color: #fff">${nivel.nombre}</span>
+            <div class="tr-board-tiempo">${trTiempoEsperando(p.ts)}</div>
+            <button class="btn btn-secondary btn-sm" data-atender="${p.id}" type="button">Marcar atendido</button>
+          </div>`;
+        }).join('')
+      : `<div class="empty-state"><div class="empty-state-title">Sin pacientes en espera</div><p>La cola de guardia está vacía por ahora.</p></div>`;
+
+    board.querySelectorAll('[data-atender]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        trMarcarAtendido(btn.dataset.atender);
+        render();
+      });
+    });
+  }
+
+  document.getElementById('btnReset').addEventListener('click', () => {
+    trResetDemo();
+    render();
+  });
+
+  render();
+  setInterval(render, 30000);
+  trOnStateChange(render);
+</script>
+</body>
+</html>

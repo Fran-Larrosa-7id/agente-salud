@@ -11,6 +11,7 @@ Fuente: card de Trello con la lista oficial de productos a considerar.
 - **Gestor de turnos por WhatsApp** (`whatsapp-turnos/`) — vista de conversación (chat simulado dentro de un frame de teléfono) con 4 escenarios ramificados: solicitar, recordatorio automático, cancelar y reprogramar turno; más un panel de automatizaciones institucional con métricas, flujos configurables (on/off) y actividad reciente.
 - **App mobile de pacientes** (`app-mobile-pacientes/`) — app de una sola pantalla con tab bar (Inicio, Turnos, Estudios, Avisos, Perfil): próximo turno, pedir turno nuevo (drawer con especialidades), cancelar/reprogramar, ver y "descargar" estudios, notificaciones con contador de no leídas, y documentación del paciente. Reusa María González como paciente de referencia para mantener continuidad narrativa con el resto de la vertical.
 - **Triage / evaluador de riesgo** (`triage-riesgo/`) — cuestionario de autoevaluación (motivo de consulta, preguntas de alarma, intensidad del síntoma) que calcula un nivel de riesgo tipo Manchester (rojo/naranja/amarillo/verde/azul) con acción recomendada, y un panel de guardia que prioriza automáticamente la cola por nivel + tiempo de espera. Sincronizado en vivo entre pestañas vía `localStorage`, mismo patrón que el Llamador de pacientes.
+- **Analista/Agente de IA** (embebido en `institucion.html` + `js/asistente-ia.js`) — botón flotante que abre un panel de chat lateral; responde preguntas en lenguaje natural ("¿quién requiere revisión?", "resumen del día", "pacientes de la Dra. Martínez") analizando en vivo los datos reales de la tabla de pacientes (`PACIENTES`/`ACTIVIDAD_RECIENTE` de `js/data.js`), no respuestas genéricas fijas. No se creó carpeta nueva porque tiene más sentido como capacidad dentro del dashboard existente que como producto standalone.
 
 ## Descartados
 
@@ -28,7 +29,7 @@ Fuente: card de Trello con la lista oficial de productos a considerar.
 ## Prioridad 2 — más valor, más esfuerzo/lógica
 
 4. ~~**Sistema de triage / evaluador de riesgo**~~ ✅ hecho (`triage-riesgo/`).
-5. **Analista/Agente de IA** — investigación, búsqueda y análisis de información, generación de información o asistencia al usuario. En vez de producto standalone, mockear como panel/copiloto embebido en `institucion.html` (dashboard ya existente). Barato de mockear como UI de chat lateral, alto factor "wow" por ser IA. **Próximo paso.**
+5. ~~**Analista/Agente de IA**~~ ✅ hecho (panel embebido en `institucion.html`).
 
 ## Evaluar con cuidado / dejar para más adelante
 
@@ -39,4 +40,4 @@ Ambos se harían solo si hay bastante tiempo libre acumulado, no como próximo p
 
 ## Próximo paso
 
-Arrancar mockup de **Analista/Agente de IA** (prioridad 2, ítem 5), como panel embebido en `institucion.html`.
+Prioridad 1 y 2 completas (5 de 5 mockups). Lo que queda en la lista original es "evaluar con cuidado" (Gestor de consultas, Gestor de cirugías) — alcance grande, mejor esperar a tener más tiempo libre acumulado antes de arrancar alguno. Mientras tanto, probar los 5 mockups ya hechos en el navegador y recoger feedback antes de seguir sumando más.

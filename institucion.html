@@ -149,9 +149,34 @@
   </div>
 </aside>
 
+<button class="ai-fab" id="aiFabBtn" type="button" aria-label="Abrir analista de IA">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.6 4.2L18 9l-4.4 1.8L12 15l-1.6-4.2L6 9l4.4-1.8L12 3z"/><path d="M19 15l.8 2.1L22 18l-2.2.9L19 21l-.8-2.1L16 18l2.2-.9L19 15z"/></svg>
+</button>
+
+<div class="scrim" id="aiScrim"></div>
+<aside class="drawer" id="aiDrawer" aria-hidden="true" aria-labelledby="aiDrawerTitle">
+  <div style="position:relative;">
+    <button class="drawer-close" id="aiDrawerClose" aria-label="Cerrar analista de IA">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="drawer-head">
+      <div class="eyebrow">Asistente virtual</div>
+      <div class="drawer-name" id="aiDrawerTitle">Analista de datos</div>
+      <div class="drawer-meta">Preguntá sobre los pacientes de hoy, en lenguaje natural.</div>
+    </div>
+  </div>
+  <div class="ai-chat-body" id="aiChatBody"></div>
+  <div class="ai-suggestions" id="aiSuggestions"></div>
+  <form class="ai-input-row" id="aiForm">
+    <input class="input" id="aiInput" type="text" placeholder="Escribí tu pregunta..." autocomplete="off">
+    <button class="btn btn-accent" type="submit">Enviar</button>
+  </form>
+</aside>
+
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
 <script src="js/data.js"></script>
 <script src="js/institucion.js"></script>
+<script src="js/asistente-ia.js"></script>
 </body>
 </html>

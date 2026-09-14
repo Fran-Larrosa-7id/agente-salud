@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de automatizaciones — Gestor de Turnos por WhatsApp</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="css/whatsapp.css">
+</head>
+<body>
+<header class="wa-topbar">
+  <div class="wa-mark"><span class="dot"></span> Panel de automatizaciones</div>
+  <a class="wa-back" href="index.html">← Volver</a>
+</header>
+<main class="wa-panel">
+  <div class="wa-stats-grid" id="waStats"></div>
+
+  <div class="wa-section-title">Flujos automáticos</div>
+  <div class="wa-flows-grid" id="waFlows"></div>
+
+  <div class="wa-section-title">Actividad reciente</div>
+  <div class="wa-activity-list" id="waActivity"></div>
+</main>
+<script src="js/escenarios.js"></script>
+<script>
+  document.getElementById('waStats').innerHTML = WA_STATS.map((s) => `
+    <div class="stat-card">
+      <div class="stat-card-label">${s.label}</div>
+      <div class="stat-card-value ${s.tono}">${s.valor}</div>
+      <div class="stat-card-foot">${s.foot}</div>
+    </div>`).join('');
+
+  function renderFlows() {
+    document.getElementById('waFlows').innerHTML = WA_AUTOMATIZACIONES.map((f, i) => `
+      <div class="wa-flow-card">
+        <div class="wa-flow-head">
+          <div class="wa-flow-name">${f.nombre}</div>
+          <button class="wa-toggle${f.activo ? ' is-on' : ''}" data-i="${i}" type="button" aria-label="Activar o desactivar ${f.nombre}"></button>
+        </div>
+        <div class="wa-flow-desc">${f.descripcion}</div>
+        <div class="wa-flow-trigger"><b>Se dispara con:</b> ${f.disparador}</div>
+      </div>`).join('');
+
+    document.querySelectorAll('.wa-toggle').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.dataset.i);
+        WA_AUTOMATIZACIONES[i].activo = !WA_AUTOMATIZACIONES[i].activo;
+        renderFlows();
+      });
+    });
+  }
+  renderFlows();
+
+  document.getElementById('waActivity').innerHTML = WA_ACTIVIDAD.map((a) => `
+    <div class="wa-activity-row">
+      <span><b>${a.paciente}</b> ${a.accion}</span>
+      <span class="wa-activity-when">${a.hace}</span>
+    </div>`).join('');
+</script>
+</body>
+</html>

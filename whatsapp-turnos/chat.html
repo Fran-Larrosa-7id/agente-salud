@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conversación — Gestor de Turnos por WhatsApp</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="css/whatsapp.css">
+</head>
+<body>
+<header class="wa-topbar">
+  <div class="wa-mark"><span class="dot"></span> Conversación (paciente)</div>
+  <a class="wa-back" href="index.html">← Volver</a>
+</header>
+<div class="wa-chat-layout">
+  <nav aria-label="Escenarios">
+    <div class="wa-scenarios-title">Escenarios</div>
+    <div id="waScenarios"></div>
+  </nav>
+  <div class="wa-phone-wrap">
+    <div class="wa-phone">
+      <div class="wa-phone-header">
+        <div class="wa-phone-avatar">CS</div>
+        <div>
+          <div class="wa-phone-title">Clínica San Martín</div>
+          <div class="wa-phone-sub">Asistente virtual · en línea</div>
+        </div>
+      </div>
+      <div class="wa-phone-body" id="waBody"></div>
+    </div>
+  </div>
+</div>
+<script src="js/escenarios.js"></script>
+<script>
+  let activeKey = null;
+  let playToken = 0;
+
+  function renderScenarioList() {
+    const cont = document.getElementById('waScenarios');
+    cont.innerHTML = Object.keys(WA_ESCENARIOS).map((key) => {
+      const esc = WA_ESCENARIOS[key];
+      return `<button class="wa-scenario-btn${key === activeKey ? ' is-active' : ''}" data-key="${key}" type="button">${esc.nombre}</button>`;
+    }).join('');
+    cont.querySelectorAll('[data-key]').forEach((btn) => {
+      btn.addEventListener('click', () => playScenario(btn.dataset.key));
+    });
+  }
+
+  function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+  function playScenario(key) {
+    activeKey = key;
+    playToken += 1;
+    const myToken = playToken;
+    renderScenarioList();
+    const body = document.getElementById('waBody');
+    body.innerHTML = '';
+    playSteps(WA_ESCENARIOS[key].pasos, body, myToken);
+  }
+
+  async function playSteps(pasos, body, myToken) {
+    for (const paso of pasos) {
+      if (myToken !== playToken) return;
+
+      if (paso.de === 'bot') {
+        const typing = document.createElement('div');
+        typing.className = 'wa-typing';
+        typing.textContent = 'escribiendo…';
+        body.appendChild(typing);
+        body.scrollTop = body.scrollHeight;
+        await wait(700);
+        if (myToken !== playToken) return;
+        typing.remove();
+      } else {
+        await wait(300);
+        if (myToken !== playToken) return;
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = 'wa-bubble ' + paso.de;
+      bubble.textContent = paso.texto;
+      body.appendChild(bubble);
+      body.scrollTop = body.scrollHeight;
+      requestAnimationFrame(() => bubble.classList.add('is-visible'));
+
+      if (paso.opciones) {
+        await wait(300);
+        if (myToken !== playToken) return;
+        const opcionesEl = document.createElement('div');
+        opcionesEl.className = 'wa-bubble-options';
+        opcionesEl.innerHTML = paso.opciones.map((op, i) => `<button class="wa-option-btn" type="button" data-i="${i}">${op.texto}</button>`).join('');
+        body.appendChild(opcionesEl);
+        body.scrollTop = body.scrollHeight;
+        opcionesEl.querySelectorAll('.wa-option-btn').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (myToken !== playToken) return;
+            const opcion = paso.opciones[Number(btn.dataset.i)];
+            opcionesEl.remove();
+
+            const userBubble = document.createElement('div');
+            userBubble.className = 'wa-bubble user';
+            userBubble.textContent = opcion.texto;
+            body.appendChild(userBubble);
+            body.scrollTop = body.scrollHeight;
+            requestAnimationFrame(() => userBubble.classList.add('is-visible'));
+
+            await wait(500);
+            if (myToken !== playToken) return;
+            playSteps(opcion.siguiente, body, myToken);
+          });
+        });
+        return; // pausa hasta que el usuario elija una opción
+      }
+
+      await wait(600);
+    }
+  }
+
+  renderScenarioList();
+</script>
+</body>
+</html>

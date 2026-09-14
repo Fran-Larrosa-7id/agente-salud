@@ -7,6 +7,8 @@ Fuente: card de Trello con la lista oficial de productos a considerar.
 ## Ya hecho
 
 - **Onboarding de pacientes** (`paciente.html` + `institucion.html`, este mismo repo) — alta de pacientes, formularios, carga de documentación, datos previos a la atención. Ver `HANDOFF.md`, `PRODUCT.md`, `DESIGN.md` para proceso y sistema de diseño ("The Lab Report": navy `#0b2545` + teal `#0c7f74`/`#0f9b8e`).
+- **Llamador de pacientes** (`llamador-pacientes/`) — pantalla pública tipo TV para sala de espera, panel de control (recepción/consultorio) y vista mobile del profesional. Estado sincronizado en vivo entre pestañas vía `localStorage` (sin backend): llamar a un paciente desde el Panel actualiza la Pantalla automáticamente.
+- **Gestor de turnos por WhatsApp** (`whatsapp-turnos/`) — vista de conversación (chat simulado dentro de un frame de teléfono) con 4 escenarios ramificados: solicitar, recordatorio automático, cancelar y reprogramar turno; más un panel de automatizaciones institucional con métricas, flujos configurables (on/off) y actividad reciente.
 
 ## Descartados
 
@@ -17,9 +19,9 @@ Fuente: card de Trello con la lista oficial de productos a considerar.
 
 ## Prioridad 1 — arrancar por acá (rápidos, alto impacto de demo, reusan el sistema de diseño ya definido)
 
-1. **Llamador de pacientes** — gestión de sala de espera, llamado de pacientes, visualización de llamados por pantalla (formato TV/kiosko). Mayormente visual/estado, poca lógica. Alto factor "wow" en demo a clínicas por ser una pantalla pública en la sala de espera. Reusa paleta navy/teal para look institucional.
-2. **Gestor de turnos por WhatsApp** — solicitud, confirmación, cancelación y reprogramación de turnos vía chat; automatización de comunicaciones con pacientes. Canal claramente distinto del sistema de turnos de Horus (es la interfaz conversacional, no el motor de turnos). Mockup de conversación de chat, rápido de armar y muy demostrable.
-3. **App mobile de pacientes** — turnos, estudios, notificaciones, información y documentación. Continuación natural del onboarding ya hecho: reusa casi literalmente componentes y flujo mobile de `paciente.html`, costo incremental bajo.
+1. ~~**Llamador de pacientes**~~ ✅ hecho (`llamador-pacientes/`).
+2. ~~**Gestor de turnos por WhatsApp**~~ ✅ hecho (`whatsapp-turnos/`).
+3. **App mobile de pacientes** — turnos, estudios, notificaciones, información y documentación. Continuación natural del onboarding ya hecho: reusa casi literalmente componentes y flujo mobile de `paciente.html`, costo incremental bajo. **Próximo paso.**
 
 ## Prioridad 2 — más valor, más esfuerzo/lógica
 
@@ -35,4 +37,4 @@ Ambos se harían solo si hay bastante tiempo libre acumulado, no como próximo p
 
 ## Próximo paso
 
-Arrancar mockup de **Llamador de pacientes** (prioridad 1, ítem 1).
+Arrancar mockup de **App mobile de pacientes** (prioridad 1, ítem 3).

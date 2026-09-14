@@ -9,6 +9,7 @@ Fuente: card de Trello con la lista oficial de productos a considerar.
 - **Onboarding de pacientes** (`paciente.html` + `institucion.html`, este mismo repo) — alta de pacientes, formularios, carga de documentación, datos previos a la atención. Ver `HANDOFF.md`, `PRODUCT.md`, `DESIGN.md` para proceso y sistema de diseño ("The Lab Report": navy `#0b2545` + teal `#0c7f74`/`#0f9b8e`).
 - **Llamador de pacientes** (`llamador-pacientes/`) — pantalla pública tipo TV para sala de espera, panel de control (recepción/consultorio) y vista mobile del profesional. Estado sincronizado en vivo entre pestañas vía `localStorage` (sin backend): llamar a un paciente desde el Panel actualiza la Pantalla automáticamente.
 - **Gestor de turnos por WhatsApp** (`whatsapp-turnos/`) — vista de conversación (chat simulado dentro de un frame de teléfono) con 4 escenarios ramificados: solicitar, recordatorio automático, cancelar y reprogramar turno; más un panel de automatizaciones institucional con métricas, flujos configurables (on/off) y actividad reciente.
+- **App mobile de pacientes** (`app-mobile-pacientes/`) — app de una sola pantalla con tab bar (Inicio, Turnos, Estudios, Avisos, Perfil): próximo turno, pedir turno nuevo (drawer con especialidades), cancelar/reprogramar, ver y "descargar" estudios, notificaciones con contador de no leídas, y documentación del paciente. Reusa María González como paciente de referencia para mantener continuidad narrativa con el resto de la vertical.
 
 ## Descartados
 
@@ -21,7 +22,7 @@ Fuente: card de Trello con la lista oficial de productos a considerar.
 
 1. ~~**Llamador de pacientes**~~ ✅ hecho (`llamador-pacientes/`).
 2. ~~**Gestor de turnos por WhatsApp**~~ ✅ hecho (`whatsapp-turnos/`).
-3. **App mobile de pacientes** — turnos, estudios, notificaciones, información y documentación. Continuación natural del onboarding ya hecho: reusa casi literalmente componentes y flujo mobile de `paciente.html`, costo incremental bajo. **Próximo paso.**
+3. ~~**App mobile de pacientes**~~ ✅ hecho (`app-mobile-pacientes/`).
 
 ## Prioridad 2 — más valor, más esfuerzo/lógica
 
@@ -37,4 +38,4 @@ Ambos se harían solo si hay bastante tiempo libre acumulado, no como próximo p
 
 ## Próximo paso
 
-Arrancar mockup de **App mobile de pacientes** (prioridad 1, ítem 3).
+Prioridad 1 completa. Seguir con prioridad 2: **Triage / evaluador de riesgo** o **Analista/Agente de IA** (como panel embebido en `institucion.html`).

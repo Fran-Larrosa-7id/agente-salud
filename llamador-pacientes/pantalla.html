@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sala de espera — Llamador de Pacientes</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="css/llamador.css">
+</head>
+<body class="ll-tv">
+<header class="tv-header">
+  <div class="tv-header-mark"><span class="dot"></span> Llamador de Pacientes</div>
+  <div class="tv-clock" id="tvClock" aria-hidden="true"></div>
+</header>
+<main class="tv-body">
+  <section class="tv-consultorios" id="tvConsultorios" aria-label="Consultorios"></section>
+  <aside class="tv-history">
+    <div class="tv-history-title">Últimos llamados</div>
+    <div class="tv-history-list" id="tvHistory"></div>
+  </aside>
+</main>
+<script src="js/llamador.js"></script>
+<script>
+  function renderClock() {
+    document.getElementById('tvClock').textContent = llHoraActual();
+  }
+  setInterval(renderClock, 1000 * 15);
+  renderClock();
+
+  let lastFlashId = null;
+
+  function render(state) {
+    const cont = document.getElementById('tvConsultorios');
+    cont.innerHTML = LL_CONSULTORIOS.map((c) => {
+      const paciente = state.atendiendo[c.id];
+      const cola = state.colas[c.id] || [];
+      const isFlash = state.llamados[0] && state.llamados[0].consultorioId === c.id && state.llamados[0].ts === lastFlashId;
+      return `<div class="tv-card${isFlash ? ' is-flash' : ''}" data-consultorio="${c.id}">
+        <div class="tv-card-label">${c.nombre}</div>
+        <div class="tv-card-sala">${c.profesional} · ${c.especialidad}</div>
+        ${paciente
+          ? `<div class="tv-card-paciente">${paciente.nombre}</div>`
+          : `<div class="tv-card-paciente is-empty">Sin paciente en atención</div>`}
+        <div class="tv-card-meta">${paciente ? `Turno <b>${paciente.turno}</b>` : ''} · ${cola.length} en espera</div>
+      </div>`;
+    }).join('');
+
+    const hist = document.getElementById('tvHistory');
+    hist.innerHTML = state.llamados.length
+      ? state.llamados.map((h) => {
+          const c = llConsultorio(h.consultorioId);
+          return `<div class="tv-history-item">
+            <span class="tv-history-name">${h.pacienteNombre}${h.tipo === 'repetido' ? ' (nuevamente)' : ''}</span>
+            <span class="tv-history-sala">${c ? c.nombre : ''} · ${h.hora}</span>
+          </div>`;
+        }).join('')
+      : `<div class="tv-history-item" style="opacity:.5">Sin llamados todavía</div>`;
+  }
+
+  function flashLatest(state) {
+    if (state.llamados[0]) {
+      lastFlashId = state.llamados[0].ts;
+      render(state);
+      setTimeout(() => { lastFlashId = null; render(llGetState()); }, 2400);
+    }
+  }
+
+  const initial = llGetState();
+  render(initial);
+
+  llOnStateChange((state) => flashLatest(state));
+</script>
+</body>
+</html>

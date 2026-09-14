@@ -15,10 +15,13 @@
   let ordenMedicaCargada = false;
   const completedPhases = { personales: false, cobertura: false, clinica: false };
 
-  function showScreen(id) {
+  function showScreen(id, direction) {
     SCREENS.forEach((s) => {
       const el = document.getElementById('screen-' + s);
-      if (el) el.classList.toggle('is-active', s === id);
+      if (!el) return;
+      el.classList.remove('dir-forward', 'dir-back');
+      el.classList.toggle('is-active', s === id);
+      if (s === id && direction) el.classList.add(direction === 'back' ? 'dir-back' : 'dir-forward');
     });
     currentScreen = id;
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
@@ -38,12 +41,12 @@
   document.querySelectorAll('[data-next]').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (currentScreen in completedPhases) completedPhases[currentScreen] = true;
-      showScreen(btn.dataset.next);
+      showScreen(btn.dataset.next, 'forward');
     });
   });
 
   document.querySelectorAll('[data-goto]').forEach((el) => {
-    el.addEventListener('click', () => showScreen(el.dataset.goto));
+    el.addEventListener('click', () => showScreen(el.dataset.goto, 'back'));
   });
 
   function renderPhaseRail() {
@@ -64,7 +67,7 @@
       const isCurrent = i === doneCount;
       const stateClass = isDone ? 'is-done' : isCurrent ? 'is-current' : '';
       const dotContent = isDone
-        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'
+        ? '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'
         : (i + 1);
       const sub = isDone ? 'Completo' : isCurrent ? 'Siguiente paso' : 'Pendiente';
       return `<div class="phase-item ${stateClass}">
@@ -83,11 +86,11 @@
     if (!badge || !alert) return;
     if (ordenMedicaCargada) {
       badge.className = 'badge badge-success';
-      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Completo';
+      badge.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Completo';
       alert.hidden = true;
     } else {
       badge.className = 'badge badge-pending';
-      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>1 pendiente';
+      badge.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>1 pendiente';
       alert.hidden = false;
     }
   }
@@ -97,7 +100,7 @@
     const stack = document.getElementById('toastStack');
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
+    toast.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
     stack.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('is-visible'));
     setTimeout(() => {
@@ -114,24 +117,33 @@
     });
   });
 
+  function flashRow(row) {
+    if (!row) return;
+    row.classList.add('is-flash');
+    setTimeout(() => row.classList.remove('is-flash'), 900);
+  }
+
   function simulateUpload(uploader) {
     const type = uploader.dataset.upload;
     uploader.querySelector('.uploader-title').textContent = 'Subiendo...';
+    uploader.classList.add('is-uploading');
     uploader.style.pointerEvents = 'none';
 
     setTimeout(() => {
+      uploader.classList.remove('is-uploading');
       if (type === 'credencial') {
         uploader.querySelector('.uploader-title').textContent = 'Subir foto de la credencial';
         uploader.style.pointerEvents = '';
         document.getElementById('credencialResult').innerHTML = `
           <div class="doc-row" style="margin-top: var(--sp-3)">
-            <div class="doc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/></svg></div>
+            <div class="doc-icon"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/></svg></div>
             <div class="doc-info">
               <div class="doc-name">credencial_osde.jpg</div>
               <div class="doc-meta">Cargado</div>
             </div>
-            <span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Cargado</span>
+            <span class="badge badge-success"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Cargado</span>
           </div>`;
+        flashRow(document.querySelector('#credencialResult .doc-row'));
         showToast('Credencial cargada correctamente');
       } else {
         uploader.querySelector('.uploader-title').textContent = 'Arrastrá o tocá para subir';
@@ -139,8 +151,9 @@
         ordenMedicaCargada = true;
         document.getElementById('ordenMedicaMeta').textContent = 'Cargado';
         const badge = document.getElementById('ordenMedicaBadge');
-        badge.className = 'badge badge-success';
-        badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Cargado';
+        badge.className = 'badge badge-success is-pop';
+        badge.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Cargado';
+        flashRow(document.getElementById('ordenMedicaRow'));
         renderRevision();
         showToast('Orden médica cargada correctamente');
       }

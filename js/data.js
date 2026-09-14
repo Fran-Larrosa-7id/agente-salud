@@ -94,7 +94,7 @@ const PACIENTES = [
     obraSocial: 'Unión Personal', plan: 'Plan 1', progreso: 75,
     estado: ESTADOS.REVISION,
     secciones: { personales: true, cobertura: true, antecedentes: true, medicacion: true, documentacion: false },
-    alergias: ['No tiene alergias conocidas'],
+    alergias: [],
     medicacion: [{ nombre: 'Atorvastatina', dosis: '20 mg', frecuencia: '1 vez al día, noche' }],
     antecedentes: 'Dislipemia. Cirugía de rodilla en 2019.',
     documentos: [

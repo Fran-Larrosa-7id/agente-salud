@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Evaluación de síntomas — Triage</title>
+<title>Evaluación de síntomas · Triage</title>
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
@@ -14,7 +14,7 @@
   <div class="tr-mark"><span class="dot"></span> Evaluación de síntomas</div>
   <a class="tr-back" href="index.html">← Volver</a>
 </header>
-<p class="tr-disclaimer">Prototipo de demostración — no reemplaza una evaluación médica real.</p>
+<p class="tr-disclaimer">Prototipo de demostración. No reemplaza una evaluación médica real.</p>
 
 <main class="tr-shell">
 
@@ -48,8 +48,8 @@
     <h1 class="tr-title">¿Qué tan intenso es el síntoma?</h1>
     <p class="tr-sub">0 es nada de molestia, 10 es lo más fuerte que imaginás.</p>
     <div class="tr-slider-value" id="intensidadValue">5</div>
-    <input class="tr-slider" id="inputIntensidad" type="range" min="0" max="10" value="5">
-    <div class="tr-slider-labels"><span>0 — Nada</span><span>10 — Insoportable</span></div>
+    <input class="tr-slider" id="inputIntensidad" type="range" min="0" max="10" value="5" aria-label="Intensidad del síntoma, de 0 a 10">
+    <div class="tr-slider-labels"><span>0 · Nada</span><span>10 · Insoportable</span></div>
     <button class="btn btn-accent btn-block" id="btnVerResultado" type="button">Ver resultado</button>
   </section>
 

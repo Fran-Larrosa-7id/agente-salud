@@ -35,9 +35,10 @@
   font-weight: 600;
   font-size: var(--fs-sm);
   color: var(--navy-900);
-  transition: border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard);
+  transition: border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-out);
 }
 .wa-scenario-btn:hover { border-color: var(--navy-500); }
+.wa-scenario-btn:active { transform: scale(0.98); }
 .wa-scenario-btn.is-active { border-color: var(--accent); background: var(--teal-100); }
 
 .wa-phone-wrap { display: flex; justify-content: center; }
@@ -118,18 +119,30 @@
   border-radius: var(--r-md);
   cursor: pointer;
   text-align: center;
-  transition: background var(--dur-fast) var(--ease-standard);
+  transition: background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-out);
 }
 .wa-option-btn:hover { background: #f2fbf9; }
+.wa-option-btn:active { transform: scale(0.97); }
 .wa-typing {
   align-self: flex-start;
   background: #fff;
   border-radius: var(--r-md);
   border-top-left-radius: 2px;
-  padding: var(--sp-2) var(--sp-3);
-  font-size: var(--fs-sm);
-  color: var(--gray-600);
-  font-style: italic;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wa-typing span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gray-400);
+  animation: wa-typing-bounce 1s var(--ease-standard) infinite;
+}
+.wa-typing span:nth-child(2) { animation-delay: 0.15s; }
+.wa-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes wa-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-4px); opacity: 1; }
 }
 
 /* ---------- Panel de automatizaciones (institución) ---------- */
@@ -175,6 +188,8 @@
 }
 .wa-toggle.is-on { background: var(--accent-strong); }
 .wa-toggle.is-on::after { transform: translateX(18px); }
+.wa-toggle { transition: background var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-out); }
+.wa-toggle:active { transform: scale(0.94); }
 
 .wa-activity-list { display: flex; flex-direction: column; }
 .wa-activity-row {

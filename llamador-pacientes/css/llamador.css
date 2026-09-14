@@ -97,9 +97,10 @@ body.ll-tv {
   padding: var(--sp-4);
   margin-bottom: var(--sp-3);
   cursor: pointer;
-  transition: border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard);
+  transition: border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-out);
 }
 .panel-consultorio-btn:hover { border-color: var(--navy-500); }
+.panel-consultorio-btn:active { transform: scale(0.98); }
 .panel-consultorio-btn.is-active { border-color: var(--accent); background: var(--teal-100); }
 .panel-consultorio-nombre { font-weight: 700; color: var(--navy-900); font-size: var(--fs-sm); }
 .panel-consultorio-prof { font-size: var(--fs-xs); color: var(--ink-soft); margin-top: 2px; }

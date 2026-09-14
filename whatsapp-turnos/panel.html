@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel de automatizaciones — Gestor de Turnos por WhatsApp</title>
+<title>Panel de automatizaciones · Gestor de Turnos por WhatsApp</title>
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
@@ -37,7 +37,7 @@
       <div class="wa-flow-card">
         <div class="wa-flow-head">
           <div class="wa-flow-name">${f.nombre}</div>
-          <button class="wa-toggle${f.activo ? ' is-on' : ''}" data-i="${i}" type="button" aria-label="Activar o desactivar ${f.nombre}"></button>
+          <button class="wa-toggle${f.activo ? ' is-on' : ''}" data-i="${i}" type="button" role="switch" aria-checked="${f.activo}" aria-label="${f.nombre}"></button>
         </div>
         <div class="wa-flow-desc">${f.descripcion}</div>
         <div class="wa-flow-trigger"><b>Se dispara con:</b> ${f.disparador}</div>
@@ -48,6 +48,7 @@
         const i = Number(btn.dataset.i);
         WA_AUTOMATIZACIONES[i].activo = !WA_AUTOMATIZACIONES[i].activo;
         renderFlows();
+        document.querySelector(`.wa-toggle[data-i="${i}"]`).focus();
       });
     });
   }

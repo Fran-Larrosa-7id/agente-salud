@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Llamador de Pacientes — Demo</title>
+<title>Llamador de Pacientes · Demo</title>
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <style>
@@ -31,6 +31,7 @@
     box-shadow: var(--shadow-sm);
   }
   .demo-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--accent); }
+  .demo-card:active { transform: translateY(-1px) scale(0.99); }
   .demo-card-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
   .demo-icon { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--mint-100); color: var(--teal-600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .demo-card h2 { font-size: var(--fs-md); font-weight: 700; color: var(--navy-900); }
@@ -45,12 +46,12 @@
   <div class="selector-head">
     <div class="selector-mark"><span class="dot"></span> Llamador de Pacientes</div>
     <h1>Elegí qué vista querés ver</h1>
-    <p>Prototipo conceptual — sala de espera, panel de recepción/consultorio y app del profesional.</p>
+    <p>Prototipo conceptual: sala de espera, panel de recepción/consultorio y app del profesional.</p>
   </div>
   <div class="cards">
     <a class="demo-card" href="pantalla.html">
       <div class="demo-card-head">
-        <div class="demo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+        <div class="demo-icon"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
         <h2>Pantalla (sala de espera)</h2>
       </div>
       <p>Vista pública para la sala de espera: quién está siendo atendido en cada consultorio y el historial de últimos llamados.</p>
@@ -58,7 +59,7 @@
     </a>
     <a class="demo-card" href="panel.html">
       <div class="demo-card-head">
-        <div class="demo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v5"/></svg></div>
+        <div class="demo-icon"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v5"/></svg></div>
         <h2>Panel de control</h2>
       </div>
       <p>Vista de escritorio para recepción o consultorio: cola de espera por consultorio y botón para llamar al siguiente paciente.</p>
@@ -66,7 +67,7 @@
     </a>
     <a class="demo-card" href="mobile.html">
       <div class="demo-card-head">
-        <div class="demo-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 6h6M9 18h.01"/></svg></div>
+        <div class="demo-icon"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 6h6M9 18h.01"/></svg></div>
         <h2>App del profesional</h2>
       </div>
       <p>Versión simplificada para celular: el médico llama a su próximo paciente sin depender de una PC.</p>

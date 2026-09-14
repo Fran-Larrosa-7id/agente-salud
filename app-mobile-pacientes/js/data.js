@@ -30,9 +30,9 @@ const APP_ESPECIALIDADES_DISPONIBLES = [
 ];
 
 const APP_ESTUDIOS = [
-  { id: 'e1', nombre: 'Análisis de sangre completo', profesional: 'Dr. Martín Gómez', fecha: '04/09/2026', estado: 'disponible' },
-  { id: 'e2', nombre: 'Electrocardiograma', profesional: 'Dra. Sofía Martínez', fecha: '12/08/2026', estado: 'disponible' },
-  { id: 'e3', nombre: 'Radiografía de rodilla', profesional: 'Dr. Juan Pérez', fecha: '22/09/2026', estado: 'pendiente' },
+  { id: 'e1', nombre: 'Análisis de sangre completo', profesional: 'Dr. Martín Gómez', fecha: 'Jueves 04/09', estado: 'disponible' },
+  { id: 'e2', nombre: 'Electrocardiograma', profesional: 'Dra. Sofía Martínez', fecha: 'Martes 12/08', estado: 'disponible' },
+  { id: 'e3', nombre: 'Radiografía de rodilla', profesional: 'Dr. Juan Pérez', fecha: 'Lunes 22/09', estado: 'pendiente' },
 ];
 
 const APP_NOTIFICACIONES = [
@@ -46,5 +46,5 @@ const APP_NOTIFICACIONES = [
 const APP_DOCUMENTOS = [
   { nombre: 'DNI_frente.jpg', tipo: 'DNI', estado: 'validado' },
   { nombre: 'credencial_osde.jpg', tipo: 'Credencial de obra social', estado: 'validado' },
-  { nombre: 'orden_medica.pdf', tipo: 'Orden médica — Traumatología', estado: 'pendiente' },
+  { nombre: 'orden_medica.pdf', tipo: 'Orden médica · Traumatología', estado: 'pendiente' },
 ];

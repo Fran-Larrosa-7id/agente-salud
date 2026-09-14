@@ -21,7 +21,7 @@
     const stack = document.getElementById('toastStack');
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
+    toast.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
     stack.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('is-visible'));
     setTimeout(() => {
@@ -38,7 +38,7 @@
       <div class="app-turno-prof">${t.profesional}</div>
       <div class="app-turno-esp">${t.especialidad}</div>
       <div class="app-turno-when">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
         ${t.fecha} · ${t.hora}
       </div>
       <div class="app-turno-lugar">${t.lugar}</div>
@@ -72,7 +72,7 @@
             </div>
             <span class="badge ${t.estado === 'Confirmado' ? 'badge-success' : 'badge-pending'}">${t.estado}</span>
           </div>
-          <div class="app-list-card-meta">${t.fecha} · ${t.hora} — ${t.lugar}</div>
+          <div class="app-list-card-meta">${t.fecha} · ${t.hora} · ${t.lugar}</div>
           <div class="app-list-card-actions">
             <button class="btn btn-secondary btn-sm" data-reprogramar="${t.id}">Reprogramar</button>
             <button class="btn btn-danger-ghost btn-sm" data-cancelar="${t.id}">Cancelar</button>
@@ -99,6 +99,9 @@
         renderTurnos();
         renderInicio();
         showToast('Turno cancelado. Te avisamos por WhatsApp.');
+        const title = document.querySelector('#screen-turnos .app-screen-title');
+        title.setAttribute('tabindex', '-1');
+        title.focus();
       });
     });
     document.querySelectorAll('[data-reprogramar]').forEach((btn) => {
@@ -111,20 +114,29 @@
   const drawerTurno = document.getElementById('drawerPedirTurno');
   const drawerEstudio = document.getElementById('drawerEstudio');
 
-  function openDrawer(drawer) {
+  let drawerReturnFocus = null;
+
+  function openDrawer(drawer, triggerEl) {
+    drawerReturnFocus = triggerEl || document.activeElement;
+    drawer.setAttribute('aria-hidden', 'false');
     scrim.classList.add('is-open');
     drawer.classList.add('is-open');
+    drawer.querySelector('.app-drawer-close').focus();
   }
   function closeDrawers() {
     scrim.classList.remove('is-open');
-    drawerTurno.classList.remove('is-open');
-    drawerEstudio.classList.remove('is-open');
+    [drawerTurno, drawerEstudio].forEach((d) => { d.classList.remove('is-open'); d.setAttribute('aria-hidden', 'true'); });
+    if (drawerReturnFocus && document.body.contains(drawerReturnFocus)) drawerReturnFocus.focus();
+    drawerReturnFocus = null;
   }
   scrim.addEventListener('click', closeDrawers);
   document.getElementById('closeDrawerTurno').addEventListener('click', closeDrawers);
   document.getElementById('closeDrawerEstudio').addEventListener('click', closeDrawers);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && (drawerTurno.classList.contains('is-open') || drawerEstudio.classList.contains('is-open'))) closeDrawers();
+  });
 
-  document.getElementById('fabPedirTurno').addEventListener('click', () => {
+  document.getElementById('fabPedirTurno').addEventListener('click', (e) => {
     document.getElementById('especialidadesList').innerHTML = APP_ESPECIALIDADES_DISPONIBLES.map((esp) =>
       `<button class="app-especialidad-btn" data-esp="${esp}">${esp}</button>`).join('');
     document.querySelectorAll('.app-especialidad-btn').forEach((btn) => {
@@ -133,13 +145,13 @@
         showToast(`Solicitamos tu turno de ${btn.dataset.esp}. Te confirmamos por WhatsApp.`);
       });
     });
-    openDrawer(drawerTurno);
+    openDrawer(drawerTurno, e.currentTarget);
   });
 
   // --- Estudios ---
   function renderEstudios() {
     document.getElementById('estudiosList').innerHTML = APP_ESTUDIOS.map((e) => `
-      <div class="app-list-card${e.estado === 'disponible' ? ' is-clickable' : ''}" data-estudio="${e.id}">
+      <div class="app-list-card${e.estado === 'disponible' ? ' is-clickable' : ''}" data-estudio="${e.id}"${e.estado === 'disponible' ? ' role="button" tabindex="0"' : ''} aria-label="${e.nombre}${e.estado === 'disponible' ? '' : ', pendiente'}">
         <div class="app-list-card-head">
           <div>
             <div class="app-list-card-title">${e.nombre}</div>
@@ -150,15 +162,14 @@
         <div class="app-list-card-meta">${e.fecha}</div>
       </div>`).join('');
 
-    document.querySelectorAll('[data-estudio]').forEach((card) => {
-      card.addEventListener('click', () => {
+    function abrirEstudio(card) {
         const e = APP_ESTUDIOS.find((x) => x.id === card.dataset.estudio);
         if (e.estado !== 'disponible') return;
         document.getElementById('estudioDrawerTitle').textContent = e.nombre;
         document.getElementById('estudioDrawerBody').innerHTML = `
           <p style="color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: var(--sp-4)">Solicitado por ${e.profesional} · ${e.fecha}</p>
           <div class="doc-row">
-            <div class="doc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h6l1 4H8l1-4z"/><path d="M6 6h12l1 15H5L6 6z"/></svg></div>
+            <div class="doc-icon"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h6l1 4H8l1-4z"/><path d="M6 6h12l1 15H5L6 6z"/></svg></div>
             <div class="doc-info">
               <div class="doc-name">${e.nombre}.pdf</div>
               <div class="doc-meta">Resultado listo para descargar</div>
@@ -166,7 +177,13 @@
           </div>
           <button class="btn btn-accent btn-block" id="btnDescargarEstudio" style="margin-top: var(--sp-5)" type="button">Descargar PDF</button>`;
         document.getElementById('btnDescargarEstudio').addEventListener('click', () => showToast('Descarga simulada'));
-        openDrawer(drawerEstudio);
+        openDrawer(drawerEstudio, card);
+    }
+
+    document.querySelectorAll('[data-estudio]').forEach((card) => {
+      card.addEventListener('click', () => abrirEstudio(card));
+      card.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrirEstudio(card); }
       });
     });
   }
@@ -180,15 +197,15 @@
   }
 
   const NOTIF_ICONS = {
-    turno: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>',
-    estudio: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h6l1 4H8l1-4z"/><path d="M6 6h12l1 15H5L6 6z"/></svg>',
-    documentacion: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
-    recordatorio: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/></svg>',
+    turno: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>',
+    estudio: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h6l1 4H8l1-4z"/><path d="M6 6h12l1 15H5L6 6z"/></svg>',
+    documentacion: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+    recordatorio: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/></svg>',
   };
 
   function renderNotificaciones() {
     document.getElementById('notifList').innerHTML = APP_NOTIFICACIONES.map((n) => `
-      <div class="app-notif-row${n.leida ? '' : ' is-unread'}" data-notif="${n.id}">
+      <div class="app-notif-row${n.leida ? '' : ' is-unread'}" data-notif="${n.id}" role="button" tabindex="0" aria-label="${n.titulo}${n.leida ? '' : ', sin leer'}">
         <div class="app-notif-icon">${NOTIF_ICONS[n.tipo] || ''}</div>
         <div class="app-notif-content">
           <div class="app-notif-title">${n.titulo}</div>
@@ -198,13 +215,20 @@
         ${n.leida ? '' : '<span class="app-notif-dot" aria-hidden="true"></span>'}
       </div>`).join('');
 
+    function marcarLeida(row) {
+      const n = APP_NOTIFICACIONES.find((x) => x.id === row.dataset.notif);
+      n.leida = true;
+      renderNotificaciones();
+      updateBellBadge();
+      const same = document.querySelector(`[data-notif="${n.id}"]`);
+      if (same) same.focus();
+    }
+
     document.querySelectorAll('[data-notif]').forEach((row) => {
-      row.addEventListener('click', () => {
-        const n = APP_NOTIFICACIONES.find((x) => x.id === row.dataset.notif);
-        n.leida = true;
-        renderNotificaciones();
-        updateBellBadge();
+      row.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); marcarLeida(row); }
       });
+      row.addEventListener('click', () => marcarLeida(row));
     });
     updateBellBadge();
   }
@@ -215,7 +239,7 @@
   function renderDocumentos() {
     document.getElementById('documentosList').innerHTML = APP_DOCUMENTOS.map((d) => `
       <div class="doc-row">
-        <div class="doc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+        <div class="doc-icon"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
         <div class="doc-info">
           <div class="doc-name">${d.tipo}</div>
           <div class="doc-meta">${d.nombre}</div>

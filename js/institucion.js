@@ -12,11 +12,11 @@
 
   function statusBadge(estado) {
     const icons = {
-      listo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>',
-      info_pendiente: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>',
-      doc_pendiente: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>',
-      revision: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>',
-      no_iniciado: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
+      listo: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>',
+      info_pendiente: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>',
+      doc_pendiente: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>',
+      revision: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>',
+      no_iniciado: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>',
     };
     return `<span class="badge ${estado.badge}">${icons[estado.key]}${estado.label}</span>`;
   }
@@ -62,7 +62,7 @@
     document.getElementById('emptyState').hidden = filtered.length !== 0;
 
     tbody.innerHTML = filtered.map((p) => `
-      <tr data-id="${p.id}" tabindex="0">
+      <tr data-id="${p.id}" tabindex="0" role="button" aria-label="Ver detalle de ${p.nombre} ${p.apellido}">
         <td>
           <div class="patient-name-cell">
             <span class="patient-name">${p.nombre} ${p.apellido}</span>
@@ -83,9 +83,9 @@
     `).join('');
 
     tbody.querySelectorAll('tr').forEach((row) => {
-      row.addEventListener('click', () => openDrawer(row.dataset.id));
+      row.addEventListener('click', () => openDrawer(row.dataset.id, row));
       row.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') openDrawer(row.dataset.id);
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(row.dataset.id, row); }
       });
     });
   }
@@ -136,10 +136,12 @@
   // --- Drawer ---
   const drawer = document.getElementById('drawer');
   const scrim = document.getElementById('scrim');
+  let drawerReturnFocus = null;
 
-  function openDrawer(id) {
+  function openDrawer(id, triggerEl) {
     const p = PACIENTES.find((x) => x.id === id);
     if (!p) return;
+    drawerReturnFocus = triggerEl || document.activeElement;
 
     document.getElementById('drawerDni').textContent = `DNI ${p.dni}`;
     document.getElementById('drawerName').textContent = `${p.nombre} ${p.apellido}`;
@@ -155,17 +157,17 @@
     if (!p.secciones.cobertura) faltantes.push('cobertura médica');
     if (faltantes.length) {
       alertBox.innerHTML = `<div class="alert alert-warning">
-        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        <svg aria-hidden="true" class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
         <div><div class="alert-title">Falta completar</div><div>Pendiente: ${faltantes.join(', ')}.</div></div>
       </div>`;
     } else if (p.estado.key === 'revision') {
       alertBox.innerHTML = `<div class="alert alert-danger">
-        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+        <svg aria-hidden="true" class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
         <div><div class="alert-title">Requiere revisión manual</div><div>Hay documentos marcados para validar antes del turno.</div></div>
       </div>`;
     } else {
       alertBox.innerHTML = `<div class="alert alert-success">
-        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+        <svg aria-hidden="true" class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
         <div><div class="alert-title">Sin pendientes</div><div>El paciente está listo para ser atendido.</div></div>
       </div>`;
     }
@@ -181,8 +183,8 @@
       <div class="checklist-item">
         <span>${label}</span>
         ${done
-          ? '<span class="badge badge-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Completo</span>'
-          : '<span class="badge badge-pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>Pendiente</span>'}
+          ? '<span class="badge badge-success"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>Completo</span>'
+          : '<span class="badge badge-pending"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>Pendiente</span>'}
       </div>
     `).join('');
 
@@ -199,10 +201,10 @@
           const badgeClass = d.estado === 'validado' ? 'badge-success' : d.estado === 'revision' ? 'badge-review' : 'badge-pending';
           const label = d.estado === 'validado' ? 'Validado' : d.estado === 'revision' ? 'Revisión requerida' : 'Pendiente';
           const icon = d.estado === 'validado'
-            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'
-            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>';
+            ? '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>'
+            : '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>';
           return `<div class="doc-row">
-            <div class="doc-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
+            <div class="doc-icon"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></div>
             <div class="doc-info"><div class="doc-name">${d.nombre}</div><div class="doc-meta">${d.tipo}</div></div>
             <span class="badge ${badgeClass}">${icon}${label}</span>
           </div>`;
@@ -212,18 +214,30 @@
     drawer.classList.add('is-open');
     drawer.setAttribute('aria-hidden', 'false');
     scrim.classList.add('is-open');
+    document.getElementById('drawerClose').focus();
   }
 
   function closeDrawer() {
     drawer.classList.remove('is-open');
     drawer.setAttribute('aria-hidden', 'true');
     scrim.classList.remove('is-open');
+    if (drawerReturnFocus && document.body.contains(drawerReturnFocus)) drawerReturnFocus.focus();
+    drawerReturnFocus = null;
   }
 
   document.getElementById('drawerClose').addEventListener('click', closeDrawer);
   scrim.addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('is-open')) closeDrawer();
+    if (!drawer.classList.contains('is-open')) return;
+    if (e.key === 'Escape') { closeDrawer(); return; }
+    if (e.key === 'Tab') {
+      const focusable = drawer.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
   });
 
   // --- Quick actions (simulated) ---
@@ -231,7 +245,7 @@
     const stack = document.getElementById('toastStack');
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
+    toast.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
     stack.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('is-visible'));
     setTimeout(() => {

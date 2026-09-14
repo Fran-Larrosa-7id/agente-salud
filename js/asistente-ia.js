@@ -6,7 +6,7 @@
   const PENDIENTES_KEYS = ['info_pendiente', 'doc_pendiente', 'no_iniciado'];
 
   function listaPacientes(list, detalle) {
-    return list.map((p) => `• ${p.nombre} ${p.apellido} (${p.turno} hs)${detalle ? ' — ' + detalle(p) : ''}`).join('<br>');
+    return list.map((p) => `• ${p.nombre} ${p.apellido} (${p.turno} hs)${detalle ? ' · ' + detalle(p) : ''}`).join('<br>');
   }
 
   function resumenDelDia() {
@@ -48,7 +48,7 @@
 
   function actividadReciente() {
     if (!ACTIVIDAD_RECIENTE.length) return 'No hay actividad registrada todavía.';
-    const lista = ACTIVIDAD_RECIENTE.map((a) => `• <b>${a.paciente}</b> ${a.accion} — ${a.hace}`).join('<br>');
+    const lista = ACTIVIDAD_RECIENTE.map((a) => `• <b>${a.paciente}</b> ${a.accion} · ${a.hace}`).join('<br>');
     return `Actividad reciente:<br>${lista}`;
   }
 
@@ -100,7 +100,8 @@
 
     const typing = document.createElement('div');
     typing.className = 'ai-typing';
-    typing.textContent = 'Analizando datos…';
+    typing.setAttribute('aria-label', 'Analizando datos…');
+    typing.innerHTML = '<span></span><span></span><span></span>';
     chatBody.appendChild(typing);
     chatBody.scrollTop = chatBody.scrollHeight;
 
@@ -124,6 +125,7 @@
     drawer.classList.remove('is-open');
     drawer.setAttribute('aria-hidden', 'true');
     scrim.classList.remove('is-open');
+    document.getElementById('aiFabBtn').focus();
   }
 
   document.getElementById('aiFabBtn').addEventListener('click', () => {
@@ -136,7 +138,16 @@
   document.getElementById('aiDrawerClose').addEventListener('click', closeAiDrawer);
   scrim.addEventListener('click', closeAiDrawer);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('is-open')) closeAiDrawer();
+    if (!drawer.classList.contains('is-open')) return;
+    if (e.key === 'Escape') { closeAiDrawer(); return; }
+    if (e.key === 'Tab') {
+      const focusable = drawer.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
   });
 
   document.getElementById('patientTableBody').addEventListener('click', (e) => {

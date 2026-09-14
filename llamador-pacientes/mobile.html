@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>App del profesional — Llamador de Pacientes</title>
+<title>App del profesional · Llamador de Pacientes</title>
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
@@ -40,7 +40,7 @@
     const stack = document.getElementById('toastStack');
     const toast = document.createElement('div');
     toast.className = 'toast';
-    toast.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
+    toast.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
     stack.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('is-visible'));
     setTimeout(() => {
@@ -50,7 +50,7 @@
   }
 
   const select = document.getElementById('mobileConsultorio');
-  select.innerHTML = LL_CONSULTORIOS.map((c) => `<option value="${c.id}">${c.nombre} — ${c.profesional}</option>`).join('');
+  select.innerHTML = LL_CONSULTORIOS.map((c) => `<option value="${c.id}">${c.nombre} · ${c.profesional}</option>`).join('');
   select.addEventListener('change', () => { activeId = select.value; render(); });
 
   function render() {
@@ -69,7 +69,7 @@
     document.getElementById('btnRepetir').disabled = !paciente;
     document.getElementById('btnFinalizar').disabled = !paciente;
 
-    document.getElementById('mobileColaTitle').textContent = `Cola de espera — ${cola.length} paciente${cola.length === 1 ? '' : 's'}`;
+    document.getElementById('mobileColaTitle').textContent = `Cola de espera · ${cola.length} paciente${cola.length === 1 ? '' : 's'}`;
     document.getElementById('mobileCola').innerHTML = cola.length
       ? cola.map((p) => `<div class="panel-cola-row"><span class="doc-name">${p.nombre}</span><span class="panel-cola-turno">Turno ${p.turno}</span></div>`).join('')
       : `<div class="panel-cola-row" style="opacity:.6">No hay pacientes esperando</div>`;

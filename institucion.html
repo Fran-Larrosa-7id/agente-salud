@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Onboarding de Pacientes — Panel institucional</title>
+<title>Onboarding de Pacientes · Panel institucional</title>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/components.css">
@@ -57,15 +57,17 @@
         </div>
         <div class="filter-bar">
           <div class="search-input-wrap">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <label class="visually-hidden" for="searchInput">Buscar paciente por nombre o DNI</label>
             <input class="input" id="searchInput" type="search" placeholder="Buscar por nombre o DNI...">
           </div>
+          <label class="visually-hidden" for="profFilter">Filtrar por profesional</label>
           <select class="select select-sm" id="profFilter">
             <option value="">Todos los profesionales</option>
           </select>
         </div>
         <div class="filter-bar" style="border-bottom: none">
-          <div class="filter-chip-group" id="statusFilters">
+          <div class="filter-chip-group" id="statusFilters" role="group" aria-label="Filtrar por estado">
             <button class="filter-chip is-active" data-status="">Todos</button>
             <button class="filter-chip" data-status="listo">Completos</button>
             <button class="filter-chip" data-status="pendiente">Pendientes</button>
@@ -88,7 +90,7 @@
           </table>
         </div>
         <div class="empty-state" id="emptyState" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
           <div class="empty-state-title">Sin resultados</div>
           <p>No encontramos pacientes que coincidan con este filtro o búsqueda.</p>
         </div>
@@ -109,10 +111,10 @@
 </div>
 
 <div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="drawerName">
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="drawerName">
   <div style="position:relative;">
     <button class="drawer-close" id="drawerClose" aria-label="Cerrar detalle">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
     <div class="drawer-head">
       <div class="eyebrow" id="drawerDni"></div>
@@ -150,14 +152,14 @@
 </aside>
 
 <button class="ai-fab" id="aiFabBtn" type="button" aria-label="Abrir analista de IA">
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.6 4.2L18 9l-4.4 1.8L12 15l-1.6-4.2L6 9l4.4-1.8L12 3z"/><path d="M19 15l.8 2.1L22 18l-2.2.9L19 21l-.8-2.1L16 18l2.2-.9L19 15z"/></svg>
+  <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.6 4.2L18 9l-4.4 1.8L12 15l-1.6-4.2L6 9l4.4-1.8L12 3z"/><path d="M19 15l.8 2.1L22 18l-2.2.9L19 21l-.8-2.1L16 18l2.2-.9L19 15z"/></svg>
 </button>
 
 <div class="scrim" id="aiScrim"></div>
-<aside class="drawer" id="aiDrawer" aria-hidden="true" aria-labelledby="aiDrawerTitle">
+<aside class="drawer" id="aiDrawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="aiDrawerTitle">
   <div style="position:relative;">
     <button class="drawer-close" id="aiDrawerClose" aria-label="Cerrar analista de IA">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
     <div class="drawer-head">
       <div class="eyebrow">Asistente virtual</div>

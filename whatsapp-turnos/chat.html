@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Conversación — Gestor de Turnos por WhatsApp</title>
+<title>Conversación · Gestor de Turnos por WhatsApp</title>
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
@@ -28,7 +28,7 @@
           <div class="wa-phone-sub">Asistente virtual · en línea</div>
         </div>
       </div>
-      <div class="wa-phone-body" id="waBody"></div>
+      <div class="wa-phone-body" id="waBody" aria-live="polite" tabindex="-1"></div>
     </div>
   </div>
 </div>
@@ -67,7 +67,8 @@
       if (paso.de === 'bot') {
         const typing = document.createElement('div');
         typing.className = 'wa-typing';
-        typing.textContent = 'escribiendo…';
+        typing.setAttribute('aria-label', 'escribiendo…');
+        typing.innerHTML = '<span></span><span></span><span></span>';
         body.appendChild(typing);
         body.scrollTop = body.scrollHeight;
         await wait(700);
@@ -98,6 +99,7 @@
             if (myToken !== playToken) return;
             const opcion = paso.opciones[Number(btn.dataset.i)];
             opcionesEl.remove();
+            body.focus();
 
             const userBubble = document.createElement('div');
             userBubble.className = 'wa-bubble user';

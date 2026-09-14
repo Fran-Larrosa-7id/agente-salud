@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel de triage — Priorización de guardia</title>
+<title>Panel de triage · Priorización de guardia</title>
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
@@ -16,11 +16,11 @@
 </header>
 <main class="tr-panel">
   <div class="tr-panel-head">
-    <div class="wa-section-title" style="margin:0; font-size: var(--fs-md); font-weight:700; color:var(--navy-900)">Cola de guardia — priorizada por riesgo</div>
+    <div class="wa-section-title" style="margin:0; font-size: var(--fs-md); font-weight:700; color:var(--navy-900)">Cola de guardia, priorizada por riesgo</div>
     <button class="btn btn-ghost btn-sm" id="btnReset" type="button">Reiniciar demo</button>
   </div>
   <div class="tr-legend" id="trLegend"></div>
-  <div id="board"></div>
+  <div id="board" tabindex="-1"></div>
 </main>
 <script src="js/triage-data.js"></script>
 <script src="js/triage-state.js"></script>
@@ -57,6 +57,7 @@
       btn.addEventListener('click', () => {
         trMarcarAtendido(btn.dataset.atender);
         render();
+        document.getElementById('board').focus();
       });
     });
   }

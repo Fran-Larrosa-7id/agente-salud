@@ -17,73 +17,139 @@
 <main class="tr-panel">
   <div class="tr-panel-head">
     <div>
-      <h1 class="tr-panel-title">Cola de guardia, priorizada por riesgo<span class="tr-panel-count" id="trCount"></span></h1>
+      <h1 class="tr-panel-title">Cola de guardia</h1>
+      <p class="tr-panel-sub">Ordenada por prioridad clínica y hora de llegada. <span id="trUpdated"></span></p>
     </div>
-    <button class="btn btn-ghost btn-sm" id="btnReset" type="button">Reiniciar demo</button>
+    <div class="tr-panel-actions">
+      <button class="btn btn-ghost btn-sm" id="btnReset" type="button">Reiniciar demo</button>
+      <button class="btn btn-accent" id="btnSiguiente" type="button">Atender al siguiente</button>
+    </div>
   </div>
-  <div class="tr-summary" id="trSummary"></div>
-  <div class="tr-legend" id="trLegend"></div>
+
+  <div class="tr-levels" id="trLevels" role="group" aria-label="Filtrar por nivel de prioridad"></div>
+
   <div id="board" tabindex="-1"></div>
 </main>
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
 <script src="js/triage-data.js"></script>
 <script src="js/triage-state.js"></script>
 <script>
-  document.getElementById('trLegend').innerHTML = Object.values(TR_NIVELES)
-    .sort((a, b) => a.orden - b.orden)
-    .map((n) => `<span class="tr-legend-item"><span class="tr-legend-dot" style="background: var(--triage-${n.id})"></span>${n.nombre}</span>`).join('');
+  let nivelFiltro = '';
+  const ICON_ALERT = '<svg class="tr-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>';
 
-  function render() {
-    const state = trGetState();
-    const pendientes = state.cola
+  function showToast(message) {
+    const stack = document.getElementById('toastStack');
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg><span>${message}</span>`;
+    stack.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('is-visible'));
+    setTimeout(() => { toast.classList.remove('is-visible'); setTimeout(() => toast.remove(), 250); }, 2400);
+  }
+
+  function tiempoRestante(min, objetivo) {
+    if (min > objetivo) return { txt: `Excedido por ${min - objetivo} min`, cls: 'is-over', pct: 100 };
+    const pct = objetivo === 0 ? 100 : Math.round((min / objetivo) * 100);
+    return { txt: `Quedan ${objetivo - min} min`, cls: pct >= 75 ? 'is-warn' : '', pct };
+  }
+
+  function ordenados() {
+    return trGetState().cola
       .filter((p) => p.estado === 'esperando')
       .sort((a, b) => {
         const oa = TR_NIVELES[a.nivelId].orden, ob = TR_NIVELES[b.nivelId].orden;
         return oa !== ob ? oa - ob : a.ts - b.ts;
       });
+  }
 
-    const trCount = document.getElementById('trCount');
-    trCount.textContent = pendientes.length ? ` · ${pendientes.length} en espera` : '';
+  function render() {
+    const todos = ordenados();
+    const now = new Date();
+    document.getElementById('trUpdated').textContent = 'Actualizado ' + now.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) + '.';
 
-    const conDatos = pendientes.map((p) => {
-      const nivel = TR_NIVELES[p.nivelId];
-      const minEsperando = Math.floor((Date.now() - p.ts) / 60000);
-      return { p, nivel, overdue: minEsperando > nivel.minutos };
+    // Franja de niveles: resumen + filtro
+    const niveles = Object.values(TR_NIVELES).sort((a, b) => a.orden - b.orden);
+    document.getElementById('trLevels').innerHTML = niveles.map((n) => {
+      const cant = todos.filter((p) => p.nivelId === n.id).length;
+      const activo = nivelFiltro === n.id;
+      return `<button class="tr-level${activo ? ' is-active' : ''}${cant ? '' : ' is-zero'}" type="button" data-nivel="${n.id}" aria-pressed="${activo}" style="--lvl: var(--triage-${n.id})">
+        <span class="tr-level-count">${cant}</span>
+        <span class="tr-level-name">${n.nombre}</span>
+        <span class="tr-level-sla">${n.minutos === 0 ? 'Inmediata' : 'Objetivo ' + (n.minutos >= 120 ? (n.minutos / 60) + ' h' : n.minutos + ' min')}</span>
+      </button>`;
+    }).join('');
+    document.querySelectorAll('[data-nivel]').forEach((b) => {
+      b.addEventListener('click', () => {
+        nivelFiltro = nivelFiltro === b.dataset.nivel ? '' : b.dataset.nivel;
+        render();
+        document.querySelector(`[data-nivel="${b.dataset.nivel}"]`).focus();
+      });
     });
-    const excedidos = conDatos.filter((d) => d.overdue).length;
-    document.getElementById('trSummary').innerHTML = pendientes.length ? `
-      <div class="tr-summary-item"><div class="tr-summary-value">${pendientes.length}</div><div class="tr-summary-label">En espera</div></div>
-      <div class="tr-summary-item"><div class="tr-summary-value${excedidos ? ' is-alert' : ''}">${excedidos}</div><div class="tr-summary-label">Exceden tiempo objetivo</div></div>
-    ` : '';
 
+    document.getElementById('btnSiguiente').disabled = todos.length === 0;
+
+    const visibles = nivelFiltro ? todos.filter((p) => p.nivelId === nivelFiltro) : todos;
+    const excedidos = todos.filter((p) => Math.floor((Date.now() - p.ts) / 60000) > TR_NIVELES[p.nivelId].minutos).length;
     const board = document.getElementById('board');
-    board.innerHTML = conDatos.length
-      ? '<div class="tr-board">' + conDatos.map(({ p, nivel, overdue }) => {
-          const overdueIcon = '<svg class="tr-board-tiempo-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>';
-          return `<div class="tr-board-row" style="border-left-color: var(--triage-${p.nivelId}); background: var(--triage-${p.nivelId}-tint)">
-            <div class="tr-board-info">
-              <div class="tr-board-nombre">${p.nombre}</div>
-              <div class="tr-board-motivo">${p.motivoLabel}</div>
-            </div>
-            <div class="tr-board-meta">
-              <span class="badge" style="background: var(--triage-${p.nivelId}); color: #fff">${nivel.nombre}</span>
-              <div class="tr-board-tiempo${overdue ? ' is-overdue' : ''}" title="${overdue ? 'Superó el tiempo objetivo de atención (' + nivel.minutos + ' min)' : ''}">${overdue ? overdueIcon : ''}${trTiempoEsperando(p.ts)}</div>
-            </div>
-            <button class="btn btn-accent btn-sm tr-board-action" data-atender="${p.id}" type="button" aria-label="Marcar a ${p.nombre} como atendido">Marcar atendido</button>
-          </div>`;
-        }).join('') + '</div>'
-      : `<div class="empty-state"><div class="empty-state-title">Sin pacientes en espera</div><p>La cola de guardia está vacía por ahora.</p></div>`;
+
+    if (!visibles.length) {
+      board.innerHTML = todos.length
+        ? `<div class="empty-state"><div class="empty-state-title">Sin pacientes en este nivel</div><p>Hay ${todos.length} en espera en otros niveles. <button class="tr-link" type="button" id="btnQuitarFiltro">Ver todos</button></p></div>`
+        : `<div class="empty-state"><div class="empty-state-title">Sin pacientes en espera</div><p>La cola de guardia está vacía por ahora.</p></div>`;
+      const q = document.getElementById('btnQuitarFiltro');
+      if (q) q.addEventListener('click', () => { nivelFiltro = ''; render(); });
+      return;
+    }
+
+    board.innerHTML = `
+      <div class="tr-table-head">
+        <span><b>${visibles.length}</b> en espera${nivelFiltro ? ' en este nivel' : ''}</span>
+        ${excedidos ? `<span class="tr-table-alert">${ICON_ALERT}<b>${excedidos}</b> ${excedidos === 1 ? 'excede' : 'exceden'} el tiempo objetivo</span>` : ''}
+      </div>
+      <div class="table-wrap"><table class="tr-table">
+        <thead><tr><th>Prioridad</th><th>Paciente</th><th>Espera</th><th class="tr-col-sla">Tiempo objetivo</th><th><span class="visually-hidden">Acción</span></th></tr></thead>
+        <tbody>${visibles.map((p) => {
+          const nivel = TR_NIVELES[p.nivelId];
+          const min = Math.floor((Date.now() - p.ts) / 60000);
+          const t = tiempoRestante(min, nivel.minutos);
+          const esSiguiente = p.id === todos[0].id;
+          return `<tr class="${t.cls === 'is-over' ? 'is-over-row' : ''}">
+            <td><span class="tr-prio" style="--lvl: var(--triage-${p.nivelId})">${nivel.nombre}</span></td>
+            <td>
+              <div class="tr-nombre">${p.nombre}${esSiguiente ? '<span class="tr-next">Siguiente</span>' : ''}</div>
+              <div class="tr-motivo">${p.motivoLabel}</div>
+            </td>
+            <td class="tr-espera">${min < 1 ? '&lt; 1' : min} min</td>
+            <td class="tr-col-sla">
+              <div class="tr-sla-text ${t.cls}">${t.cls === 'is-over' ? ICON_ALERT : ''}${t.txt}</div>
+              <div class="tr-sla-bar" aria-hidden="true"><span class="${t.cls}" style="width:${Math.min(t.pct, 100)}%"></span></div>
+            </td>
+            <td class="tr-action"><button class="btn btn-secondary btn-sm" data-atender="${p.id}" type="button" aria-label="Marcar a ${p.nombre} como atendido">Marcar atendido</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
 
     board.querySelectorAll('[data-atender]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        trMarcarAtendido(btn.dataset.atender);
-        render();
-        document.getElementById('board').focus();
-      });
+      btn.addEventListener('click', () => atender(btn.dataset.atender));
     });
   }
 
+  function atender(id) {
+    const p = trGetState().cola.find((x) => x.id === id);
+    trMarcarAtendido(id);
+    if (p) showToast(p.nombre + ' marcado como atendido');
+    render();
+    document.getElementById('board').focus();
+  }
+
+  document.getElementById('btnSiguiente').addEventListener('click', () => {
+    const primero = ordenados()[0];
+    if (primero) atender(primero.id);
+  });
+
   document.getElementById('btnReset').addEventListener('click', () => {
     trResetDemo();
+    nivelFiltro = '';
     render();
   });
 

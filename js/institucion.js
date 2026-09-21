@@ -62,7 +62,7 @@
     document.getElementById('emptyState').hidden = filtered.length !== 0;
 
     tbody.innerHTML = filtered.map((p) => `
-      <tr data-id="${p.id}" tabindex="0" role="button" aria-label="Ver detalle de ${p.nombre} ${p.apellido}">
+      <tr class="${p.estado.key === 'revision' ? 'row-revision' : ''}" data-id="${p.id}" tabindex="0" role="button" aria-label="Ver detalle de ${p.nombre} ${p.apellido}">
         <td>
           <div class="patient-name-cell">
             <span class="patient-name">${p.nombre} ${p.apellido}</span>
@@ -96,8 +96,10 @@
     container.innerHTML = list.map((p) => `
       <div class="turno-row">
         <span class="turno-time num">${p.turno}</span>
-        <span class="turno-name">${p.nombre} ${p.apellido}</span>
-        ${statusBadge(p.estado)}
+        <div class="turno-info">
+          <span class="turno-name">${p.nombre} ${p.apellido}</span>
+          ${statusBadge(p.estado)}
+        </div>
       </div>
     `).join('');
   }
@@ -124,13 +126,22 @@
     profFilter = e.target.value;
     renderTable();
   });
-  document.querySelectorAll('#statusFilters .filter-chip').forEach((chip) => {
-    chip.addEventListener('click', () => {
-      document.querySelectorAll('#statusFilters .filter-chip').forEach((c) => c.classList.remove('is-active'));
-      chip.classList.add('is-active');
-      statusFilter = chip.dataset.status;
-      renderTable();
+  function setStatusFilter(status) {
+    statusFilter = status;
+    document.querySelectorAll('#statusFilters .filter-chip').forEach((c) => {
+      const on = c.dataset.status === status;
+      c.classList.toggle('is-active', on);
+      c.setAttribute('aria-pressed', on);
     });
+    document.querySelectorAll('.stat-cell').forEach((c) => {
+      const on = c.dataset.status === status;
+      c.classList.toggle('is-active', on);
+      c.setAttribute('aria-pressed', on);
+    });
+    renderTable();
+  }
+  document.querySelectorAll('#statusFilters .filter-chip, .stat-cell').forEach((el) => {
+    el.addEventListener('click', () => setStatusFilter(el.dataset.status));
   });
 
   // --- Drawer ---

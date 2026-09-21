@@ -26,27 +26,27 @@
       <p>Estado de pre-admisión de los pacientes de hoy.</p>
     </div>
 
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-card-label">Pacientes de hoy</div>
-        <div class="stat-card-value num" id="statTotal">0</div>
-        <div class="stat-card-foot">Turnos agendados</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Onboarding completo</div>
-        <div class="stat-card-value accent num" id="statListos">0</div>
-        <div class="stat-card-foot">Listos para atender</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Pendientes</div>
-        <div class="stat-card-value warn num" id="statPendientes">0</div>
-        <div class="stat-card-foot">Información o documentación</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">Requieren revisión</div>
-        <div class="stat-card-value danger num" id="statRevision">0</div>
-        <div class="stat-card-foot">Necesitan validación manual</div>
-      </div>
+    <div class="stat-grid" role="group" aria-label="Filtrar por estado desde el resumen">
+      <button class="stat-cell is-active" type="button" data-status="" aria-pressed="true">
+        <span class="stat-cell-label">Pacientes de hoy</span>
+        <span class="stat-cell-value num" id="statTotal">0</span>
+        <span class="stat-cell-foot">Turnos agendados</span>
+      </button>
+      <button class="stat-cell" type="button" data-status="listo" aria-pressed="false">
+        <span class="stat-cell-label">Onboarding completo</span>
+        <span class="stat-cell-value accent num" id="statListos">0</span>
+        <span class="stat-cell-foot">Listos para atender</span>
+      </button>
+      <button class="stat-cell" type="button" data-status="pendiente" aria-pressed="false">
+        <span class="stat-cell-label">Pendientes</span>
+        <span class="stat-cell-value warn num" id="statPendientes">0</span>
+        <span class="stat-cell-foot">Información o documentación</span>
+      </button>
+      <button class="stat-cell is-urgent" type="button" data-status="revision" aria-pressed="false">
+        <span class="stat-cell-label">Requieren revisión</span>
+        <span class="stat-cell-value danger num" id="statRevision">0</span>
+        <span class="stat-cell-foot">Necesitan validación manual</span>
+      </button>
     </div>
 
     <div class="content-grid">
@@ -54,6 +54,14 @@
         <div class="panel-head">
           <h2>Pacientes</h2>
           <span class="field-hint num" id="tableCount">0 pacientes</span>
+        </div>
+        <div class="filter-bar filter-bar-tabs">
+          <div class="filter-chip-group" id="statusFilters" role="group" aria-label="Filtrar por estado">
+            <button class="filter-chip is-active" data-status="">Todos</button>
+            <button class="filter-chip" data-status="listo">Completos</button>
+            <button class="filter-chip" data-status="pendiente">Pendientes</button>
+            <button class="filter-chip" data-status="revision">Revisión requerida</button>
+          </div>
         </div>
         <div class="filter-bar">
           <div class="search-input-wrap">
@@ -65,14 +73,6 @@
           <select class="select select-sm" id="profFilter">
             <option value="">Todos los profesionales</option>
           </select>
-        </div>
-        <div class="filter-bar" style="border-bottom: none">
-          <div class="filter-chip-group" id="statusFilters" role="group" aria-label="Filtrar por estado">
-            <button class="filter-chip is-active" data-status="">Todos</button>
-            <button class="filter-chip" data-status="listo">Completos</button>
-            <button class="filter-chip" data-status="pendiente">Pendientes</button>
-            <button class="filter-chip" data-status="revision">Revisión requerida</button>
-          </div>
         </div>
         <div class="table-wrap">
           <table class="patient-table">
@@ -96,7 +96,7 @@
         </div>
       </section>
 
-      <aside style="display:flex; flex-direction:column; gap: var(--sp-6);">
+      <aside class="side-col">
         <section class="panel">
           <div class="panel-head"><h2>Próximos turnos</h2></div>
           <div class="side-list" id="proximosTurnos"></div>

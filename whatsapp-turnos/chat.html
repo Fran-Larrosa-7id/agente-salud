@@ -41,7 +41,8 @@
     const cont = document.getElementById('waScenarios');
     cont.innerHTML = Object.keys(WA_ESCENARIOS).map((key) => {
       const esc = WA_ESCENARIOS[key];
-      return `<button class="wa-scenario-btn${key === activeKey ? ' is-active' : ''}" data-key="${key}" type="button">${esc.nombre}</button>`;
+      const off = !waFlujoActivo(esc.flujo);
+      return `<button class="wa-scenario-btn${key === activeKey ? ' is-active' : ''}" data-key="${key}" type="button">${esc.nombre}${off ? '<span class="wa-scenario-off">Automatización desactivada</span>' : ''}</button>`;
     }).join('');
     cont.querySelectorAll('[data-key]').forEach((btn) => {
       btn.addEventListener('click', () => playScenario(btn.dataset.key));
@@ -57,7 +58,16 @@
     renderScenarioList();
     const body = document.getElementById('waBody');
     body.innerHTML = '';
-    playSteps(WA_ESCENARIOS[key].pasos, body, myToken);
+    const esc = WA_ESCENARIOS[key];
+    const activo = waFlujoActivo(esc.flujo);
+    if (!activo) {
+      const aviso = document.createElement('div');
+      aviso.className = 'wa-notice';
+      aviso.innerHTML = `<b>Automatización desactivada:</b> ${waFlujo(esc.flujo).nombre}. <a href="panel.html">Activar en el panel</a>`;
+      body.appendChild(aviso);
+    }
+    waRegistrarActividad('María González', activo ? esc.actividad : 'escribió y fue derivada a un operador (automatización desactivada)');
+    playSteps(activo ? esc.pasos : esc.sinFlujo, body, myToken);
   }
 
   async function playSteps(pasos, body, myToken) {
@@ -121,6 +131,8 @@
   }
 
   renderScenarioList();
+  window.addEventListener('storage', renderScenarioList);
+  window.addEventListener('focus', renderScenarioList);
 </script>
 </body>
 </html>

@@ -18,25 +18,34 @@
 
 <main class="tr-shell">
 
+  <div class="tr-stepbar" id="stepbar">
+    <div class="tr-stepbar-row">
+      <button class="tr-stepbar-back" id="btnAtras" type="button" hidden><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>Atrás</button>
+      <span class="tr-step-count" id="stepCount" style="margin:0 0 0 auto">Paso 1 de 4</span>
+    </div>
+    <div class="tr-progress" id="trProgress" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  </div>
+
   <section id="stepNombre">
-    <div class="tr-step-count">Paso 1 de 4</div>
     <h1 class="tr-title">¿Cómo te llamás?</h1>
     <p class="tr-sub">Para poder identificarte en la sala de espera.</p>
-    <div class="field" style="margin-bottom: var(--sp-6)">
-      <input class="input" id="inputNombre" type="text" placeholder="Nombre y apellido" value="Roberto Aguirre">
-    </div>
-    <button class="btn btn-accent btn-block" id="btnNombreContinuar" type="button">Continuar</button>
+    <form id="formNombre">
+      <div class="field" style="margin-bottom: var(--sp-6)">
+        <label class="field-label" for="inputNombre">Nombre y apellido</label>
+        <input class="input" id="inputNombre" type="text" autocomplete="name" value="Roberto Aguirre" required>
+      </div>
+      <button class="btn btn-accent btn-block" id="btnNombreContinuar" type="submit">Continuar</button>
+    </form>
   </section>
 
   <section id="stepMotivo" hidden>
-    <div class="tr-step-count">Paso 2 de 4</div>
     <h1 class="tr-title">¿Cuál es tu síntoma principal?</h1>
     <p class="tr-sub">Elegí la opción que mejor describe por qué venís a la consulta hoy.</p>
-    <div id="motivosList"></div>
+    <p class="tr-emergency"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg><span>Si es una emergencia, avisá ahora en el mostrador de guardia o llamá al 107.</span></p>
+    <div class="tr-motivo-list" id="motivosList"></div>
   </section>
 
   <section id="stepPreguntas" hidden>
-    <div class="tr-step-count">Paso 3 de 4</div>
     <h1 class="tr-title">Algunas preguntas más</h1>
     <p class="tr-sub">Respondé con sinceridad, nos ayuda a priorizar tu atención.</p>
     <div id="preguntasList"></div>
@@ -44,10 +53,9 @@
   </section>
 
   <section id="stepIntensidad" hidden>
-    <div class="tr-step-count">Paso 4 de 4</div>
     <h1 class="tr-title">¿Qué tan intenso es el síntoma?</h1>
     <p class="tr-sub">0 es nada de molestia, 10 es lo más fuerte que imaginás.</p>
-    <div class="tr-slider-value" id="intensidadValue">5</div>
+    <div class="tr-slider-value" aria-live="polite"><span id="intensidadValue">5</span><small id="intensidadLabel">Moderado</small></div>
     <input class="tr-slider" id="inputIntensidad" type="range" min="0" max="10" value="5" aria-label="Intensidad del síntoma, de 0 a 10">
     <div class="tr-slider-labels"><span>0 · Nada</span><span>10 · Insoportable</span></div>
     <button class="btn btn-accent btn-block" id="btnVerResultado" type="button">Ver resultado</button>
@@ -59,8 +67,9 @@
       <div class="tr-result-nivel" id="resultNivel"></div>
       <div class="tr-result-accion" id="resultAccion"></div>
     </div>
+    <dl class="tr-summary-list" id="resultResumen"></dl>
     <button class="btn btn-accent btn-block" id="btnSumarCola" type="button">Sumarme a la cola de guardia</button>
-    <p id="confirmacionCola" style="text-align:center; margin-top: var(--sp-5); color: var(--ink-soft); font-size: var(--fs-sm)" hidden></p>
+    <div class="tr-queue-box" id="confirmacionCola" hidden></div>
   </section>
 
 </main>

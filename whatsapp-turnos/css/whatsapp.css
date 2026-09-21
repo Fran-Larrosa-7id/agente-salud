@@ -205,3 +205,11 @@
 .wa-activity-row:last-child { border-bottom: none; }
 .wa-activity-row b { color: var(--navy-900); }
 .wa-activity-when { color: var(--ink-soft); font-size: var(--fs-xs); white-space: nowrap; }
+
+/* ---------- Vínculo con automatizaciones ---------- */
+.wa-scenario-off { display: block; margin-top: 4px; font-size: var(--fs-xs); font-weight: 700; color: var(--red-600); }
+.wa-notice { align-self: stretch; background: var(--amber-100); color: var(--amber-700); border-radius: var(--r-sm); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-xs); line-height: var(--lh-normal); }
+.wa-notice a { color: inherit; font-weight: 700; }
+.wa-bubble.sistema { align-self: center; background: rgba(255,255,255,0.7); color: var(--gray-600); font-size: var(--fs-xs); text-align: center; box-shadow: none; }
+.wa-flow-state { margin-top: var(--sp-2); font-size: var(--fs-xs); font-weight: 700; color: var(--green-700); }
+.wa-flow-state.is-off { color: var(--red-600); }

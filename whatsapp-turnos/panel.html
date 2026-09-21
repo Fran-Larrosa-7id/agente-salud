@@ -37,28 +37,34 @@
       <div class="wa-flow-card">
         <div class="wa-flow-head">
           <div class="wa-flow-name">${f.nombre}</div>
-          <button class="wa-toggle${f.activo ? ' is-on' : ''}" data-i="${i}" type="button" role="switch" aria-checked="${f.activo}" aria-label="${f.nombre}"></button>
+          <button class="wa-toggle${f.activo ? ' is-on' : ''}" data-id="${f.id}" data-i="${i}" type="button" role="switch" aria-checked="${f.activo}" aria-label="${f.nombre}"></button>
         </div>
         <div class="wa-flow-desc">${f.descripcion}</div>
         <div class="wa-flow-trigger"><b>Se dispara con:</b> ${f.disparador}</div>
+        <div class="wa-flow-state${f.activo ? '' : ' is-off'}">${f.activo ? 'Activo' : 'Desactivado: los pacientes se derivan a un operador'}</div>
       </div>`).join('');
 
     document.querySelectorAll('.wa-toggle').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const i = Number(btn.dataset.i);
-        WA_AUTOMATIZACIONES[i].activo = !WA_AUTOMATIZACIONES[i].activo;
+        const id = btn.dataset.id;
+        waSetFlujo(id, !waFlujoActivo(id));
         renderFlows();
-        document.querySelector(`.wa-toggle[data-i="${i}"]`).focus();
+        document.querySelector(`.wa-toggle[data-id="${id}"]`).focus();
       });
     });
   }
   renderFlows();
 
-  document.getElementById('waActivity').innerHTML = WA_ACTIVIDAD.map((a) => `
-    <div class="wa-activity-row">
-      <span><b>${a.paciente}</b> ${a.accion}</span>
-      <span class="wa-activity-when">${a.hace}</span>
-    </div>`).join('');
+  function renderActividad() {
+    document.getElementById('waActivity').innerHTML = waActividadCompleta().map((a) => `
+      <div class="wa-activity-row">
+        <span><b>${a.paciente}</b> ${a.accion}</span>
+        <span class="wa-activity-when">${a.hace}</span>
+      </div>`).join('');
+  }
+  renderActividad();
+  window.addEventListener('storage', () => { waCargarFlujos(); renderFlows(); renderActividad(); });
+  window.addEventListener('focus', () => { waCargarFlujos(); renderFlows(); renderActividad(); });
 </script>
 </body>
 </html>

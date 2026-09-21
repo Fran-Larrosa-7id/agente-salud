@@ -89,24 +89,28 @@ const WA_ESCENARIOS = {
 
 const WA_AUTOMATIZACIONES = [
   {
+    id: 'solicitud',
     nombre: 'Solicitud de turno por chat',
     descripcion: 'El paciente pide un turno por WhatsApp y el asistente ofrece los horarios disponibles según especialidad.',
     disparador: 'Mensaje entrante con intención de "sacar turno"',
     activo: true,
   },
   {
+    id: 'recordatorio',
     nombre: 'Recordatorio 24 hs antes',
     descripcion: 'Se envía un recordatorio automático con opción de confirmar, reprogramar o cancelar.',
     disparador: '24 hs antes de cada turno agendado',
     activo: true,
   },
   {
+    id: 'reprogramacion',
     nombre: 'Reprogramación automática',
     descripcion: 'Si el paciente cancela, se le ofrecen los próximos horarios disponibles sin intervención humana.',
     disparador: 'Respuesta "Cancelar" o "Reprogramar" en un recordatorio',
     activo: true,
   },
   {
+    id: 'encuesta',
     nombre: 'Encuesta post-consulta',
     descripcion: 'A las 2 horas de finalizada la consulta, se envía una encuesta corta de satisfacción.',
     disparador: 'Turno marcado como "Atendido" en el sistema',
@@ -128,3 +132,70 @@ const WA_ACTIVIDAD = [
   { paciente: 'Diego Molina', accion: 'canceló su turno del 17/09', hace: 'Hace 1 h' },
   { paciente: 'Florencia Díaz', accion: 'confirmó su turno del 15/09 12:00', hace: 'Hace 2 h' },
 ];
+
+// ---------- Vínculo panel de automatizaciones <-> conversación (estado en localStorage) ----------
+const WA_KEY_FLUJOS = 'wa-flujos';
+const WA_KEY_ACTIVIDAD = 'wa-actividad-extra';
+
+function waLeer(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; }
+}
+function waEscribir(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* sin persistencia: queda en memoria */ }
+}
+
+function waCargarFlujos() {
+  const guardado = waLeer(WA_KEY_FLUJOS, {});
+  WA_AUTOMATIZACIONES.forEach((f) => { if (typeof guardado[f.id] === 'boolean') f.activo = guardado[f.id]; });
+}
+function waFlujo(id) { return WA_AUTOMATIZACIONES.find((f) => f.id === id); }
+function waFlujoActivo(id) { const f = waFlujo(id); return !f || f.activo; }
+function waSetFlujo(id, activo) {
+  const f = waFlujo(id);
+  if (!f) return;
+  f.activo = activo;
+  const guardado = waLeer(WA_KEY_FLUJOS, {});
+  guardado[id] = activo;
+  waEscribir(WA_KEY_FLUJOS, guardado);
+}
+
+function waRegistrarActividad(paciente, accion) {
+  const lista = waLeer(WA_KEY_ACTIVIDAD, []);
+  lista.unshift({ paciente, accion, ts: Date.now() });
+  waEscribir(WA_KEY_ACTIVIDAD, lista.slice(0, 6));
+}
+function waHace(ts) {
+  const min = Math.floor((Date.now() - ts) / 60000);
+  if (min < 1) return 'Ahora';
+  if (min < 60) return 'Hace ' + min + ' min';
+  return 'Hace ' + Math.floor(min / 60) + ' h';
+}
+function waActividadCompleta() {
+  const extra = waLeer(WA_KEY_ACTIVIDAD, []).map((a) => ({ paciente: a.paciente, accion: a.accion, hace: waHace(a.ts) }));
+  return extra.concat(WA_ACTIVIDAD).slice(0, 8);
+}
+
+// Cada escenario depende de un flujo. Si el flujo está apagado, la conversación cambia.
+const WA_OPERADOR = 'Gracias por escribirnos. Un operador de la clínica te va a responder a la brevedad.';
+Object.assign(WA_ESCENARIOS.solicitud, {
+  flujo: 'solicitud',
+  actividad: 'solicitó un turno de Cardiología',
+  sinFlujo: [WA_ESCENARIOS.solicitud.pasos[0], { de: 'bot', texto: WA_OPERADOR }],
+});
+Object.assign(WA_ESCENARIOS.recordatorio, {
+  flujo: 'recordatorio',
+  actividad: 'recibió el recordatorio de su turno',
+  sinFlujo: [{ de: 'sistema', texto: 'No se envió el recordatorio: la paciente no recibe ningún mensaje automático.' }],
+});
+Object.assign(WA_ESCENARIOS.cancelacion, {
+  flujo: 'reprogramacion',
+  actividad: 'canceló su turno del 16/09',
+  sinFlujo: [WA_ESCENARIOS.cancelacion.pasos[0], { de: 'bot', texto: 'Recibimos tu solicitud de cancelación. Un operador la va a gestionar y te confirma por acá.' }],
+});
+Object.assign(WA_ESCENARIOS.reprogramacion, {
+  flujo: 'reprogramacion',
+  actividad: 'pidió reprogramar su turno',
+  sinFlujo: [WA_ESCENARIOS.reprogramacion.pasos[0], { de: 'bot', texto: WA_OPERADOR }],
+});
+
+waCargarFlujos();

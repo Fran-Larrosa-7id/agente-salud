@@ -3,158 +3,205 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catálogo de Soluciones · Vertical Salud</title>
+<title>Soluciones Digitales · Vertical Salud</title>
+<meta name="description" content="Productos y experiencias digitales adaptables a las necesidades de cada institución de salud.">
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/base.css">
-<style>
-  body { background: var(--surface-page); }
-  .cat { max-width: 1120px; margin: 0 auto; padding: var(--sp-8) var(--sp-6) var(--sp-10); }
-  .cat-head { border-bottom: 2px solid var(--navy-900); padding-bottom: var(--sp-5); margin-bottom: var(--sp-6); }
-  .cat-eyebrow { margin: 0 0 var(--sp-2); font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--teal-700); }
-  .cat-head h1 { margin: 0; font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -0.01em; color: var(--navy-900); }
-  .cat-head p { margin: var(--sp-2) 0 0; max-width: 62ch; font-size: var(--fs-md); color: var(--ink-soft); }
-
-  .cat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
-  @media (max-width: 960px) { .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 620px) { .cat-grid { grid-template-columns: 1fr; } }
-
-  .cat-card { display: flex; flex-direction: column; background: var(--white); border: 1px solid var(--line-strong); border-top: 4px solid var(--navy-900); border-radius: var(--r-md); padding: var(--sp-5); }
-  .cat-card.is-transversal { border-top-color: var(--teal-700); }
-  .cat-card.is-exploratorio { border-top-color: var(--amber-600); }
-  .cat-status { align-self: flex-start; margin-bottom: var(--sp-3); font-size: 0.6875rem; font-weight: 800; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-soft); }
-  .cat-card h2 { margin: 0 0 var(--sp-2); font-size: var(--fs-lg); font-weight: 800; color: var(--navy-900); }
-  .cat-desc { margin: 0 0 var(--sp-3); font-size: var(--fs-sm); color: var(--ink); }
-  .cat-tags { list-style: none; margin: 0 0 var(--sp-4); padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-  .cat-tags li { font-size: var(--fs-xs); font-weight: 600; color: var(--navy-900); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 2px 8px; }
-  .cat-more { margin-bottom: var(--sp-4); border-top: 1px solid var(--line); font-size: var(--fs-sm); }
-  .cat-more summary { cursor: pointer; padding: var(--sp-3) 0; font-weight: 700; color: var(--accent-strong); }
-  .cat-more summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  .cat-more dl { margin: 0; }
-  .cat-more dt { margin-top: var(--sp-2); font-size: 0.6875rem; font-weight: 800; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-soft); }
-  .cat-more dd { margin: 2px 0 0; color: var(--ink); }
-  .cat-cta { margin-top: auto; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--sp-4); background: var(--navy-900); color: #fff; font-weight: 700; font-size: var(--fs-sm); border-radius: var(--r-sm); text-decoration: none; transition: background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-out); }
-  .cat-cta:hover { background: var(--navy-800); }
-  .cat-cta:active { transform: scale(0.98); }
-  .cat-cta:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-
-  .journey { margin-top: var(--sp-8); background: var(--white); border: 1px solid var(--line-strong); border-top: 2px solid var(--navy-900); border-radius: var(--r-md); padding: var(--sp-5); }
-  .journey h2 { margin: 0 0 var(--sp-4); font-size: var(--fs-md); font-weight: 800; color: var(--navy-900); }
-  .journey ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-4); }
-  @media (max-width: 760px) { .journey ol { grid-template-columns: 1fr; } }
-  .journey li { border-left: 3px solid var(--navy-900); padding-left: var(--sp-3); }
-  .journey-phase { display: block; font-size: 0.6875rem; font-weight: 800; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--teal-700); }
-  .journey b { display: block; margin-top: 2px; font-size: var(--fs-sm); color: var(--navy-900); }
-  .journey li span.j-d { display: block; font-size: var(--fs-xs); color: var(--ink-soft); margin-top: 2px; }
-  .journey-note { margin: var(--sp-4) 0 0; padding-top: var(--sp-3); border-top: 1px solid var(--line); font-size: var(--fs-xs); color: var(--ink-soft); }
-  .cat-foot { margin-top: var(--sp-6); text-align: center; font-size: var(--fs-xs); color: var(--ink-soft); }
-</style>
+<link rel="stylesheet" href="css/home.css">
+<script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
-<main class="cat">
-  <header class="cat-head">
-    <p class="cat-eyebrow">Soluciones digitales · Vertical Salud</p>
-    <h1>Catálogo de soluciones</h1>
-    <p>Exploración de productos y experiencias digitales adaptables a distintas instituciones de salud.</p>
-  </header>
+<a class="skip" href="#soluciones">Ir a las soluciones</a>
 
-  <div class="cat-grid">
-    <article class="cat-card">
-      <span class="cat-status">Mock navegable</span>
-      <h2>Onboarding de pacientes</h2>
-      <p class="cat-desc">Digitalización de datos, documentación e información previa a la atención.</p>
-      <ul class="cat-tags"><li>Pre-atención</li><li>Configurable</li><li>Paciente + Institución</li></ul>
-      <details class="cat-more"><summary>Ver detalle</summary><dl>
-        <dt>Usuarios</dt><dd>Paciente y recepción.</dd>
-        <dt>Qué demuestra</dt><dd>La institución elige una plantilla y el flujo del paciente se adapta.</dd>
-        <dt>Cómo se adapta</dt><dd>Secciones y documentos requeridos por tipo de atención.</dd>
-        <dt>Simulado</dt><dd>Carga de archivos y envío de datos. No reemplaza la historia clínica.</dd>
-      </dl></details>
-      <a class="cat-cta" href="onboarding.html">Ver demo</a>
-    </article>
-
-    <article class="cat-card">
-      <span class="cat-status">Mock navegable</span>
-      <h2>Turnos por WhatsApp</h2>
-      <p class="cat-desc">Capa conversacional conectada al motor de agenda de la institución.</p>
-      <ul class="cat-tags"><li>Automatización</li><li>Agenda</li><li>WhatsApp</li></ul>
-      <details class="cat-more"><summary>Ver detalle</summary><dl>
-        <dt>Usuarios</dt><dd>Paciente y personal de la institución.</dd>
-        <dt>Qué demuestra</dt><dd>La IA interpreta; el motor valida disponibilidad y revalida antes de reservar; hay derivación a un operador.</dd>
-        <dt>Cómo se adapta</dt><dd>Automatizaciones activables y reglas de agenda de cada institución.</dd>
-        <dt>Simulado</dt><dd>API de WhatsApp, agenda y motor de turnos. La conversación es un guion.</dd>
-      </dl></details>
-      <a class="cat-cta" href="whatsapp-turnos/index.html">Ver demo</a>
-    </article>
-
-    <article class="cat-card">
-      <span class="cat-status">Mock navegable</span>
-      <h2>Llamador de pacientes</h2>
-      <p class="cat-desc">Gestión de salas de espera y llamado sincronizado de pacientes.</p>
-      <ul class="cat-tags"><li>Sala de espera</li><li>Recepción</li><li>Profesionales</li></ul>
-      <details class="cat-more"><summary>Ver detalle</summary><dl>
-        <dt>Usuarios</dt><dd>Recepción, profesionales y pacientes en sala.</dd>
-        <dt>Qué demuestra</dt><dd>Panel, app del profesional y pantalla de sala sincronizados en vivo.</dd>
-        <dt>Cómo se adapta</dt><dd>Privacidad del llamado (nombre, iniciales o número), consultorios y sonido.</dd>
-        <dt>Simulado</dt><dd>La sincronización usa localStorage entre pestañas, sin servidor en tiempo real.</dd>
-      </dl></details>
-      <a class="cat-cta" href="llamador-pacientes/index.html">Ver demo</a>
-    </article>
-
-    <article class="cat-card">
-      <span class="cat-status">Mock navegable</span>
-      <h2>Portal del paciente</h2>
-      <p class="cat-desc">Punto único de acceso del paciente a servicios digitales de la institución.</p>
-      <ul class="cat-tags"><li>Turnos</li><li>Estudios</li><li>Notificaciones</li></ul>
-      <details class="cat-more"><summary>Ver detalle</summary><dl>
-        <dt>Usuarios</dt><dd>Paciente.</dd>
-        <dt>Qué demuestra</dt><dd>Un acceso unificado a servicios que pueden venir de distintos sistemas.</dd>
-        <dt>Cómo se adapta</dt><dd>Los módulos visibles dependen de las soluciones que use la institución.</dd>
-        <dt>Simulado</dt><dd>No se integra con Horus ni Osiris. Datos ficticios.</dd>
-      </dl></details>
-      <a class="cat-cta" href="app-mobile-pacientes/index.html">Ver demo</a>
-    </article>
-
-    <article class="cat-card is-transversal">
-      <span class="cat-status">Capacidad transversal</span>
-      <h2>Asistente IA</h2>
-      <p class="cat-desc">Consulta de información operativa mediante lenguaje natural.</p>
-      <ul class="cat-tags"><li>Lenguaje natural</li><li>Operativo</li><li>Transversal</li></ul>
-      <details class="cat-more"><summary>Ver detalle</summary><dl>
-        <dt>Usuarios</dt><dd>Personal administrativo de la institución.</dd>
-        <dt>Qué demuestra</dt><dd>Preguntas sobre pacientes, turnos y documentación. No diagnostica ni recomienda tratamientos.</dd>
-        <dt>Cómo se adapta</dt><dd>Consulta las fuentes de información a las que la institución decida conectarlo.</dd>
-        <dt>Simulado</dt><dd>No usa un modelo real: responde con reglas sobre datos de ejemplo.</dd>
-      </dl></details>
-      <a class="cat-cta" href="institucion.html?ia=1">Ver demo</a>
-    </article>
-
-    <article class="cat-card is-exploratorio">
-      <span class="cat-status">Concepto exploratorio</span>
-      <h2>Triage</h2>
-      <p class="cat-desc">Evaluación y priorización basada en reglas definidas y validadas por la institución.</p>
-      <ul class="cat-tags"><li>Guardia</li><li>Reglas configurables</li><li>Revisión profesional</li></ul>
-      <details class="cat-more"><summary>Ver detalle</summary><dl>
-        <dt>Usuarios</dt><dd>Paciente y equipo de guardia.</dd>
-        <dt>Qué demuestra</dt><dd>Un motor de evaluación que ordena la cola con prioridad orientativa; siempre hay revisión profesional.</dd>
-        <dt>Cómo se adapta</dt><dd>Reglas y contacto de emergencia definidos por cada institución.</dd>
-        <dt>Simulado</dt><dd>Las reglas son ilustrativas, no un protocolo clínico validado.</dd>
-      </dl></details>
-      <a class="cat-cta" href="triage-riesgo/index.html">Ver demo</a>
-    </article>
+<header class="h-bar">
+  <div class="wrap">
+    <a class="h-brand" href="index.html" aria-label="Vertical Salud, inicio"><i aria-hidden="true"></i>Vertical Salud <small>Soluciones digitales</small></a>
+    <nav class="h-nav" aria-label="Principal">
+      <a href="#soluciones">Soluciones</a>
+      <a href="#recorrido">Recorrido</a>
+    </nav>
   </div>
+</header>
 
-  <section class="journey" aria-labelledby="jTitle">
-    <h2 id="jTitle">Cómo pueden convivir, sin ser un solo sistema</h2>
-    <ol>
-      <li><span class="journey-phase">Antes de la atención</span><b>Turnos por WhatsApp</b><span class="j-d">Gestiona, confirma y recuerda el turno.</span><span class="j-d">↓ Onboarding prepara datos y documentación.</span></li>
-      <li><span class="journey-phase">Llegada</span><b>Llamador</b><span class="j-d">Ordena la sala de espera.</span></li>
-      <li><span class="journey-phase">Atención</span><b>Sistema clínico / Horus</b><span class="j-d">Fuera del alcance de estos mocks.</span></li>
-      <li><span class="journey-phase">Post-atención</span><b>Portal del paciente</b><span class="j-d">Turnos, estudios y notificaciones.</span></li>
-    </ol>
-    <p class="journey-note">Cada solución puede funcionar de forma independiente o integrarse con otros sistemas de la institución.</p>
+<main>
+  <section class="hero" aria-labelledby="h1">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow">Soluciones digitales · Vertical Salud</p>
+        <h1 id="h1">Tecnología para acompañar cada etapa de la atención</h1>
+        <p class="hero-sub">Productos y experiencias digitales adaptables a las necesidades de cada institución de salud.</p>
+        <div class="hero-cta">
+          <a class="btn-h primary" href="#soluciones">Explorar soluciones <span class="arr" aria-hidden="true">→</span></a>
+          <a class="btn-h ghost" href="#recorrido">Ver recorrido</a>
+        </div>
+      </div>
+      <div class="mosaic" aria-hidden="true">
+        <figure><img src="assets/catalog/crop/onboarding_pacientes.webp" alt="" width="263" height="408"></figure>
+        <figure><img src="assets/catalog/crop/turnos_whatsapp.webp" alt="" width="252" height="408"></figure>
+        <figure><img src="assets/catalog/crop/llamador_pacientes.webp" alt="" width="246" height="408"></figure>
+      </div>
+    </div>
   </section>
 
-  <p class="cat-foot">Prototipos frontend sin backend · datos ficticios · no son implementaciones productivas.</p>
+  <section class="sec" id="soluciones" aria-labelledby="sPrin">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Soluciones principales</p>
+        <h2 id="sPrin">Antes, durante y a la llegada de la atención</h2>
+        <p>Tres soluciones que ordenan el contacto con el paciente. Cada institución define cómo se adaptan.</p>
+      </div>
+
+      <div class="feats">
+        <article class="feat t-mint reveal">
+          <div class="feat-body">
+            <p class="eyebrow"><span class="feat-num">01</span> · Solución digital</p>
+            <h3>Onboarding de pacientes</h3>
+            <p class="feat-desc">Digitalización de datos, documentación e información previa a la atención.</p>
+            <p class="feat-meta">Pre-atención · Configurable por institución</p>
+            <a class="go" href="onboarding.html">Ver demo <span class="arr" aria-hidden="true">→</span></a>
+            <details class="more"><summary>Qué demuestra y qué es simulado</summary><dl>
+              <dt>Usuarios</dt><dd>Paciente y recepción.</dd>
+              <dt>Qué demuestra</dt><dd>La institución elige una plantilla y el flujo del paciente se adapta.</dd>
+              <dt>Cómo se adapta</dt><dd>Secciones y documentos requeridos por tipo de atención.</dd>
+              <dt>Simulado</dt><dd>Carga de archivos y envío de datos. No reemplaza la historia clínica.</dd>
+            </dl></details>
+          </div>
+          <div class="feat-media"><img src="assets/catalog/crop/onboarding_pacientes.webp" alt="Paciente completando su información previa en el celular: datos personales y cobertura médica" width="263" height="408" loading="lazy"></div>
+        </article>
+
+        <article class="feat t-sky reveal">
+          <div class="feat-body">
+            <p class="eyebrow"><span class="feat-num">02</span> · Solución digital</p>
+            <h3>Turnos por WhatsApp</h3>
+            <p class="feat-desc">Capa conversacional conectada al motor de agenda de la institución.</p>
+            <p class="feat-meta">WhatsApp · Agenda</p>
+            <a class="go" href="whatsapp-turnos/index.html">Ver demo <span class="arr" aria-hidden="true">→</span></a>
+            <details class="more"><summary>Qué demuestra y qué es simulado</summary><dl>
+              <dt>Usuarios</dt><dd>Paciente y personal de la institución.</dd>
+              <dt>Qué demuestra</dt><dd>La IA interpreta; el motor valida disponibilidad y revalida antes de reservar; hay derivación a un operador.</dd>
+              <dt>Cómo se adapta</dt><dd>Automatizaciones activables y reglas de agenda de cada institución.</dd>
+              <dt>Simulado</dt><dd>API de WhatsApp, agenda y motor de turnos. La conversación es un guion.</dd>
+            </dl></details>
+          </div>
+          <div class="feat-media"><img src="assets/catalog/crop/turnos_whatsapp.webp" alt="Conversación de WhatsApp con una clínica ofreciendo horarios alternativos para un turno" width="252" height="408" loading="lazy"></div>
+        </article>
+
+        <article class="feat t-gray reveal">
+          <div class="feat-body">
+            <p class="eyebrow"><span class="feat-num">03</span> · Solución digital</p>
+            <h3>Llamador de pacientes</h3>
+            <p class="feat-desc">Gestión de salas de espera y llamado sincronizado de pacientes.</p>
+            <p class="feat-meta">Recepción · Profesionales · Sala de espera</p>
+            <a class="go" href="llamador-pacientes/index.html">Ver demo <span class="arr" aria-hidden="true">→</span></a>
+            <details class="more"><summary>Qué demuestra y qué es simulado</summary><dl>
+              <dt>Usuarios</dt><dd>Recepción, profesionales y pacientes en sala.</dd>
+              <dt>Qué demuestra</dt><dd>Panel, app del profesional y pantalla de sala sincronizados en vivo.</dd>
+              <dt>Cómo se adapta</dt><dd>Privacidad del llamado (nombre, iniciales o número), consultorios y sonido.</dd>
+              <dt>Simulado</dt><dd>La sincronización usa localStorage entre pestañas, sin servidor en tiempo real.</dd>
+            </dl></details>
+          </div>
+          <div class="feat-media"><img src="assets/catalog/crop/llamador_pacientes.webp" alt="Pantalla de sala de espera mostrando el consultorio y el nombre del paciente llamado" width="246" height="408" loading="lazy"></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0" aria-labelledby="sOtras">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="eyebrow">Otras soluciones y capacidades</p>
+        <h2 id="sOtras">Complementan el recorrido</h2>
+      </div>
+
+      <div class="minis">
+        <article class="mini reveal">
+          <figure class="mini-media"><img src="assets/catalog/crop/portal_paciente.webp" alt="Portal del paciente en el celular con próximo turno, estudios y documentos" width="283" height="406" loading="lazy"></figure>
+          <div class="mini-body">
+            <p class="eyebrow">Solución digital</p>
+            <h3>Portal del paciente</h3>
+            <p class="mini-desc">Punto único de acceso del paciente a servicios digitales de la institución.</p>
+            <a class="go" href="app-mobile-pacientes/index.html">Ver demo <span class="arr" aria-hidden="true">→</span></a>
+          </div>
+          <details class="more"><summary>Qué demuestra y qué es simulado</summary><dl>
+            <dt>Qué demuestra</dt><dd>Un acceso unificado a servicios que pueden venir de distintos sistemas.</dd>
+            <dt>Cómo se adapta</dt><dd>Los módulos visibles dependen de las soluciones que use la institución.</dd>
+            <dt>Simulado</dt><dd>No se integra con Horus ni Osiris. Datos ficticios.</dd>
+          </dl></details>
+        </article>
+
+        <article class="mini is-transversal reveal">
+          <figure class="mini-media"><img src="assets/catalog/crop/asistente_ia.webp" alt="Asistente en lenguaje natural respondiendo qué pacientes tienen documentación pendiente" width="242" height="406" loading="lazy"></figure>
+          <div class="mini-body">
+            <p class="eyebrow">Capacidad transversal</p>
+            <h3>Asistente IA</h3>
+            <p class="mini-desc">Consulta de información operativa mediante lenguaje natural.</p>
+            <a class="go" href="institucion.html?ia=1">Ver demo <span class="arr" aria-hidden="true">→</span></a>
+          </div>
+          <details class="more"><summary>Qué demuestra y qué es simulado</summary><dl>
+            <dt>Qué demuestra</dt><dd>Preguntas sobre pacientes, turnos y documentación. No diagnostica ni recomienda tratamientos.</dd>
+            <dt>Cómo se adapta</dt><dd>Consulta las fuentes de información a las que la institución decida conectarlo.</dd>
+            <dt>Simulado</dt><dd>No usa un modelo real: responde con reglas sobre datos de ejemplo.</dd>
+          </dl></details>
+        </article>
+
+        <article class="mini is-explor reveal">
+          <figure class="mini-media"><img src="assets/catalog/crop/triage.webp" alt="Tablet con la pregunta sobre el síntoma principal y opciones de respuesta" width="236" height="406" loading="lazy"></figure>
+          <div class="mini-body">
+            <p class="eyebrow">Concepto exploratorio</p>
+            <h3>Triage</h3>
+            <p class="mini-desc">Evaluación y priorización basada en reglas definidas y validadas por la institución.</p>
+            <a class="go" href="triage-riesgo/index.html">Ver demo <span class="arr" aria-hidden="true">→</span></a>
+          </div>
+          <details class="more"><summary>Qué demuestra y qué es simulado</summary><dl>
+            <dt>Qué demuestra</dt><dd>Un motor que ordena la cola con prioridad orientativa; siempre hay revisión profesional.</dd>
+            <dt>Cómo se adapta</dt><dd>Reglas y contacto de emergencia definidos por cada institución.</dd>
+            <dt>Simulado</dt><dd>Las reglas son ilustrativas, no un protocolo clínico validado. Etapa conceptual.</dd>
+          </dl></details>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec journey-band" id="recorrido" aria-labelledby="sJ">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <p class="eyebrow">Recorrido del paciente</p>
+        <h2 id="sJ">Soluciones que se complementan en cada etapa</h2>
+      </div>
+      <ol class="jr reveal">
+        <li><span class="ph">Antes de la atención</span><a class="nm" href="whatsapp-turnos/index.html">Turnos por WhatsApp</a><span class="ds">Gestiona, confirma y recuerda el turno.</span></li>
+        <li><span class="ph">Preparación</span><a class="nm" href="onboarding.html">Onboarding</a><span class="ds">Datos y documentación.</span></li>
+        <li><span class="ph">Llegada</span><a class="nm" href="llamador-pacientes/index.html">Llamador</a><span class="ds">Ordena la sala de espera.</span></li>
+        <li class="is-out"><span class="ph">Atención</span><span class="nm">Sistema clínico / Horus</span><span class="ds">Fuera del alcance de estos mocks.</span></li>
+        <li><span class="ph">Post-atención</span><a class="nm" href="app-mobile-pacientes/index.html">Portal del paciente</a><span class="ds">Turnos, estudios y notificaciones.</span></li>
+      </ol>
+      <div class="j-ia reveal">
+        <b>Asistente IA</b>
+        <span>Capacidad transversal: consulta información operativa en cualquier etapa. <a href="institucion.html?ia=1">Ver demo</a></span>
+      </div>
+      <p class="j-note">Cada solución puede funcionar de forma independiente o integrarse con otros sistemas de la institución.</p>
+    </div>
+  </section>
 </main>
+
+<footer class="h-foot">
+  <div class="wrap">
+    <p><b>Vertical Salud</b> · Soluciones digitales adaptables a cada institución.<br>Prototipos frontend sin backend, con datos ficticios.</p>
+    <nav aria-label="Pie de página"><a href="#soluciones">Soluciones</a><a href="#recorrido">Recorrido</a></nav>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    els.forEach(function (e) { e.classList.add('in'); }); return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+  els.forEach(function (e) { io.observe(e); });
+})();
+</script>
 </body>
 </html>

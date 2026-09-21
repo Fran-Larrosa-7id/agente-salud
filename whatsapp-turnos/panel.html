@@ -12,7 +12,7 @@
 <body>
 <header class="wa-topbar">
   <div class="wa-mark"><span class="dot"></span> Panel de automatizaciones</div>
-  <a class="wa-back" href="index.html">← Volver</a>
+  <span style="display:inline-flex;gap:var(--sp-4)"><a class="wa-back" href="index.html">← Volver</a><a class="wa-back" href="../index.html">Catálogo</a></span>
 </header>
 <main class="wa-panel">
   <div class="wa-stats-grid" id="waStats"></div>
@@ -43,7 +43,7 @@
     </div>
   </section>
 
-  <div class="wa-section-title">Automatizaciones</div>
+  <div class="wa-section-title" style="display:flex;justify-content:space-between;align-items:center">Automatizaciones <button class="btn btn-ghost btn-sm" id="waResetPanel" type="button">Reiniciar demo</button></div>
   <div class="wa-flows-grid" id="waFlows"></div>
 
   <div class="wa-section-title">Actividad reciente</div>
@@ -92,6 +92,7 @@
       </div>`).join('');
   }
   renderActividad();
+  document.getElementById('waResetPanel').addEventListener('click', () => { waResetDemo(); renderFlows(); renderActividad(); });
   window.addEventListener('storage', () => { waCargarFlujos(); renderFlows(); renderActividad(); });
   window.addEventListener('focus', () => { waCargarFlujos(); renderFlows(); renderActividad(); });
 </script>

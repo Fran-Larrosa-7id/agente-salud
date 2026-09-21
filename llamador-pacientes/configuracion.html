@@ -13,7 +13,7 @@
 <header class="ll-topbar">
   <div class="ll-mark"><span class="dot"></span> Configuración</div>
   <span class="ll-role">Vista de Administración</span>
-  <a class="ll-back" href="index.html">← Volver</a>
+  <span style="display:inline-flex;gap:var(--sp-4)"><a class="ll-back" href="index.html">← Volver</a><a class="ll-back" href="../index.html">Catálogo</a></span>
 </header>
 <main class="cfg">
   <div class="cfg-head">
@@ -50,6 +50,7 @@
       <fieldset class="cfg-box">
         <legend>Sonido al llamar</legend>
         <div id="cfgSonido"></div>
+        <button class="btn btn-ghost btn-sm" id="cfgReset" type="button" style="float:right">Restaurar valores demo</button>
         <button class="btn btn-secondary btn-sm" id="cfgProbar" type="button" style="margin-top: var(--sp-3)">Probar sonido</button>
       </fieldset>
     </div>
@@ -112,6 +113,17 @@
   document.querySelectorAll('input[name="sonido"]').forEach((r) => r.addEventListener('change', () => { cfg.sonido = r.value; guardar(); llSonar(cfg.sonido); }));
   document.querySelectorAll('[data-vis]').forEach((c) => c.addEventListener('change', () => { cfg.visible[c.dataset.vis] = c.checked; guardar(); }));
   $('cfgProbar').addEventListener('click', () => llSonar(cfg.sonido));
+  $('cfgReset').addEventListener('click', () => {
+    Object.assign(cfg, JSON.parse(JSON.stringify(LL_CONFIG_DEFAULT)));
+    llResetConfig();
+    $('cfgPantalla').value = cfg.pantalla;
+    radios('cfgFormato', 'formato', LL_FORMATOS, cfg.formato, true);
+    radios('cfgSonido', 'sonido', SONIDOS, cfg.sonido, false);
+    document.querySelectorAll('[data-vis]').forEach((c) => { c.checked = cfg.visible[c.dataset.vis]; });
+    document.querySelectorAll('input[name="formato"]').forEach((r) => r.addEventListener('change', () => { cfg.formato = r.value; guardar(); }));
+    document.querySelectorAll('input[name="sonido"]').forEach((r) => r.addEventListener('change', () => { cfg.sonido = r.value; guardar(); llSonar(cfg.sonido); }));
+    preview();
+  });
   preview();
 </script>
 </body>

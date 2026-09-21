@@ -153,6 +153,11 @@ function llNombreSala(nombre, id, formato) {
   return nombre;
 }
 
+function llResetConfig() {
+  try { localStorage.removeItem(LL_CONFIG_KEY); } catch (e) { /* nada que borrar */ }
+  return llGetConfig();
+}
+
 function llOnConfigChange(callback) {
   window.addEventListener('storage', (e) => {
     if (e.key === LL_CONFIG_KEY) callback(llGetConfig());

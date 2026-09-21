@@ -60,3 +60,22 @@ function trTiempoEsperando(ts) {
   if (min < 1) return 'recién llegado';
   return `hace ${min} min`;
 }
+
+// ---------- Contacto de emergencia configurable (cada institución define el suyo) ----------
+const TR_CONTACTO_KEY = 'triage_contacto_v1';
+const TR_CONTACTO_DEMO = { etiqueta: 'Emergencias médicas', numero: '107' };
+
+function trGetContacto() {
+  try {
+    const c = JSON.parse(localStorage.getItem(TR_CONTACTO_KEY));
+    if (c && c.etiqueta && c.numero) return c;
+  } catch (e) { /* usa el valor demo */ }
+  return Object.assign({}, TR_CONTACTO_DEMO);
+}
+function trSaveContacto(c) {
+  try { localStorage.setItem(TR_CONTACTO_KEY, JSON.stringify(c)); } catch (e) { /* sin persistencia */ }
+}
+function trRestaurarContacto() {
+  try { localStorage.removeItem(TR_CONTACTO_KEY); } catch (e) { /* nada que borrar */ }
+  return Object.assign({}, TR_CONTACTO_DEMO);
+}

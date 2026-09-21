@@ -1,43 +1,53 @@
 # Roadmap de mockups — Vertical Salud
 
-Contexto: trabajo en paralelo a Horus (no relacionado, prioridad menor), para ir armando una base de mockups de productos/aplicaciones ofrecibles a clientes de la Vertical Salud. Se hace en los huecos de tiempo mientras se espera disponibilidad de los servicios back de Horus. No se sube a repositorio ni se busca desarrollo funcional — el objetivo es explorar ideas, definir qué se puede ofrecer y generar mockups visuales/funcionales mockeados.
+Contexto: trabajo en paralelo a Horus y Osiris (no relacionado), para armar una base de mockups de soluciones ofrecibles a clientes de la Vertical Salud. El objetivo es explorar ideas y comunicar qué se puede ofrecer; no es desarrollo funcional. Punto de entrada: `index.html` (catálogo).
 
-Fuente: card de Trello con la lista oficial de productos a considerar.
+Categorías: FUERTE · COMPLEMENTARIO · CAPACIDAD TRANSVERSAL · EXPLORATORIO · BACKLOG.
 
-## Ya hecho
+## Onboarding de pacientes — FUERTE
+Rutas: `onboarding.html`, `institucion.html`, `paciente.html`.
+- **Qué demuestra:** preparar datos, documentación e información previa a la atención. La institución elige una plantilla (Consulta general, Pre-admisión quirúrgica, Diagnóstico por imágenes, Laboratorio, Personalizado) y el flujo del paciente omite secciones y ajusta los documentos requeridos.
+- **Mockeado:** carga de archivos, envío de datos, estados de los pacientes, persistencia de la configuración (solo `localStorage`).
+- **Falta:** requisitos por profesional o sede, recordatorios de onboarding pendiente.
+- **No se pretende:** historia clínica, evoluciones, diagnósticos, tratamientos.
 
-- **Onboarding de pacientes** (`paciente.html` + `institucion.html`, este mismo repo) — alta de pacientes, formularios, carga de documentación, datos previos a la atención. Ver `HANDOFF.md`, `PRODUCT.md`, `DESIGN.md` para proceso y sistema de diseño ("The Lab Report": navy `#0b2545` + teal `#0c7f74`/`#0f9b8e`).
-- **Llamador de pacientes** (`llamador-pacientes/`) — pantalla pública tipo TV para sala de espera, panel de control (recepción/consultorio) y vista mobile del profesional. Estado sincronizado en vivo entre pestañas vía `localStorage` (sin backend): llamar a un paciente desde el Panel actualiza la Pantalla automáticamente.
-- **Gestor de turnos por WhatsApp** (`whatsapp-turnos/`) — vista de conversación (chat simulado dentro de un frame de teléfono) con 4 escenarios ramificados: solicitar, recordatorio automático, cancelar y reprogramar turno; más un panel de automatizaciones institucional con métricas, flujos configurables (on/off) y actividad reciente.
-- **App mobile de pacientes** (`app-mobile-pacientes/`) — app de una sola pantalla con tab bar (Inicio, Turnos, Estudios, Avisos, Perfil): próximo turno, pedir turno nuevo (drawer con especialidades), cancelar/reprogramar, ver y "descargar" estudios, notificaciones con contador de no leídas, y documentación del paciente. Reusa María González como paciente de referencia para mantener continuidad narrativa con el resto de la vertical.
-- **Triage / evaluador de riesgo** (`triage-riesgo/`) — cuestionario de autoevaluación (motivo de consulta, preguntas de alarma, intensidad del síntoma) que calcula un nivel de riesgo tipo Manchester (rojo/naranja/amarillo/verde/azul) con acción recomendada, y un panel de guardia que prioriza automáticamente la cola por nivel + tiempo de espera. Sincronizado en vivo entre pestañas vía `localStorage`, mismo patrón que el Llamador de pacientes.
-- **Analista/Agente de IA** (embebido en `institucion.html` + `js/asistente-ia.js`) — botón flotante que abre un panel de chat lateral; responde preguntas en lenguaje natural ("¿quién requiere revisión?", "resumen del día", "pacientes de la Dra. Martínez") analizando en vivo los datos reales de la tabla de pacientes (`PACIENTES`/`ACTIVIDAD_RECIENTE` de `js/data.js`), no respuestas genéricas fijas. No se creó carpeta nueva porque tiene más sentido como capacidad dentro del dashboard existente que como producto standalone.
+## Turnos por WhatsApp — FUERTE
+Rutas: `whatsapp-turnos/index.html`, `chat.html`, `panel.html`.
+- **Qué demuestra:** la IA interpreta la intención; el motor valida disponibilidad real (ausencias, feriados, bloqueos, turnos existentes) y revalida antes de reservar; la agenda es la fuente de verdad. Escenarios: solicitar, profesional no disponible, horario que se ocupa, recordatorio, cancelar, reprogramar, hablar con un operador. Panel «Qué pasa por detrás», arquitectura conceptual y automatizaciones (Disparador / Acción / Estado) que afectan la conversación.
+- **Mockeado:** API de WhatsApp, agenda, motor de turnos, IA.
+- **Falta:** escenario para la encuesta post-consulta; vista de la bandeja del operador.
+- **No se pretende:** gestor de turnos completo, integración real con agendas.
 
-## Descartados
+## Llamador de pacientes — FUERTE
+Rutas: `llamador-pacientes/index.html`, `pantalla.html`, `panel.html`, `mobile.html`, `configuracion.html`.
+- **Qué demuestra:** sala de espera sincronizada entre recepción, profesional y pantalla; privacidad configurable (nombre completo, nombre + inicial, iniciales, número de turno); datos visibles y sonido configurables; separación de roles.
+- **Mockeado:** sincronización (`localStorage` + eventos `storage`, sin servidor en tiempo real), sonido, consultorios.
+- **Falta:** estado de llegada del paciente (programado → presente → en espera).
+- **No se pretende:** WebSockets, autenticación, integración con la agenda.
 
-- **Sistema de gestión de turnos** → ya es Horus, no corresponde mockear.
-- **Gestor de estudios** → ya es Osiris, no corresponde mockear.
-- **Sitio web informativo/administrable** → poco diferenciado (lo hace cualquier agencia), no muestra expertise específico de la vertical salud. Baja prioridad.
-- **Gestor de procesos** (tareas/estados/responsables/automatizaciones) → genérico, no específico de salud, bajo valor como showcase de vertical.
+## Portal del paciente — COMPLEMENTARIO
+Ruta: `app-mobile-pacientes/index.html`.
+- **Qué demuestra:** punto único de acceso del paciente a servicios digitales (turnos, estudios, documentación, notificaciones) que pueden venir de distintas soluciones.
+- **Mockeado:** todo el contenido y los datos.
+- **Falta:** nada previsto; se mantiene acotado.
+- **No se pretende:** reemplazar Horus, Osiris, Onboarding ni WhatsApp; ser una app completa.
 
-## Prioridad 1 — arrancar por acá (rápidos, alto impacto de demo, reusan el sistema de diseño ya definido)
+## Asistente IA — CAPACIDAD TRANSVERSAL
+Ruta: `institucion.html?ia=1` (panel embebido).
+- **Qué demuestra:** lenguaje natural sobre información operativa (revisión, documentación pendiente, próximos turnos, pacientes de un profesional). Consulta solo las fuentes que la institución decida conectarle.
+- **Mockeado:** el modelo; responde con reglas sobre datos de ejemplo.
+- **Falta:** presentarlo sobre otros productos (agenda, procesos).
+- **No se pretende:** diagnóstico, tratamiento, recomendación clínica, inventar datos.
 
-1. ~~**Llamador de pacientes**~~ ✅ hecho (`llamador-pacientes/`).
-2. ~~**Gestor de turnos por WhatsApp**~~ ✅ hecho (`whatsapp-turnos/`).
-3. ~~**App mobile de pacientes**~~ ✅ hecho (`app-mobile-pacientes/`).
+## Triage — EXPLORATORIO
+Rutas: `triage-riesgo/index.html`, `evaluacion.html`, `panel.html`.
+- **Qué demuestra:** un motor de evaluación aplica reglas configuradas y validadas por la institución y devuelve una prioridad orientativa; siempre hay revisión profesional. El contacto de emergencia es configurable.
+- **Mockeado:** las reglas, que son ilustrativas y no representan un protocolo clínico validado.
+- **Falta:** definir con profesionales las reglas antes de cualquier uso real.
+- **No se pretende:** algoritmo clínico, clasificación definitiva.
 
-## Prioridad 2 — más valor, más esfuerzo/lógica
+## BACKLOG
+Sin desarrollo: gestor de estudios, gestor de cirugías, historia clínica, integraciones reales, backend.
 
-4. ~~**Sistema de triage / evaluador de riesgo**~~ ✅ hecho (`triage-riesgo/`).
-5. ~~**Analista/Agente de IA**~~ ✅ hecho (panel embebido en `institucion.html`).
-
-## Evaluar con cuidado / dejar para más adelante
-
-- **Gestor de consultas** (gestión de atención, evolución, antecedentes, historia clínica) — alcance grande, casi un EHR completo.
-- **Gestor de cirugías** (programación, planificación, seguimiento, estados y procesos asociados) — el brief mismo dice "puede tomar Horus como referencia pero pensando en un producto más general", lo que sugiere riesgo de pisarse con el roadmap futuro de Horus.
-
-Ambos se harían solo si hay bastante tiempo libre acumulado, no como próximo paso — alcance grande y riesgo de duplicar trabajo con Horus.
-
-## Próximo paso
-
-Prioridad 1 y 2 completas (5 de 5 mockups). Lo que queda en la lista original es "evaluar con cuidado" (Gestor de consultas, Gestor de cirugías) — alcance grande, mejor esperar a tener más tiempo libre acumulado antes de arrancar alguno. Mientras tanto, probar los 5 mockups ya hechos en el navegador y recoger feedback antes de seguir sumando más.
+## Journey conceptual
+Turnos por WhatsApp → Onboarding → (llegada) Llamador → Atención (sistema clínico) → Portal del paciente. Cada solución puede funcionar sola o integrarse con otros sistemas; no es un sistema monolítico.

@@ -302,3 +302,5 @@ table.patient-table { width: 100%; min-width: 720px; border-collapse: collapse; 
 .cfg-check { display: flex; align-items: center; gap: var(--sp-3); padding: 5px 0; font-size: var(--fs-sm); cursor: pointer; }
 .cfg-check input { width: 16px; height: 16px; accent-color: var(--navy-900); }
 .cfg-scope { margin: var(--sp-4) 0 0; padding-top: var(--sp-3); border-top: 1px solid var(--line); font-size: var(--fs-xs); color: var(--ink-soft); }
+.cfg-flow { margin: 0 0 var(--sp-2); font-size: var(--fs-sm); font-weight: 700; color: var(--navy-900); }
+.cfg-link { font-size: var(--fs-sm); font-weight: 600; color: var(--accent-strong); }

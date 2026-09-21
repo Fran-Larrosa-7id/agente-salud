@@ -141,6 +141,7 @@
     openAiDrawer();
   });
   document.getElementById('aiDrawerClose').addEventListener('click', closeAiDrawer);
+  if (location.search.includes('ia=1')) document.getElementById('aiFabBtn').click();
   scrim.addEventListener('click', closeAiDrawer);
   document.addEventListener('keydown', (e) => {
     if (!drawer.classList.contains('is-open')) return;

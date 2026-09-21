@@ -12,12 +12,13 @@
 <body>
 <header class="wa-topbar">
   <div class="wa-mark"><span class="dot"></span> Conversación (paciente)</div>
-  <a class="wa-back" href="index.html">← Volver</a>
+  <span style="display:inline-flex;gap:var(--sp-4)"><a class="wa-back" href="index.html">← Volver</a><a class="wa-back" href="../index.html">Catálogo</a></span>
 </header>
 <div class="wa-chat-layout">
   <nav aria-label="Escenarios">
     <div class="wa-scenarios-title">Escenarios</div>
     <div id="waScenarios"></div>
+    <button class="btn btn-ghost btn-sm btn-block" id="waReset" type="button">Reiniciar demo</button>
   </nav>
   <div class="wa-phone-wrap">
     <div class="wa-phone">
@@ -170,6 +171,14 @@
     }
   }
 
+  document.getElementById('waReset').addEventListener('click', () => {
+    playToken += 1;
+    activeKey = null;
+    document.getElementById('waBody').innerHTML = '';
+    document.getElementById('waTrace').innerHTML = '';
+    document.getElementById('waTraceEmpty').hidden = false;
+    renderScenarioList();
+  });
   renderScenarioList();
   window.addEventListener('storage', renderScenarioList);
   window.addEventListener('focus', renderScenarioList);

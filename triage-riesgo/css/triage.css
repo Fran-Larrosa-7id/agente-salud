@@ -185,3 +185,10 @@
 
 /* ---------- Aclaración: reglas ilustrativas ---------- */
 .tr-disclaimer { margin: 0 0 var(--sp-4); padding: var(--sp-3) var(--sp-4); border-left: 4px solid var(--amber-600); background: var(--amber-100); font-size: var(--fs-xs); color: var(--ink); line-height: var(--lh-normal); }
+
+.tr-contact { margin: 0 0 var(--sp-4); border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--white); font-size: var(--fs-sm); }
+.tr-contact summary { cursor: pointer; padding: var(--sp-3) var(--sp-4); font-weight: 700; color: var(--navy-900); }
+.tr-contact summary:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.tr-contact-form { display: grid; gap: var(--sp-2); padding: 0 var(--sp-4) var(--sp-4); max-width: 360px; }
+.tr-contact-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-2); }
+.tr-contact-hint { margin: 0; font-size: var(--fs-xs); color: var(--ink-soft); }

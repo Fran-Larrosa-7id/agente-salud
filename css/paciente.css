@@ -161,3 +161,4 @@ body.paciente {
 .success-wrap h1 { font-size: var(--fs-xl); font-weight: 800; color: var(--navy-900); margin-bottom: var(--sp-2); }
 .success-wrap p { color: var(--ink-soft); }
 .appointment-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-5); margin-top: var(--sp-8); text-align: left; }
+.tpl-tag { display: inline-block; margin: 0 0 var(--sp-2); font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--teal-700); }

@@ -16,7 +16,7 @@
     <div class="brand"><span class="dot"></span> Onboarding de Pacientes</div>
     <div class="topbar-right">
       <span class="topbar-date num">Lunes 15 de septiembre</span>
-      <a class="topbar-exit" href="index.html">Salir de la demo</a>
+      <a class="topbar-exit" href="onboarding.html">← Volver</a><a class="topbar-exit" href="index.html">Catálogo</a>
     </div>
   </header>
 
@@ -116,6 +116,12 @@
               <div class="cfg-group-title">Documentación requerida</div>
               <ul class="cfg-checks" id="cfgDocs"></ul>
             </div>
+            <div class="cfg-group">
+              <div class="cfg-group-title">Flujo que verá el paciente</div>
+              <p class="cfg-flow" id="cfgFlow"></p>
+              <a class="cfg-link" href="paciente.html" target="_blank" rel="noopener">Abrir flujo del paciente ↗</a>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="cfgReset" type="button" style="margin-top: var(--sp-3)">Reiniciar configuración</button>
             <p class="cfg-scope">Reúne información <b>previa</b> a la atención. No reemplaza la historia clínica: no registra evoluciones, diagnósticos ni tratamientos.</p>
           </div>
         </section>
@@ -182,7 +188,7 @@
     <div class="drawer-head">
       <div class="eyebrow">Asistente IA · Onboarding · Agenda · Procesos</div>
       <div class="drawer-name" id="aiDrawerTitle">Analista de datos</div>
-      <div class="drawer-meta">Consulta información operativa en lenguaje natural. No diagnostica ni da recomendaciones clínicas.</div>
+      <div class="drawer-meta">Consulta información operativa en lenguaje natural, desde las fuentes a las que la institución decida conectarlo. No diagnostica ni da recomendaciones clínicas.</div>
     </div>
   </div>
   <div class="ai-chat-body" id="aiChatBody"></div>
@@ -196,47 +202,41 @@
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
 <script src="js/data.js"></script>
+<script src="js/onboarding-config.js"></script>
 <script src="js/institucion.js"></script>
 <script src="js/asistente-ia.js"></script>
 <script>
-  // Configuración conceptual: cada institución define qué solicita antes de una atención (mock, sin persistencia)
-  const CFG_SECCIONES = ['Datos personales', 'Cobertura médica', 'Antecedentes', 'Medicación', 'Documentación'];
-  const CFG_DOCS = ['DNI', 'Credencial', 'Orden médica', 'Estudios previos', 'Consentimiento informado', 'Ayuno confirmado'];
-  const CFG_PLANTILLAS = {
-    general: { nombre: 'Consulta general', ayuda: 'Datos básicos, cobertura y antecedentes para preparar la consulta.',
-      secciones: [1, 1, 1, 1, 1], docs: [1, 1, 0, 0, 0, 0] },
-    quirurgica: { nombre: 'Pre-admisión quirúrgica', ayuda: 'Suma estudios previos y consentimiento informado.',
-      secciones: [1, 1, 1, 1, 1], docs: [1, 1, 1, 1, 1, 0] },
-    imagenes: { nombre: 'Diagnóstico por imágenes', ayuda: 'Prioriza la orden médica y la información previa al estudio.',
-      secciones: [1, 1, 0, 1, 1], docs: [1, 1, 1, 0, 0, 0] },
-    laboratorio: { nombre: 'Laboratorio', ayuda: 'Orden médica y confirmación de ayuno, sin cuestionario largo.',
-      secciones: [1, 1, 0, 1, 1], docs: [1, 1, 1, 0, 0, 1] },
-    personalizado: { nombre: 'Personalizado', ayuda: 'La institución elige cada sección y cada documento.',
-      secciones: [1, 1, 0, 0, 1], docs: [1, 0, 0, 0, 0, 0] },
-  };
+  // Configuración de onboarding: se guarda y el flujo de paciente.html la aplica (ver js/onboarding-config.js)
   const cfgSel = document.getElementById('cfgPlantilla');
-  let cfgActual = null;
-  cfgSel.innerHTML = Object.keys(CFG_PLANTILLAS).map((k) => `<option value="${k}">${CFG_PLANTILLAS[k].nombre}</option>`).join('');
+  let cfgActual = obGetConfig();
+  cfgSel.innerHTML = Object.keys(OB_PLANTILLAS).map((k) => `<option value="${k}">${OB_PLANTILLAS[k].nombre}</option>`).join('');
+
   function cfgRender() {
-    const pl = cfgActual;
-    document.getElementById('cfgHelp').textContent = CFG_PLANTILLAS[cfgSel.value].ayuda;
+    cfgSel.value = cfgActual.plantilla;
+    document.getElementById('cfgHelp').textContent = OB_PLANTILLAS[cfgActual.plantilla].ayuda;
     const lista = (id, items, marks, tipo) => {
       document.getElementById(id).innerHTML = items.map((t, i) => `<li><label class="cfg-check"><input type="checkbox" data-t="${tipo}" data-i="${i}"${marks[i] ? ' checked' : ''}> ${t}</label></li>`).join('');
     };
-    lista('cfgSecciones', CFG_SECCIONES, pl.secciones, 's');
-    lista('cfgDocs', CFG_DOCS, pl.docs, 'd');
+    lista('cfgSecciones', OB_SECCIONES, cfgActual.secciones, 's');
+    lista('cfgDocs', OB_DOCS, cfgActual.docs, 'd');
     document.querySelectorAll('.cfg-check input').forEach((c) => c.addEventListener('change', () => {
-      (c.dataset.t === 's' ? pl.secciones : pl.docs)[Number(c.dataset.i)] = c.checked ? 1 : 0;
-      if (cfgSel.value !== 'personalizado') { cfgSel.value = 'personalizado'; document.getElementById('cfgHelp').textContent = CFG_PLANTILLAS.personalizado.ayuda; }
+      (c.dataset.t === 's' ? cfgActual.secciones : cfgActual.docs)[Number(c.dataset.i)] = c.checked ? 1 : 0;
+      cfgActual.plantilla = 'personalizado';
+      obSaveConfig(cfgActual);
+      cfgRender();
+      document.getElementById(c.dataset.t === 's' ? 'cfgSecciones' : 'cfgDocs').querySelector(`[data-i="${c.dataset.i}"]`).focus();
     }));
+    const flujo = ['Datos personales', 'Cobertura médica', 'Información clínica', 'Documentación'];
+    const on = [cfgActual.secciones[0], cfgActual.secciones[1], cfgActual.secciones[2] || cfgActual.secciones[3], cfgActual.secciones[4]];
+    document.getElementById('cfgFlow').textContent = flujo.filter((_, i) => on[i]).concat(['Revisión']).join(' → ');
   }
   cfgSel.addEventListener('change', () => {
-    const p = CFG_PLANTILLAS[cfgSel.value];
-    cfgActual = { secciones: p.secciones.slice(), docs: p.docs.slice() };
+    const p = OB_PLANTILLAS[cfgSel.value];
+    cfgActual = { plantilla: cfgSel.value, secciones: p.secciones.slice(), docs: p.docs.slice() };
+    obSaveConfig(cfgActual);
     cfgRender();
   });
-  cfgSel.value = 'general';
-  cfgActual = { secciones: CFG_PLANTILLAS.general.secciones.slice(), docs: CFG_PLANTILLAS.general.docs.slice() };
+  document.getElementById('cfgReset').addEventListener('click', () => { cfgActual = obResetConfig(); cfgRender(); });
   cfgRender();
 </script>
 </body>

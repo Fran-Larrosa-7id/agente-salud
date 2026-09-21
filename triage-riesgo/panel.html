@@ -12,7 +12,7 @@
 <body>
 <header class="tr-topbar">
   <div class="tr-mark"><span class="dot"></span> Panel de triage</div>
-  <a class="tr-back" href="index.html">← Volver</a>
+  <span style="display:inline-flex;gap:var(--sp-4)"><a class="tr-back" href="index.html">← Volver</a><a class="tr-back" href="../index.html">Catálogo</a></span>
 </header>
 <main class="tr-panel">
   <div class="tr-panel-head">
@@ -27,6 +27,21 @@
   </div>
 
   <p class="tr-disclaimer">Las reglas de clasificación utilizadas en esta demo son ilustrativas. En una implementación real, los criterios de evaluación y priorización deben ser definidos y validados por la institución y profesionales responsables. La prioridad es orientativa y siempre queda sujeta a revisión profesional.</p>
+
+  <details class="tr-contact">
+    <summary>Contacto de emergencia que ve el paciente</summary>
+    <form class="tr-contact-form" id="contactForm">
+      <label class="field-label" for="contactEtiqueta">Etiqueta</label>
+      <input class="input" id="contactEtiqueta" type="text" maxlength="40" required>
+      <label class="field-label" for="contactNumero">Número</label>
+      <input class="input" id="contactNumero" type="text" maxlength="20" required>
+      <div class="tr-contact-actions">
+        <button class="btn btn-secondary btn-sm" type="submit">Guardar</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="contactReset">Restaurar valor demo</button>
+      </div>
+      <p class="tr-contact-hint">Cada institución puede usar 911, una guardia propia o un interno.</p>
+    </form>
+  </details>
 
   <div class="tr-levels" id="trLevels" role="group" aria-label="Filtrar por nivel de prioridad"></div>
 
@@ -154,6 +169,19 @@
     nivelFiltro = '';
     render();
   });
+
+  function cargarContacto() {
+    const c = trGetContacto();
+    document.getElementById('contactEtiqueta').value = c.etiqueta;
+    document.getElementById('contactNumero').value = c.numero;
+  }
+  document.getElementById('contactForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    trSaveContacto({ etiqueta: document.getElementById('contactEtiqueta').value.trim(), numero: document.getElementById('contactNumero').value.trim() });
+    showToast('Contacto de emergencia guardado');
+  });
+  document.getElementById('contactReset').addEventListener('click', () => { trRestaurarContacto(); cargarContacto(); showToast('Valor demo restaurado'); });
+  cargarContacto();
 
   render();
   setInterval(render, 30000);

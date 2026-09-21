@@ -1,5 +1,6 @@
 // Datos mock — Sistema de triage / evaluador de riesgo
-// Clasificación inspirada en esquemas de triage hospitalario (tipo Manchester), simplificada para demo.
+// Priorización basada en reglas ilustrativas de esta demo. No es un protocolo clínico validado:
+// en una implementación real las define y valida la institución.
 // No es asesoramiento médico real.
 
 const TR_NIVELES = {

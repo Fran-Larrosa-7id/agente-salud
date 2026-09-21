@@ -295,3 +295,9 @@ Object.assign(WA_ESCENARIOS.operador, {
 });
 
 waCargarFlujos();
+
+// Reinicia solo el estado de esta demo (no toca otras claves de localStorage)
+function waResetDemo() {
+  try { localStorage.removeItem(WA_KEY_FLUJOS); localStorage.removeItem(WA_KEY_ACTIVIDAD); } catch (e) { /* nada que borrar */ }
+  WA_AUTOMATIZACIONES.forEach((f) => { f.activo = f.id !== 'encuesta'; });
+}

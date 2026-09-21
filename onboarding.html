@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding de Pacientes · Demo</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<style>
+  body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sp-6);
+    background: linear-gradient(180deg, var(--sky-50) 0%, var(--surface-page) 100%);
+  }
+  .selector {
+    width: 100%;
+    max-width: 880px;
+  }
+  .selector-head {
+    text-align: center;
+    margin-bottom: var(--sp-10);
+  }
+  .selector-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-weight: 800;
+    font-size: var(--fs-lg);
+    color: var(--navy-900);
+    margin-bottom: var(--sp-6);
+  }
+  .selector-mark .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .selector-head h1 {
+    font-size: var(--fs-2xl);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--navy-900);
+    margin-bottom: var(--sp-2);
+  }
+  .selector-head p { color: var(--ink-soft); font-size: var(--fs-md); }
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-5);
+  }
+  @media (max-width: 640px) {
+    .cards { grid-template-columns: 1fr; }
+  }
+  .demo-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: var(--sp-8) var(--sp-6);
+    text-align: left;
+    cursor: pointer;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
+    box-shadow: var(--shadow-sm);
+  }
+  .demo-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent);
+  }
+  .demo-card:active { transform: translateY(-1px) scale(0.99); }
+  .demo-card-head {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+  }
+  .demo-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--r-sm);
+    background: var(--mint-100);
+    color: var(--teal-600);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .demo-card h2 { font-size: var(--fs-lg); font-weight: 700; color: var(--navy-900); }
+  .demo-card p { color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: var(--sp-5); }
+  .demo-cta { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-sm); color: var(--accent-strong); }
+  .selector-foot { text-align: center; margin-top: var(--sp-8); font-size: var(--fs-xs); color: var(--gray-600); }
+  @media (max-width: 720px) { .journey ol { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<main class="selector">
+  <a href="index.html" style="display:inline-block;margin-bottom:var(--sp-5);font-size:var(--fs-sm);font-weight:600;color:var(--accent-strong)">← Volver a soluciones</a>
+  <div class="selector-head">
+    <div class="selector-mark"><span class="dot"></span> Onboarding de Pacientes</div>
+    <h1>Elegí qué demo querés ver</h1>
+    <p>Prototipo conceptual: dos experiencias relacionadas, un mismo producto.</p>
+  </div>
+  <div class="cards">
+    <a class="demo-card" href="paciente.html">
+      <div class="demo-card-head">
+        <div class="demo-icon">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 6h6M9 18h.01"/></svg>
+        </div>
+        <h2>Demo paciente</h2>
+      </div>
+      <p>Flujo mobile de pre-admisión: bienvenida, datos, cobertura, información clínica, documentación, revisión, consentimiento y confirmación.</p>
+      <span class="demo-cta">Ver flujo del paciente →</span>
+    </a>
+    <a class="demo-card" href="institucion.html">
+      <div class="demo-card-head">
+        <div class="demo-icon">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18M8 4v5"/></svg>
+        </div>
+        <h2>Demo institución</h2>
+      </div>
+      <p>Panel operativo: métricas del día, listado de pacientes con filtros y detalle individual con checklist, alertas y acciones rápidas.</p>
+      <span class="demo-cta">Ver dashboard institucional →</span>
+    </a>
+  </div>
+  <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · Vertical Salud</p>
+</main>
+</body>
+</html>

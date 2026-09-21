@@ -23,13 +23,17 @@
   <div class="mobile-current" id="mobileCurrent"></div>
 
   <div class="mobile-actions">
-    <button class="btn btn-accent btn-block" id="btnLlamar" type="button">Llamar siguiente</button>
-    <button class="btn btn-secondary btn-block" id="btnRepetir" type="button">Volver a llamar</button>
-    <button class="btn btn-ghost btn-block" id="btnFinalizar" type="button">Finalizar atención</button>
+    <button class="btn btn-accent btn-block mobile-primary" id="btnLlamar" type="button">Llamar siguiente</button>
+    <div class="mobile-actions-row">
+      <button class="btn btn-secondary" id="btnRepetir" type="button">Volver a llamar</button>
+      <button class="btn btn-secondary" id="btnFinalizar" type="button">Finalizar atención</button>
+    </div>
   </div>
 
-  <div class="mobile-cola-title" id="mobileColaTitle"></div>
-  <div id="mobileCola"></div>
+  <section aria-labelledby="mobileColaTitle">
+    <div class="mobile-cola-title" id="mobileColaTitle"></div>
+    <div class="panel-cola-list" id="mobileCola"></div>
+  </section>
 </main>
 <div class="toast-stack" id="toastStack"></div>
 <script src="js/llamador.js"></script>
@@ -60,10 +64,12 @@
     const cola = state.colas[activeId] || [];
 
     document.getElementById('mobileCurrent').innerHTML = `
-      <div class="mobile-current-label">Atendiendo ahora</div>
+      <div class="mobile-current-label">Atendiendo ahora · ${c.nombre}</div>
+      <div class="mobile-current-body">
       ${paciente
         ? `<div class="mobile-current-name">${paciente.nombre}</div><div class="mobile-current-turno">Turno ${paciente.turno}</div>`
-        : `<div class="mobile-current-name is-empty">Sin paciente en atención</div>`}`;
+        : `<div class="mobile-current-name is-empty">Sin paciente en atención</div>`}
+      </div>`;
 
     document.getElementById('btnLlamar').disabled = cola.length === 0;
     document.getElementById('btnRepetir').disabled = !paciente;
@@ -71,8 +77,8 @@
 
     document.getElementById('mobileColaTitle').textContent = `Cola de espera · ${cola.length} paciente${cola.length === 1 ? '' : 's'}`;
     document.getElementById('mobileCola').innerHTML = cola.length
-      ? cola.map((p) => `<div class="panel-cola-row"><span class="doc-name">${p.nombre}</span><span class="panel-cola-turno">Turno ${p.turno}</span></div>`).join('')
-      : `<div class="panel-cola-row" style="opacity:.6">No hay pacientes esperando</div>`;
+      ? cola.map((p, i) => `<div class="panel-cola-row"><span class="panel-cola-pos">${i + 1}</span><span class="doc-name">${p.nombre}</span><span class="panel-cola-turno">Turno ${p.turno}</span></div>`).join('')
+      : `<div class="panel-cola-row" style="color: var(--gray-600)">No hay pacientes esperando</div>`;
   }
 
   document.getElementById('btnLlamar').addEventListener('click', () => {

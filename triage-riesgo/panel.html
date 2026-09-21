@@ -16,9 +16,12 @@
 </header>
 <main class="tr-panel">
   <div class="tr-panel-head">
-    <div class="wa-section-title" style="margin:0; font-size: var(--fs-md); font-weight:700; color:var(--navy-900)">Cola de guardia, priorizada por riesgo</div>
+    <div>
+      <h1 class="tr-panel-title">Cola de guardia, priorizada por riesgo<span class="tr-panel-count" id="trCount"></span></h1>
+    </div>
     <button class="btn btn-ghost btn-sm" id="btnReset" type="button">Reiniciar demo</button>
   </div>
+  <div class="tr-summary" id="trSummary"></div>
   <div class="tr-legend" id="trLegend"></div>
   <div id="board" tabindex="-1"></div>
 </main>
@@ -38,19 +41,36 @@
         return oa !== ob ? oa - ob : a.ts - b.ts;
       });
 
+    const trCount = document.getElementById('trCount');
+    trCount.textContent = pendientes.length ? ` · ${pendientes.length} en espera` : '';
+
+    const conDatos = pendientes.map((p) => {
+      const nivel = TR_NIVELES[p.nivelId];
+      const minEsperando = Math.floor((Date.now() - p.ts) / 60000);
+      return { p, nivel, overdue: minEsperando > nivel.minutos };
+    });
+    const excedidos = conDatos.filter((d) => d.overdue).length;
+    document.getElementById('trSummary').innerHTML = pendientes.length ? `
+      <div class="tr-summary-item"><div class="tr-summary-value">${pendientes.length}</div><div class="tr-summary-label">En espera</div></div>
+      <div class="tr-summary-item"><div class="tr-summary-value${excedidos ? ' is-alert' : ''}">${excedidos}</div><div class="tr-summary-label">Exceden tiempo objetivo</div></div>
+    ` : '';
+
     const board = document.getElementById('board');
-    board.innerHTML = pendientes.length
-      ? pendientes.map((p) => {
-          const nivel = TR_NIVELES[p.nivelId];
-          return `<div class="tr-board-row">
-            <div class="tr-board-bar" style="background: var(--triage-${p.nivelId})"></div>
-            <div class="tr-board-nombre">${p.nombre}</div>
-            <div class="tr-board-motivo">${p.motivoLabel}</div>
-            <span class="badge" style="background: var(--triage-${p.nivelId}); color: #fff">${nivel.nombre}</span>
-            <div class="tr-board-tiempo">${trTiempoEsperando(p.ts)}</div>
-            <button class="btn btn-secondary btn-sm" data-atender="${p.id}" type="button">Marcar atendido</button>
+    board.innerHTML = conDatos.length
+      ? '<div class="tr-board">' + conDatos.map(({ p, nivel, overdue }) => {
+          const overdueIcon = '<svg class="tr-board-tiempo-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>';
+          return `<div class="tr-board-row" style="border-left-color: var(--triage-${p.nivelId}); background: var(--triage-${p.nivelId}-tint)">
+            <div class="tr-board-info">
+              <div class="tr-board-nombre">${p.nombre}</div>
+              <div class="tr-board-motivo">${p.motivoLabel}</div>
+            </div>
+            <div class="tr-board-meta">
+              <span class="badge" style="background: var(--triage-${p.nivelId}); color: #fff">${nivel.nombre}</span>
+              <div class="tr-board-tiempo${overdue ? ' is-overdue' : ''}" title="${overdue ? 'Superó el tiempo objetivo de atención (' + nivel.minutos + ' min)' : ''}">${overdue ? overdueIcon : ''}${trTiempoEsperando(p.ts)}</div>
+            </div>
+            <button class="btn btn-accent btn-sm tr-board-action" data-atender="${p.id}" type="button" aria-label="Marcar a ${p.nombre} como atendido">Marcar atendido</button>
           </div>`;
-        }).join('')
+        }).join('') + '</div>'
       : `<div class="empty-state"><div class="empty-state-title">Sin pacientes en espera</div><p>La cola de guardia está vacía por ahora.</p></div>`;
 
     board.querySelectorAll('[data-atender]').forEach((btn) => {

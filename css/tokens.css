@@ -40,6 +40,7 @@
 
   /* Type */
   --font-body: -apple-system, 'Segoe UI', 'Helvetica Neue', Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Segoe UI Mono', Menlo, Consolas, monospace;
   --fs-xs: 0.75rem;
   --fs-sm: 0.8125rem;
   --fs-base: 0.9375rem;

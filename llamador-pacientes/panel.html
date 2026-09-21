@@ -22,8 +22,10 @@
   </nav>
   <main class="panel-main">
     <div class="panel-current" id="panelCurrent"></div>
-    <div class="panel-cola-title" id="panelColaTitle"></div>
-    <div id="panelCola"></div>
+    <section class="panel-cola" aria-labelledby="panelColaTitle">
+      <div class="panel-cola-title" id="panelColaTitle"></div>
+      <div class="panel-cola-list" id="panelCola"></div>
+    </section>
   </main>
 </div>
 <div class="toast-stack" id="toastStack"></div>
@@ -58,10 +60,14 @@
     const side = document.getElementById('panelConsultorios');
     side.innerHTML = LL_CONSULTORIOS.map((c) => {
       const cola = state.colas[c.id] || [];
-      return `<button class="panel-consultorio-btn${c.id === activeId ? ' is-active' : ''}" data-id="${c.id}" type="button">
-        <div class="panel-consultorio-nombre">${c.nombre}</div>
-        <div class="panel-consultorio-prof">${c.profesional} · ${c.especialidad}</div>
-        <span class="badge badge-neutral panel-consultorio-count">${cola.length} en espera</span>
+      const num = (c.nombre.match(/\d+/) || [c.nombre])[0];
+      return `<button class="panel-consultorio-btn${c.id === activeId ? ' is-active' : ''}" data-id="${c.id}" type="button" aria-label="${c.nombre}, ${cola.length} en espera">
+        <span class="panel-consultorio-num" aria-hidden="true">${num}</span>
+        <span class="panel-consultorio-info">
+          <span class="panel-consultorio-nombre">${c.profesional}</span>
+          <span class="panel-consultorio-prof">${c.especialidad}</span>
+        </span>
+        <span class="panel-consultorio-count${cola.length ? '' : ' is-zero'}" aria-hidden="true">${cola.length}<small>en espera</small></span>
       </button>`;
     }).join('');
     side.querySelectorAll('[data-id]').forEach((btn) => {
@@ -74,9 +80,11 @@
 
     document.getElementById('panelCurrent').innerHTML = `
       <div class="panel-current-label">Atendiendo ahora · ${c.nombre}</div>
+      <div class="panel-current-body">
       ${paciente
         ? `<div class="panel-current-name">${paciente.nombre}</div><div class="panel-current-turno">Turno ${paciente.turno}</div>`
         : `<div class="panel-current-name is-empty">Sin paciente en atención</div>`}
+      </div>
       <div class="panel-actions">
         <button class="btn btn-accent" id="btnLlamar" type="button" ${cola.length === 0 ? 'disabled' : ''}>Llamar siguiente</button>
         <button class="btn btn-secondary" id="btnRepetir" type="button" ${paciente ? '' : 'disabled'}>Volver a llamar</button>
@@ -85,8 +93,8 @@
 
     document.getElementById('panelColaTitle').textContent = `Cola de espera · ${cola.length} paciente${cola.length === 1 ? '' : 's'}`;
     document.getElementById('panelCola').innerHTML = cola.length
-      ? cola.map((p) => `<div class="panel-cola-row"><span class="doc-name">${p.nombre}</span><span class="panel-cola-turno">Turno ${p.turno}</span></div>`).join('')
-      : `<div class="panel-cola-row" style="opacity:.6">No hay pacientes esperando en este consultorio</div>`;
+      ? cola.map((p, i) => `<div class="panel-cola-row"><span class="panel-cola-pos">${i + 1}</span><span class="doc-name">${p.nombre}</span><span class="panel-cola-turno">Turno ${p.turno}</span></div>`).join('')
+      : `<div class="panel-cola-row" style="color: var(--gray-600)">No hay pacientes esperando en este consultorio</div>`;
 
     document.getElementById('btnLlamar').addEventListener('click', () => {
       llLlamarSiguiente(activeId);

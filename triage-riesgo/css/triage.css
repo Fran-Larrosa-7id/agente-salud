@@ -4,6 +4,11 @@
   --triage-amarillo: #8a6d18;
   --triage-verde: #1f7a45;
   --triage-azul: #2f6fa8;
+  --triage-rojo-tint: #fbeae7;
+  --triage-naranja-tint: #f9eee1;
+  --triage-amarillo-tint: #f8f4de;
+  --triage-verde-tint: #e6f3ec;
+  --triage-azul-tint: #e8f1fa;
 }
 
 .tr-topbar {
@@ -98,28 +103,50 @@
 
 /* ---------- Panel de triage (institución) ---------- */
 .tr-panel { max-width: 1040px; margin: 0 auto; padding: var(--sp-8) var(--sp-6); }
-.tr-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-6); }
-.tr-legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-6); }
-.tr-legend-item { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--ink-soft); font-weight: 600; }
-.tr-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.tr-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); flex-wrap: wrap; }
+.tr-panel-title { margin: 0; font-size: var(--fs-xl); font-weight: 800; letter-spacing: -0.01em; color: var(--navy-900); }
+.tr-panel-count { font-size: var(--fs-sm); color: var(--ink-soft); font-weight: 600; margin-left: var(--sp-3); letter-spacing: normal; }
 
+.tr-summary { display: flex; gap: var(--sp-6); flex-wrap: wrap; margin-bottom: var(--sp-6); }
+.tr-summary-item { display: flex; flex-direction: column; gap: 2px; }
+.tr-summary-value { font-family: var(--font-mono); font-size: var(--fs-lg); font-weight: 700; color: var(--navy-900); line-height: 1; }
+.tr-summary-value.is-alert { color: var(--triage-naranja); }
+.tr-summary-label { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-soft); font-weight: 700; }
+
+.tr-legend {
+  display: flex; gap: var(--sp-5); flex-wrap: wrap;
+  margin-bottom: var(--sp-5); padding-bottom: var(--sp-4);
+  border-bottom: 1px solid var(--line);
+}
+.tr-legend-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tracking-caps);
+  color: var(--ink-soft); font-weight: 700;
+}
+.tr-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.tr-board { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
 .tr-board-row {
   display: grid;
-  grid-template-columns: 6px 1.4fr 1fr 0.9fr 0.9fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: var(--sp-4);
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  padding: var(--sp-4);
-  margin-bottom: var(--sp-3);
-  transition: box-shadow var(--dur-base) var(--ease-standard);
+  gap: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--line);
+  border-left: 5px solid transparent;
+  transition: filter var(--dur-fast) var(--ease-standard);
 }
-.tr-board-row:hover { box-shadow: var(--shadow-sm); }
+.tr-board-row:last-child { border-bottom: none; }
+.tr-board-row:hover { filter: brightness(0.98); }
+.tr-board-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tr-board-nombre { font-weight: 700; color: var(--navy-900); font-size: var(--fs-md); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-board-motivo { font-size: var(--fs-sm); color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-board-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.tr-board-tiempo { display: flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-soft); white-space: nowrap; }
+.tr-board-tiempo.is-overdue { color: var(--triage-naranja); font-weight: 700; }
+.tr-board-tiempo-icon { width: 13px; height: 13px; flex-shrink: 0; }
 @media (max-width: 720px) {
-  .tr-board-row { grid-template-columns: 6px 1fr; grid-template-areas: "bar nombre" "bar motivo" "bar nivel" "bar tiempo" "bar accion"; row-gap: 4px; }
+  .tr-board-row { grid-template-columns: 1fr; row-gap: var(--sp-3); }
+  .tr-board-meta { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+  .tr-board-row .tr-board-action { width: 100%; }
 }
-.tr-board-bar { align-self: stretch; border-radius: 4px; }
-.tr-board-nombre { font-weight: 700; color: var(--navy-900); font-size: var(--fs-sm); }
-.tr-board-motivo { font-size: var(--fs-sm); color: var(--ink-soft); }
-.tr-board-tiempo { font-size: var(--fs-xs); color: var(--ink-soft); }

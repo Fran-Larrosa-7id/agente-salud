@@ -15,8 +15,9 @@
 </header>
 <main class="tv-body">
   <section class="tv-consultorios" id="tvConsultorios" aria-label="Consultorios"></section>
-  <aside class="tv-history">
-    <div class="tv-history-title">Últimos llamados</div>
+  <aside class="tv-history" aria-label="Últimos llamados">
+    <div class="tv-now" id="tvNow"></div>
+    <div class="tv-history-title">Llamados anteriores</div>
     <div class="tv-history-list" id="tvHistory"></div>
   </aside>
 </main>
@@ -28,42 +29,59 @@
   setInterval(renderClock, 1000 * 15);
   renderClock();
 
-  let lastFlashId = null;
-
   function render(state) {
     const cont = document.getElementById('tvConsultorios');
     cont.innerHTML = LL_CONSULTORIOS.map((c) => {
       const paciente = state.atendiendo[c.id];
       const cola = state.colas[c.id] || [];
-      const isFlash = state.llamados[0] && state.llamados[0].consultorioId === c.id && state.llamados[0].ts === lastFlashId;
-      return `<div class="tv-card${isFlash ? ' is-flash' : ''}" data-consultorio="${c.id}">
-        <div class="tv-card-label">${c.nombre}</div>
-        <div class="tv-card-sala">${c.profesional} · ${c.especialidad}</div>
-        ${paciente
-          ? `<div class="tv-card-paciente">${paciente.nombre}</div>`
-          : `<div class="tv-card-paciente is-empty">Sin paciente en atención</div>`}
-        <div class="tv-card-meta">${paciente ? `Turno <b>${paciente.turno}</b>` : ''} · ${cola.length} en espera</div>
+      const num = (c.nombre.match(/\d+/) || [c.nombre])[0];
+      return `<div class="tv-row" data-consultorio="${c.id}">
+        <div class="tv-row-num" aria-label="${c.nombre}">${num}</div>
+        <div class="tv-row-main">
+          ${paciente
+            ? `<div class="tv-row-paciente">${paciente.nombre}</div>`
+            : `<div class="tv-row-paciente is-empty">Sin paciente en atención</div>`}
+          <div class="tv-row-prof">${c.profesional} · ${c.especialidad}</div>
+        </div>
+        <div class="tv-row-meta">
+          ${paciente ? `<div class="tv-row-turno">${paciente.turno}</div>` : ''}
+          <div class="tv-row-espera">${cola.length} en espera</div>
+        </div>
       </div>`;
     }).join('');
 
+    const ultimo = state.llamados[0];
+    const cu = ultimo ? llConsultorio(ultimo.consultorioId) : null;
+    document.getElementById('tvNow').innerHTML = ultimo
+      ? `<div class="tv-now-label">Llamando</div>
+         <div class="tv-now-name">${ultimo.pacienteNombre}</div>
+         <div class="tv-now-dest">${cu ? cu.nombre : ''}</div>`
+      : `<div class="tv-now-label">Llamando</div><div class="tv-now-name is-empty">Sin llamados todavía</div>`;
+
     const hist = document.getElementById('tvHistory');
-    hist.innerHTML = state.llamados.length
-      ? state.llamados.map((h) => {
+    const previos = state.llamados.slice(1);
+    hist.innerHTML = previos.length
+      ? previos.map((h) => {
           const c = llConsultorio(h.consultorioId);
           return `<div class="tv-history-item">
             <span class="tv-history-name">${h.pacienteNombre}${h.tipo === 'repetido' ? ' (nuevamente)' : ''}</span>
             <span class="tv-history-sala">${c ? c.nombre : ''} · ${h.hora}</span>
           </div>`;
         }).join('')
-      : `<div class="tv-history-item" style="opacity:.5">Sin llamados todavía</div>`;
+      : `<div class="tv-history-item" style="color: var(--gray-600)">Sin llamados anteriores</div>`;
   }
 
+  let flashTimer = null;
   function flashLatest(state) {
-    if (state.llamados[0]) {
-      lastFlashId = state.llamados[0].ts;
-      render(state);
-      setTimeout(() => { lastFlashId = null; render(llGetState()); }, 2400);
-    }
+    const ultimo = state.llamados[0];
+    if (!ultimo) return;
+    render(state);
+    const fila = document.querySelector('.tv-row[data-consultorio="' + ultimo.consultorioId + '"]');
+    if (!fila) return;
+    void fila.offsetWidth; // fija el estado inicial para que la transición corra
+    fila.classList.add('is-flash');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => fila.classList.remove('is-flash'), 4000);
   }
 
   const initial = llGetState();

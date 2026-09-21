@@ -1,0 +1,286 @@
+/* -------------------------------------------------------------------------
+   7iDeas brand layer — Portal del paciente
+   Visual treatment only; navigation and mock data remain in app.css/app.js.
+   ------------------------------------------------------------------------- */
+:root {
+  --brand-red: #ff0000;
+  --brand-yellow: #ffc400;
+  --brand-black: #000000;
+  --brand-dark-gray: #2b2b2b;
+  --brand-gray: #6e6e6e;
+  --brand-light-gray: #ededed;
+  --brand-page: #f4f4f4;
+}
+
+body.app-mobile {
+  position: relative;
+  font-family: 'Inter', var(--font-body);
+  background: var(--brand-page);
+  color: var(--brand-black);
+}
+
+body.app-mobile::before {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  top: -12vw;
+  right: 8vw;
+  width: clamp(180px, 25vw, 420px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.16);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body.app-mobile::after {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  left: 5vw;
+  bottom: 7vh;
+  width: 12px;
+  height: 96px;
+  background: var(--brand-yellow);
+  pointer-events: none;
+}
+
+body.app-mobile .app-back,
+body.app-mobile .app-frame {
+  position: relative;
+  z-index: 1;
+}
+
+body.app-mobile .app-back {
+  max-width: 480px;
+  margin: 0 auto;
+  padding-inline: var(--sp-5);
+  text-align: left;
+  color: var(--brand-red);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+body.app-mobile .app-frame {
+  background: #fff;
+  border-inline: 1px solid var(--brand-black);
+  box-shadow: 10px 0 0 rgba(255, 0, 0, 0.035), -10px 0 0 rgba(255, 196, 0, 0.05);
+}
+
+/* Header */
+body.app-mobile .app-header {
+  background: var(--brand-black);
+  border-bottom: 6px solid var(--brand-red);
+}
+
+body.app-mobile .app-header-org {
+  color: var(--brand-yellow);
+}
+
+body.app-mobile .app-header-greeting {
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+body.app-mobile .app-header-sub {
+  color: #cfcfcf;
+}
+
+body.app-mobile .app-bell {
+  border-radius: 0;
+  background: var(--brand-red);
+  color: var(--brand-black);
+}
+
+body.app-mobile .app-bell-badge {
+  border-radius: 0;
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+}
+
+/* Screens and section hierarchy */
+body.app-mobile .app-screen-body {
+  background:
+    linear-gradient(135deg, transparent 0 84%, rgba(255, 0, 0, 0.04) 84% 84.25%, transparent 84.25%),
+    linear-gradient(45deg, transparent 0 12%, rgba(0, 0, 0, 0.035) 12% 12.25%, transparent 12.25%),
+    #fff;
+}
+
+body.app-mobile .app-screen-title {
+  color: var(--brand-black);
+  letter-spacing: -0.03em;
+}
+
+body.app-mobile .app-section-title {
+  color: var(--brand-red);
+}
+
+body.app-mobile .app-turno-card,
+body.app-mobile .app-list-card,
+body.app-mobile .app-profile-card,
+body.app-mobile .app-notif-mini-row {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: none;
+}
+
+body.app-mobile .app-turno-card {
+  background:
+    linear-gradient(135deg, transparent 0 76%, rgba(255, 196, 0, 0.16) 76% 100%),
+    #fff;
+  border-left: 8px solid var(--brand-red);
+}
+
+body.app-mobile .app-turno-prof,
+body.app-mobile .app-list-card-title,
+body.app-mobile .app-notif-title,
+body.app-mobile .app-profile-name,
+body.app-mobile .app-drawer-title {
+  color: var(--brand-black);
+}
+
+body.app-mobile .app-turno-when,
+body.app-mobile .app-see-all {
+  color: var(--brand-red);
+}
+
+body.app-mobile .app-quick-btn {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+}
+
+body.app-mobile .app-quick-btn svg {
+  color: var(--brand-red);
+}
+
+body.app-mobile .app-quick-btn:hover,
+body.app-mobile .app-list-card.is-clickable:hover {
+  border-color: var(--brand-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+body.app-mobile .app-notif-mini-row {
+  background: #fff;
+}
+
+body.app-mobile .app-notif-row:hover,
+body.app-mobile .app-notif-row:focus-visible {
+  background: rgba(255, 0, 0, 0.04);
+}
+
+body.app-mobile .app-notif-icon {
+  border-radius: 0;
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+}
+
+body.app-mobile .app-notif-row.is-unread .app-notif-icon {
+  background: var(--brand-red);
+  color: var(--brand-black);
+}
+
+body.app-mobile .app-notif-dot {
+  border-radius: 0;
+  background: var(--brand-red);
+}
+
+body.app-mobile .app-profile-card {
+  background:
+    linear-gradient(135deg, transparent 0 82%, rgba(255, 0, 0, 0.06) 82% 82.25%, transparent 82.25%),
+    #fff;
+}
+
+body.app-mobile .app-avatar {
+  border-radius: 0;
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+  box-shadow: 6px 6px 0 var(--brand-red);
+}
+
+body.app-mobile .app-fab {
+  border-radius: 0;
+  background: var(--brand-red);
+  color: var(--brand-black);
+  box-shadow: 7px 7px 0 var(--brand-yellow);
+}
+
+body.app-mobile .app-fab:hover {
+  background: var(--brand-yellow);
+}
+
+/* Navigation and buttons */
+body.app-mobile .app-tabbar {
+  border-top: 4px solid var(--brand-black);
+}
+
+body.app-mobile .app-tab {
+  color: var(--brand-gray);
+}
+
+body.app-mobile .app-tab.is-active {
+  color: var(--brand-red);
+}
+
+body.app-mobile .btn {
+  border-radius: 0;
+  font-family: inherit;
+}
+
+body.app-mobile .btn-accent {
+  background: var(--brand-red);
+  border-color: var(--brand-red);
+  color: var(--brand-black);
+  font-weight: 800;
+}
+
+body.app-mobile .btn-accent:hover {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+}
+
+body.app-mobile .btn-danger-ghost {
+  border-radius: 0;
+  border-color: var(--brand-red);
+  color: var(--brand-red);
+}
+
+body.app-mobile .badge {
+  border-radius: 0;
+}
+
+/* Drawers */
+body.app-mobile .drawer {
+  border-left: 8px solid var(--brand-red);
+  border-radius: 0;
+}
+
+body.app-mobile .app-drawer-head {
+  border-bottom-color: var(--brand-black);
+}
+
+body.app-mobile .app-drawer-close {
+  border-radius: 0;
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+}
+
+body.app-mobile .app-drawer-close:hover {
+  background: var(--brand-red);
+}
+
+body.app-mobile .app-especialidad-btn {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+}
+
+body.app-mobile .app-especialidad-btn:hover {
+  border-color: var(--brand-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+body.app-mobile .toast {
+  border-radius: 0;
+  border-left: 5px solid var(--brand-red);
+  background: var(--brand-black);
+}

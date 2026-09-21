@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Triage / Evaluador de Riesgo · Demo</title>
+<title>7iDeas · Triage / evaluador de riesgo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <style>
@@ -45,12 +48,13 @@
   .tri-note { text-align: center; margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--ink-soft); }
   .selector-tip { text-align: center; margin-top: var(--sp-4); font-size: var(--fs-sm); color: var(--teal-600); font-weight: 600; }
 </style>
+<link rel="stylesheet" href="css/triage-brand.css">
 </head>
-<body>
+<body class="tr-selector">
 <main class="selector">
-  <a href="../index.html" style="display:inline-block;margin-bottom:var(--sp-5);font-size:var(--fs-sm);font-weight:600;color:var(--accent-strong)">← Volver a soluciones</a>
+  <a class="selector-back" href="../index.html" style="display:inline-block;margin-bottom:var(--sp-5);font-size:var(--fs-sm);font-weight:600">← Volver a soluciones</a>
   <div class="selector-head">
-    <div class="selector-mark"><span class="dot"></span> Triage / Evaluador de Riesgo</div>
+    <div class="selector-mark"><span class="dot"></span> 7iDeas · Triage / Evaluador de Riesgo</div>
     <h1>Elegí qué demo querés ver</h1>
     <p>Prototipo conceptual: ordena la cola de guardia aplicando reglas configuradas y validadas por la institución. Siempre hay una instancia de revisión profesional.</p>
   </div>
@@ -81,7 +85,7 @@
   </ol>
   <p class="tri-note">Las reglas de esta demo son ilustrativas: no constituyen un algoritmo clínico validado. El motor solo las aplica; no decide por sí mismo.</p>
   <p class="selector-tip">Tip: abrí "Evaluación" y "Panel" en dos pestañas. Al completar una evaluación, aparece sola en el panel.</p>
-  <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · no es asesoramiento médico real · Vertical Salud</p>
+  <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · no es asesoramiento médico real · 7iDeas</p>
 </main>
 </body>
 </html>

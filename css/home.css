@@ -1,4 +1,4 @@
-/* Home / catálogo — Vertical Salud. Solo afecta a index.html. */
+/* Home / catálogo — 7iDeas / vertical salud. Solo afecta a index.html. */
 :root {
   --home-max: 1280px;
   --home-gutter: clamp(16px, 4vw, 40px);
@@ -198,4 +198,360 @@ a.nm:hover { text-decoration: underline; text-underline-offset: 4px; }
   .j-ia { border-top: 1px solid rgba(255, 255, 255, 0.28); border-radius: var(--r-md); }
   .mini { grid-template-columns: 112px minmax(0, 1fr); gap: var(--sp-4); }
   .feat-media { height: 260px; }
+}
+
+/* -------------------------------------------------------------------------
+   7iDeas brand layer
+   The catalog remains health-focused, but its entry point follows the brand
+   system: black/white structure, red action, yellow highlight, geometry.
+   ------------------------------------------------------------------------- */
+:root {
+  --brand-red: #ff0000;
+  --brand-yellow: #ffc400;
+  --brand-black: #000000;
+  --brand-dark-gray: #2b2b2b;
+  --brand-gray: #6e6e6e;
+  --brand-light-gray: #ededed;
+  --on-navy-soft: #cfcfcf;
+  --on-navy-accent: var(--brand-yellow);
+}
+
+body {
+  font-family: 'Inter', var(--font-body);
+  background: #fff;
+  color: var(--brand-black);
+}
+
+:focus-visible {
+  outline-color: var(--brand-red);
+}
+
+/* Header: compact consulting-style masthead */
+.h-bar {
+  background: #fff;
+  border-bottom-color: var(--brand-black);
+}
+.h-bar.is-stuck {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom-color: rgba(0, 0, 0, 0.24);
+  box-shadow: 0 1px 14px rgba(0, 0, 0, 0.12);
+}
+.h-brand {
+  color: var(--brand-black);
+  letter-spacing: -0.035em;
+}
+.h-brand i {
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 8px 8px 0 -1px var(--brand-yellow);
+}
+.h-brand small {
+  color: var(--brand-gray);
+  border-left-color: var(--brand-black);
+}
+.h-nav a {
+  color: var(--brand-black);
+}
+.h-nav a:hover {
+  border-bottom-color: var(--brand-red);
+}
+
+/* Hero: high contrast, with geometric brand modules behind the content. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--brand-black);
+  border-bottom: 8px solid var(--brand-red);
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -22%;
+  right: 8%;
+  width: clamp(180px, 22vw, 340px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 196, 0, 0.7);
+  transform: rotate(45deg);
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  right: 42%;
+  bottom: 8%;
+  width: 14px;
+  height: 96px;
+  background: var(--brand-yellow);
+}
+.hero .wrap {
+  position: relative;
+  z-index: 1;
+}
+.hero .eyebrow {
+  color: var(--brand-yellow);
+}
+.hero h1 {
+  max-width: 14ch;
+  color: #fff;
+  letter-spacing: -0.045em;
+}
+.hero-sub {
+  color: #d2d2d2;
+}
+.btn-h {
+  border-radius: 0;
+  border-color: #fff;
+}
+.btn-h.primary {
+  background: var(--brand-red);
+  color: var(--brand-black);
+  border-color: var(--brand-red);
+}
+.btn-h.primary:hover {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+}
+.btn-h.ghost {
+  color: #fff;
+  border-color: #fff;
+}
+.btn-h.ghost:hover {
+  background: #fff;
+  color: var(--brand-black);
+}
+.mosaic {
+  position: relative;
+}
+.mosaic::before {
+  content: '+';
+  position: absolute;
+  z-index: 2;
+  top: -34px;
+  right: -10px;
+  color: var(--brand-yellow);
+  font-size: 3rem;
+  font-weight: 500;
+  line-height: 1;
+}
+.mosaic::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  left: -14px;
+  bottom: -14px;
+  width: 34px;
+  height: 34px;
+  background: var(--brand-red);
+}
+.mosaic figure {
+  border-radius: 0;
+  border: 1px solid #fff;
+  box-shadow: 8px 8px 0 var(--brand-red);
+}
+.mosaic figure:nth-child(2) {
+  box-shadow: 8px 8px 0 var(--brand-yellow);
+}
+.mosaic figure:nth-child(3) {
+  box-shadow: 8px 8px 0 #fff;
+}
+
+/* Sections and content cards: hairlines and solid geometric accents. */
+.sec-head h2,
+.feat h3,
+.mini h3 {
+  color: var(--brand-black);
+}
+.eyebrow {
+  color: var(--brand-red);
+}
+.sec-head p,
+.feat-meta {
+  color: var(--brand-gray);
+}
+.feat,
+.mini {
+  border-radius: 0;
+}
+.feat {
+  background: #fff;
+  border-color: var(--brand-black);
+  border-left: 8px solid var(--brand-red);
+  box-shadow: none;
+}
+.feat.t-sky {
+  --tint: #fff;
+  border-left-color: var(--brand-black);
+}
+.feat.t-gray {
+  --tint: #fff;
+  border-left-color: var(--brand-yellow);
+}
+.feat-desc,
+.mini-desc {
+  color: var(--brand-dark-gray);
+}
+.feat-body {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, transparent 0 68%, rgba(0, 0, 0, 0.035) 68% 68.25%, transparent 68.25%),
+    linear-gradient(45deg, transparent 0 82%, rgba(255, 0, 0, 0.035) 82% 82.25%, transparent 82.25%);
+}
+.feat-body::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: -7%;
+  width: clamp(180px, 34vw, 340px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+.feat-body::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  right: 24%;
+  bottom: 17%;
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 0, 0, 0.12);
+  box-shadow: 26px 26px 0 rgba(255, 196, 0, 0.13);
+  pointer-events: none;
+}
+.feat-body > * {
+  position: relative;
+  z-index: 1;
+}
+.feat:nth-child(2) .feat-body {
+  background:
+    linear-gradient(135deg, transparent 0 22%, rgba(0, 0, 0, 0.035) 22% 22.25%, transparent 22.25%),
+    linear-gradient(90deg, transparent 0 86%, rgba(255, 196, 0, 0.08) 86% 100%);
+}
+.feat:nth-child(2) .feat-body::before {
+  right: auto;
+  left: -10%;
+  border-color: rgba(255, 0, 0, 0.14);
+  transform: translateY(-50%) rotate(45deg);
+}
+.feat:nth-child(2) .feat-body::after {
+  right: 18%;
+  background: rgba(255, 196, 0, 0.16);
+  box-shadow: 26px 26px 0 rgba(255, 0, 0, 0.1);
+}
+.feat:nth-child(3) .feat-body {
+  background:
+    linear-gradient(160deg, transparent 0 70%, rgba(255, 196, 0, 0.08) 70% 100%),
+    linear-gradient(90deg, transparent 0 14%, rgba(0, 0, 0, 0.035) 14% 14.25%, transparent 14.25%);
+}
+.feat:nth-child(3) .feat-body::before {
+  right: -12%;
+  border-color: rgba(255, 196, 0, 0.26);
+}
+.feat:nth-child(3) .feat-body::after {
+  left: 23%;
+  right: auto;
+  background: rgba(0, 0, 0, 0.08);
+  box-shadow: 26px 26px 0 rgba(255, 0, 0, 0.1);
+}
+.feat-media {
+  background: var(--brand-light-gray);
+  border-left: 1px solid var(--brand-black);
+}
+.feat-media img,
+.mini-media img {
+  border-radius: 0;
+}
+.go {
+  color: var(--brand-black);
+  background-image: linear-gradient(var(--brand-red), var(--brand-red));
+}
+.go .arr,
+.more summary span {
+  color: var(--brand-red);
+}
+.more summary:hover {
+  color: var(--brand-black);
+}
+.mini {
+  border-top-color: var(--brand-black);
+}
+.mini-media {
+  border-radius: 0;
+  background: var(--brand-light-gray);
+  border-color: var(--brand-black);
+}
+.mini.is-transversal {
+  border-top-color: var(--brand-red);
+}
+.mini.is-explor {
+  border-top: 2px solid var(--brand-yellow);
+}
+.mini.is-explor .mini-media {
+  border: 1px solid var(--brand-yellow);
+}
+.mini.is-explor .go {
+  border-bottom-color: var(--brand-red);
+  border-bottom-style: solid;
+}
+.mini.is-explor .eyebrow {
+  color: var(--brand-red);
+}
+
+@media (hover: hover) {
+  .feat:hover,
+  .mini:hover {
+    box-shadow: 8px 8px 0 var(--brand-black);
+  }
+}
+
+/* Journey: the dark strategic layer of the brand. */
+.journey-band {
+  background: var(--brand-black);
+  border-top: 8px solid var(--brand-red);
+}
+.journey-band .eyebrow {
+  color: var(--brand-yellow);
+}
+.journey-band .sec-head p {
+  color: var(--on-navy-soft);
+}
+.jr li::before {
+  background: var(--brand-yellow);
+  box-shadow: 0 0 0 5px var(--brand-black);
+}
+.jr li.is-out::before {
+  background: var(--brand-black);
+  border-color: var(--on-navy-soft);
+}
+.j-ia {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.j-ia a {
+  text-decoration-color: var(--brand-yellow);
+}
+
+/* Footer */
+.h-foot {
+  border-top: 1px solid var(--brand-black);
+}
+.h-foot p b,
+.h-foot nav a:hover {
+  color: var(--brand-red);
+}
+
+@media (max-width: 640px) {
+  .h-brand small {
+    display: none;
+  }
+  .hero h1 {
+    max-width: none;
+  }
+  .hero::after {
+    right: 12%;
+    bottom: 6%;
+    height: 64px;
+  }
 }

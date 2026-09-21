@@ -1,0 +1,487 @@
+/* -------------------------------------------------------------------------
+   7iDeas brand layer — WhatsApp turnos
+   Shared visual direction for selector, conversation and automation panel.
+   ------------------------------------------------------------------------- */
+:root {
+  --brand-red: #ff0000;
+  --brand-yellow: #ffc400;
+  --brand-black: #000000;
+  --brand-dark-gray: #2b2b2b;
+  --brand-gray: #6e6e6e;
+  --brand-light-gray: #ededed;
+  --brand-page: #f4f4f4;
+}
+
+body.whatsapp-selector,
+body.whatsapp-chat,
+body.whatsapp-panel {
+  position: relative;
+  min-height: 100vh;
+  font-family: 'Inter', var(--font-body);
+  color: var(--brand-black);
+  background: var(--brand-page);
+}
+
+body.whatsapp-selector::before,
+body.whatsapp-chat::before,
+body.whatsapp-panel::before {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  top: -12vw;
+  right: 8vw;
+  width: clamp(180px, 25vw, 420px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.16);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body.whatsapp-selector::after,
+body.whatsapp-chat::after,
+body.whatsapp-panel::after {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  left: 5vw;
+  bottom: 7vh;
+  width: 12px;
+  height: 96px;
+  background: var(--brand-yellow);
+  pointer-events: none;
+}
+
+body.whatsapp-selector .selector,
+body.whatsapp-chat .wa-topbar,
+body.whatsapp-chat .wa-chat-layout,
+body.whatsapp-panel .wa-topbar,
+body.whatsapp-panel .wa-panel {
+  position: relative;
+  z-index: 1;
+}
+
+body.whatsapp-selector .selector {
+  max-width: 980px;
+}
+
+/* Selector */
+body.whatsapp-selector .selector-head {
+  text-align: left;
+  border-left: 8px solid var(--brand-red);
+  padding-left: var(--sp-6);
+}
+
+body.whatsapp-selector .selector-mark {
+  color: var(--brand-black);
+}
+
+body.whatsapp-selector .selector-mark .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 6px 6px 0 var(--brand-yellow);
+}
+
+body.whatsapp-selector .selector-head h1 {
+  color: var(--brand-black);
+  letter-spacing: -0.04em;
+}
+
+body.whatsapp-selector .selector-head p,
+body.whatsapp-selector .selector-foot {
+  color: var(--brand-gray);
+}
+
+body.whatsapp-selector .selector-back {
+  color: var(--brand-red);
+  font-weight: 700;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+body.whatsapp-selector .demo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.08);
+  background:
+    linear-gradient(135deg, transparent 0 75%, rgba(255, 0, 0, 0.06) 75% 75.3%, transparent 75.3%),
+    #fff;
+}
+
+body.whatsapp-selector .demo-card::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  right: -30px;
+  top: 50%;
+  width: 180px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.18);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+body.whatsapp-selector .demo-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.whatsapp-selector .demo-card:hover {
+  border-color: var(--brand-red);
+  box-shadow: 8px 8px 0 var(--brand-red);
+}
+
+body.whatsapp-selector .demo-icon {
+  border-radius: 0;
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+}
+
+body.whatsapp-selector .demo-card h2 {
+  color: var(--brand-black);
+}
+
+body.whatsapp-selector .demo-card p {
+  color: var(--brand-dark-gray);
+}
+
+body.whatsapp-selector .demo-cta {
+  color: var(--brand-red);
+}
+
+/* Shared topbar */
+body.whatsapp-chat .wa-topbar,
+body.whatsapp-panel .wa-topbar {
+  background: var(--brand-black);
+  border-bottom: 4px solid var(--brand-red);
+}
+
+body.whatsapp-chat .wa-mark,
+body.whatsapp-panel .wa-mark {
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+body.whatsapp-chat .wa-mark .dot,
+body.whatsapp-panel .wa-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 5px 5px 0 var(--brand-yellow);
+}
+
+body.whatsapp-chat .wa-back,
+body.whatsapp-panel .wa-back {
+  color: #fff;
+}
+
+body.whatsapp-chat .wa-back:hover,
+body.whatsapp-panel .wa-back:hover {
+  color: var(--brand-yellow);
+}
+
+/* Conversation */
+body.whatsapp-chat .wa-chat-layout {
+  max-width: 1320px;
+}
+
+body.whatsapp-chat .wa-scenarios-title {
+  color: var(--brand-red);
+}
+
+body.whatsapp-chat .wa-scenario-btn {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+  box-shadow: none;
+}
+
+body.whatsapp-chat .wa-scenario-btn:hover {
+  border-color: var(--brand-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+body.whatsapp-chat .wa-scenario-btn.is-active {
+  border-color: var(--brand-red);
+  background: var(--brand-black);
+  color: #fff;
+}
+
+body.whatsapp-chat .wa-scenario-off {
+  color: var(--brand-yellow);
+}
+
+body.whatsapp-chat .wa-phone {
+  border-radius: 0;
+  border: 8px solid var(--brand-black);
+  background: var(--brand-light-gray);
+  box-shadow: 12px 12px 0 var(--brand-red);
+}
+
+body.whatsapp-chat .wa-phone-header {
+  background: var(--brand-black);
+  border-bottom: 4px solid var(--brand-red);
+}
+
+body.whatsapp-chat .wa-phone-avatar {
+  border-radius: 0;
+  background: var(--brand-red);
+  color: var(--brand-black);
+  box-shadow: 4px 4px 0 var(--brand-yellow);
+}
+
+body.whatsapp-chat .wa-phone-body {
+  background:
+    linear-gradient(135deg, transparent 0 78%, rgba(255, 0, 0, 0.06) 78% 78.25%, transparent 78.25%),
+    linear-gradient(45deg, transparent 0 14%, rgba(0, 0, 0, 0.045) 14% 14.25%, transparent 14.25%),
+    #ededed;
+}
+
+body.whatsapp-chat .wa-bubble,
+body.whatsapp-chat .wa-typing,
+body.whatsapp-chat .wa-option-btn,
+body.whatsapp-chat .wa-notice {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.whatsapp-chat .wa-bubble.bot,
+body.whatsapp-chat .wa-typing {
+  border: 1px solid var(--brand-black);
+  border-left: 4px solid var(--brand-red);
+  background: #fff;
+  color: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-bubble.user {
+  border: 1px solid var(--brand-black);
+  border-right: 4px solid var(--brand-red);
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-bubble.sistema {
+  border: 1px solid rgba(0, 0, 0, 0.24);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--brand-gray);
+}
+
+body.whatsapp-chat .wa-bubble.confirmado {
+  border-left-color: var(--brand-red);
+}
+
+body.whatsapp-chat .wa-option-btn {
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+  background: #fff;
+}
+
+body.whatsapp-chat .wa-option-btn:hover {
+  background: var(--brand-red);
+  color: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-trace {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  border-top: 6px solid var(--brand-red);
+  box-shadow: none;
+}
+
+body.whatsapp-chat .wa-trace-title {
+  color: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-trace-legend {
+  border-block-color: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-tr-capa {
+  border-radius: 0;
+}
+
+body.whatsapp-chat .wa-tr-capa.ia {
+  background: var(--brand-gray);
+}
+
+body.whatsapp-chat .wa-tr-capa.motor {
+  background: var(--brand-red);
+  color: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-tr-capa.agenda {
+  background: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-notice {
+  border: 1px solid var(--brand-black);
+  border-left: 4px solid var(--brand-yellow);
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+}
+
+body.whatsapp-chat .wa-notice a {
+  color: var(--brand-black);
+  text-decoration-thickness: 2px;
+}
+
+/* Automation panel */
+body.whatsapp-panel .wa-panel {
+  max-width: 1160px;
+}
+
+body.whatsapp-panel .wa-section-title {
+  border-left: 8px solid var(--brand-red);
+  padding-left: var(--sp-3);
+  color: var(--brand-black);
+  letter-spacing: -0.01em;
+}
+
+body.whatsapp-panel .stat-card,
+body.whatsapp-panel .wa-flow-card,
+body.whatsapp-panel .wa-arch {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: none;
+}
+
+body.whatsapp-panel .stat-card {
+  border-top: 6px solid var(--brand-red);
+  background: #fff;
+}
+
+body.whatsapp-panel .stat-card-label,
+body.whatsapp-panel .stat-card-foot {
+  color: var(--brand-gray);
+}
+
+body.whatsapp-panel .stat-card-value {
+  color: var(--brand-black);
+}
+
+body.whatsapp-panel .stat-card-value.accent {
+  color: var(--brand-red);
+}
+
+body.whatsapp-panel .wa-arch {
+  position: relative;
+  overflow: hidden;
+  border-top: 6px solid var(--brand-red);
+  background:
+    linear-gradient(135deg, transparent 0 74%, rgba(255, 0, 0, 0.05) 74% 74.3%, transparent 74.3%),
+    #fff;
+}
+
+body.whatsapp-panel .wa-arch-step {
+  border-radius: 0;
+  border-color: var(--brand-black);
+}
+
+body.whatsapp-panel .wa-arch-step b,
+body.whatsapp-panel .wa-rules b,
+body.whatsapp-panel .wa-flow-name {
+  color: var(--brand-black);
+}
+
+body.whatsapp-panel .wa-arch-step.is-motor {
+  background: var(--brand-black);
+  border-color: var(--brand-red);
+}
+
+body.whatsapp-panel .wa-arch-step.is-motor b {
+  color: #fff;
+}
+
+body.whatsapp-panel .wa-arch-arrow {
+  color: var(--brand-red);
+}
+
+body.whatsapp-panel .wa-flow-card {
+  position: relative;
+  overflow: hidden;
+  border-top: 4px solid var(--brand-black);
+  background:
+    linear-gradient(135deg, transparent 0 82%, rgba(255, 196, 0, 0.12) 82% 100%),
+    #fff;
+}
+
+body.whatsapp-panel .wa-flow-card:hover {
+  border-top-color: var(--brand-red);
+  box-shadow: 7px 7px 0 rgba(255, 0, 0, 0.12);
+}
+
+body.whatsapp-panel .wa-flow-desc,
+body.whatsapp-panel .wa-flow-rule dd,
+body.whatsapp-panel .wa-arch-note {
+  color: var(--brand-dark-gray);
+}
+
+body.whatsapp-panel .wa-flow-rule {
+  border-top-color: var(--brand-black);
+}
+
+body.whatsapp-panel .wa-flow-rule dt,
+body.whatsapp-panel .wa-arch-rules-title {
+  color: var(--brand-gray);
+}
+
+body.whatsapp-panel .wa-toggle {
+  border-radius: 0;
+  background: var(--brand-gray);
+}
+
+body.whatsapp-panel .wa-toggle::after {
+  border-radius: 0;
+  background: #fff;
+}
+
+body.whatsapp-panel .wa-toggle.is-on {
+  background: var(--brand-red);
+}
+
+body.whatsapp-panel .wa-activity-row {
+  border-bottom-color: var(--brand-black);
+}
+
+body.whatsapp-panel .wa-activity-row b {
+  color: var(--brand-black);
+}
+
+body.whatsapp-panel .wa-activity-when {
+  color: var(--brand-gray);
+}
+
+body.whatsapp-panel .btn {
+  border-radius: 0;
+  font-family: inherit;
+}
+
+body.whatsapp-panel .btn-ghost {
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+  background: #fff;
+}
+
+body.whatsapp-panel .btn-ghost:hover {
+  border-color: var(--brand-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+@media (max-width: 720px) {
+  body.whatsapp-chat .wa-phone {
+    box-shadow: 8px 8px 0 var(--brand-red);
+  }
+
+  body.whatsapp-chat .wa-topbar,
+  body.whatsapp-panel .wa-topbar {
+    padding-inline: var(--sp-4);
+  }
+
+  body.whatsapp-panel .wa-panel {
+    padding-inline: var(--sp-4);
+  }
+}

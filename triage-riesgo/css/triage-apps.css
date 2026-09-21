@@ -1,0 +1,534 @@
+/*
+   7iDeas brand layer — Triage internal views
+   Keeps the triage interaction intact while bringing the panel and
+   evaluation flow into the same black / white / red / yellow system.
+*/
+:root {
+  --brand-red: #ff0000;
+  --brand-yellow: #ffc400;
+  --brand-black: #090909;
+  --brand-paper: #f4f5f6;
+  --brand-ink: #101010;
+  --brand-muted: #5f6873;
+}
+
+body.tr-panel-page,
+body.tr-evaluation-page {
+  --triage-rojo: var(--brand-red);
+  --triage-naranja: #e45722;
+  --triage-amarillo: var(--brand-yellow);
+  --triage-verde: #25734d;
+  --triage-azul: #214b72;
+  --triage-rojo-tint: #fff0f0;
+  --triage-naranja-tint: #fff2eb;
+  --triage-amarillo-tint: #fff8d9;
+  --triage-verde-tint: #e8f3ed;
+  --triage-azul-tint: #e9f0f7;
+  background: var(--brand-paper);
+  color: var(--brand-ink);
+  font-family: Inter, system-ui, sans-serif;
+  position: relative;
+  isolation: isolate;
+}
+
+body.tr-panel-page::before,
+body.tr-evaluation-page::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  top: 96px;
+  right: -70px;
+  width: 210px;
+  height: 210px;
+  border: 2px solid rgba(255, 0, 0, 0.2);
+  transform: rotate(18deg);
+  pointer-events: none;
+}
+
+body.tr-panel-page::after,
+body.tr-evaluation-page::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  left: -78px;
+  bottom: 8%;
+  width: 185px;
+  height: 14px;
+  background: var(--brand-yellow);
+  transform: rotate(-35deg);
+  pointer-events: none;
+}
+
+body.tr-panel-page .tr-topbar,
+body.tr-evaluation-page .tr-topbar {
+  position: relative;
+  z-index: 2;
+  min-height: 72px;
+  padding: 0 32px;
+  background: var(--brand-black);
+  border: 0;
+  border-bottom: 6px solid var(--brand-red);
+  color: #fff;
+}
+
+body.tr-panel-page .tr-mark,
+body.tr-evaluation-page .tr-mark {
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+body.tr-panel-page .tr-mark .dot,
+body.tr-evaluation-page .tr-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 6px 6px 0 var(--brand-yellow);
+}
+
+body.tr-panel-page .tr-back,
+body.tr-evaluation-page .tr-back {
+  color: #fff;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  text-decoration: none;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+body.tr-panel-page .tr-back:hover,
+body.tr-evaluation-page .tr-back:hover,
+body.tr-panel-page .tr-back:focus-visible,
+body.tr-evaluation-page .tr-back:focus-visible {
+  color: var(--brand-black);
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+}
+
+/* Shared controls */
+body.tr-panel-page .btn,
+body.tr-evaluation-page .btn {
+  border-radius: 0;
+  font-family: inherit;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+body.tr-panel-page .btn-accent,
+body.tr-evaluation-page .btn-accent {
+  background: var(--brand-red);
+  border-color: var(--brand-red);
+  color: #fff;
+}
+
+body.tr-panel-page .btn-accent:hover,
+body.tr-evaluation-page .btn-accent:hover {
+  background: var(--brand-black);
+  border-color: var(--brand-black);
+}
+
+body.tr-panel-page .btn-secondary,
+body.tr-evaluation-page .btn-secondary {
+  background: #fff;
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+}
+
+body.tr-panel-page .btn-secondary:hover,
+body.tr-evaluation-page .btn-secondary:hover {
+  background: var(--brand-yellow);
+  border-color: var(--brand-black);
+}
+
+body.tr-panel-page .btn-ghost,
+body.tr-evaluation-page .btn-ghost {
+  color: var(--brand-black);
+  border-color: #c4c9cf;
+}
+
+body.tr-panel-page .btn-ghost:hover,
+body.tr-evaluation-page .btn-ghost:hover {
+  color: var(--brand-black);
+  background: var(--brand-yellow);
+  border-color: var(--brand-black);
+}
+
+/* ---------- Institutional panel ---------- */
+body.tr-panel-page .tr-panel {
+  max-width: 1320px;
+  padding: 48px 32px 84px;
+  position: relative;
+  z-index: 1;
+}
+
+body.tr-panel-page .tr-panel-head {
+  align-items: center;
+  padding: 4px 0 4px 20px;
+  border-left: 8px solid var(--brand-red);
+  margin-bottom: 28px;
+}
+
+body.tr-panel-page .tr-panel-title {
+  color: var(--brand-black);
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  letter-spacing: -0.045em;
+}
+
+body.tr-panel-page .tr-panel-sub {
+  color: var(--brand-muted);
+  line-height: 1.5;
+}
+
+body.tr-panel-page .tr-panel-actions {
+  gap: 8px;
+}
+
+body.tr-panel-page > .tr-disclaimer {
+  margin: 0;
+  padding: 12px 32px 12px 44px;
+  border: 0;
+  border-left: 8px solid var(--brand-yellow);
+  border-radius: 0;
+  background: #fff;
+  color: #3e454d;
+  text-align: left;
+  line-height: 1.55;
+}
+
+body.tr-panel-page .tr-contact {
+  border: 1px solid #c9ced4;
+  border-left: 5px solid var(--brand-yellow);
+  border-radius: 0;
+  box-shadow: 5px 5px 0 rgba(9, 9, 9, 0.07);
+}
+
+body.tr-panel-page .tr-contact summary {
+  color: var(--brand-black);
+}
+
+body.tr-panel-page .tr-levels {
+  border: 2px solid var(--brand-black);
+  border-radius: 0;
+  box-shadow: 7px 7px 0 var(--brand-yellow);
+}
+
+body.tr-panel-page .tr-level {
+  border-right-color: #c9ced4;
+  background: #fff;
+}
+
+body.tr-panel-page .tr-level:hover,
+body.tr-panel-page .tr-level.is-active {
+  background: #fff7cf;
+}
+
+body.tr-panel-page .tr-level-count,
+body.tr-panel-page .tr-level-name,
+body.tr-panel-page .tr-table-head b,
+body.tr-panel-page .tr-nombre,
+body.tr-panel-page .tr-espera {
+  color: var(--brand-black);
+}
+
+body.tr-panel-page #board {
+  border: 1px solid #bfc5cc;
+  border-top: 7px solid var(--brand-black);
+  border-radius: 0;
+  box-shadow: 7px 7px 0 rgba(9, 9, 9, 0.08);
+}
+
+body.tr-panel-page .tr-table-head {
+  background: #fff;
+}
+
+body.tr-panel-page .tr-table thead th {
+  color: var(--brand-black);
+  background: #f0f1f2;
+}
+
+body.tr-panel-page .tr-table tbody td {
+  border-bottom-color: #e0e3e6;
+}
+
+body.tr-panel-page .tr-prio {
+  border-radius: 0;
+  color: #fff;
+}
+
+body.tr-panel-page .tr-next {
+  border-radius: 0;
+  color: var(--brand-black);
+  background: var(--brand-yellow);
+}
+
+body.tr-panel-page .tr-sla-bar {
+  border-radius: 0;
+}
+
+body.tr-panel-page .empty-state {
+  background: #fff;
+  border-radius: 0;
+}
+
+/* ---------- Patient evaluation ---------- */
+body.tr-evaluation-page > .tr-disclaimer {
+  margin: 0;
+  padding: 11px 24px;
+  border: 0;
+  border-bottom: 1px solid #d7dbe0;
+  border-radius: 0;
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+body.tr-evaluation-page .tr-shell {
+  max-width: 650px;
+  min-height: calc(100vh - 130px);
+  margin: 32px auto 0;
+  padding: 28px 38px 56px;
+  border: 0;
+  border-left: 8px solid var(--brand-red);
+  background: #fff;
+  box-shadow: 9px 9px 0 rgba(9, 9, 9, 0.08);
+  position: relative;
+  z-index: 1;
+}
+
+body.tr-evaluation-page .tr-stepbar {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #d8dde2;
+}
+
+body.tr-evaluation-page .tr-step-count {
+  color: var(--brand-red);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+body.tr-evaluation-page .tr-stepbar-back {
+  color: var(--brand-black);
+  border-bottom: 2px solid var(--brand-red);
+}
+
+body.tr-evaluation-page .tr-stepbar-back:hover {
+  color: var(--brand-red);
+}
+
+body.tr-evaluation-page .tr-progress {
+  gap: 6px;
+}
+
+body.tr-evaluation-page .tr-progress span {
+  height: 7px;
+  border-radius: 0;
+  background: #e3e5e8;
+}
+
+body.tr-evaluation-page .tr-progress span.is-done {
+  background: var(--brand-red);
+}
+
+body.tr-evaluation-page .tr-title {
+  color: var(--brand-black);
+  font-size: clamp(1.9rem, 4vw, 2.65rem);
+  letter-spacing: -0.045em;
+}
+
+body.tr-evaluation-page .tr-sub {
+  color: var(--brand-muted);
+}
+
+body.tr-evaluation-page .field-label {
+  color: var(--brand-black);
+  font-weight: 750;
+}
+
+body.tr-evaluation-page .input {
+  border: 2px solid #bbc1c8;
+  border-radius: 0;
+  color: var(--brand-black);
+}
+
+body.tr-evaluation-page .input:focus {
+  border-color: var(--brand-red);
+  box-shadow: 4px 4px 0 var(--brand-yellow);
+  outline: none;
+}
+
+body.tr-evaluation-page .tr-emergency {
+  border-left: 6px solid var(--brand-red);
+  border-radius: 0;
+  background: #fff1f1;
+  color: #8c0000;
+}
+
+body.tr-evaluation-page .tr-motivo-list {
+  border: 2px solid var(--brand-black);
+  border-radius: 0;
+  box-shadow: 5px 5px 0 var(--brand-yellow);
+}
+
+body.tr-evaluation-page .tr-motivo-btn {
+  border-bottom-color: #d8dde2;
+  color: var(--brand-black);
+}
+
+body.tr-evaluation-page .tr-motivo-btn:hover,
+body.tr-evaluation-page .tr-motivo-btn:focus-visible {
+  background: #fff7cf;
+  color: var(--brand-black);
+  outline: none;
+}
+
+body.tr-evaluation-page .tr-motivo-btn svg {
+  color: var(--brand-red);
+}
+
+body.tr-evaluation-page .tr-pregunta {
+  border-bottom-color: #d8dde2;
+}
+
+body.tr-evaluation-page .tr-pregunta-texto {
+  color: var(--brand-black);
+}
+
+body.tr-evaluation-page .tr-yn-btn {
+  border: 2px solid #bbc1c8;
+  border-radius: 0;
+  color: var(--brand-black);
+}
+
+body.tr-evaluation-page .tr-yn-btn:hover {
+  border-color: var(--brand-black);
+  background: #fff7cf;
+}
+
+body.tr-evaluation-page .tr-yn-btn.is-selected {
+  border-color: var(--brand-red);
+  background: var(--brand-red);
+  color: #fff;
+}
+
+body.tr-evaluation-page .tr-slider-value {
+  color: var(--brand-black);
+}
+
+body.tr-evaluation-page .tr-slider-value small {
+  color: var(--brand-red);
+}
+
+body.tr-evaluation-page .tr-slider {
+  accent-color: var(--brand-red);
+}
+
+body.tr-evaluation-page .tr-slider-labels {
+  color: var(--brand-muted);
+}
+
+body.tr-evaluation-page .tr-result-banner {
+  border-radius: 0;
+  border-left: 12px solid var(--brand-yellow);
+  box-shadow: 6px 6px 0 rgba(9, 9, 9, 0.12);
+}
+
+body.tr-evaluation-page .tr-bg-amarillo {
+  color: var(--brand-black);
+}
+
+body.tr-evaluation-page .tr-summary-list {
+  border: 2px solid var(--brand-black);
+  border-radius: 0;
+}
+
+body.tr-evaluation-page .tr-summary-list div {
+  border-bottom-color: #d8dde2;
+}
+
+body.tr-evaluation-page .tr-summary-list dd {
+  color: var(--brand-black);
+}
+
+body.tr-evaluation-page .tr-result-banner + .tr-summary-list + .tr-disclaimer {
+  margin-top: 0;
+  border-left-color: var(--brand-yellow);
+  border-radius: 0;
+  background: #fff;
+}
+
+body.tr-evaluation-page .tr-queue-box {
+  border: 2px solid var(--brand-black);
+  border-radius: 0;
+  box-shadow: 6px 6px 0 var(--brand-yellow);
+}
+
+body.tr-evaluation-page .tr-queue-box-head {
+  background: var(--brand-black);
+  color: #fff;
+}
+
+body.tr-evaluation-page .tr-queue-pos {
+  color: var(--brand-red);
+}
+
+body.tr-evaluation-page .tr-result-links .btn {
+  border-radius: 0;
+}
+
+@media (max-width: 720px) {
+  body.tr-panel-page .tr-topbar,
+  body.tr-evaluation-page .tr-topbar {
+    min-height: 64px;
+    padding: 0 18px;
+  }
+
+  body.tr-panel-page .tr-topbar > span,
+  body.tr-evaluation-page .tr-topbar > span {
+    gap: 4px !important;
+  }
+
+  body.tr-panel-page .tr-back,
+  body.tr-evaluation-page .tr-back {
+    padding: 6px 7px;
+    font-size: 0.72rem;
+  }
+
+  body.tr-panel-page .tr-panel {
+    padding: 32px 18px 56px;
+  }
+
+  body.tr-panel-page .tr-panel-head {
+    align-items: flex-start;
+    padding-left: 14px;
+  }
+
+  body.tr-panel-page .tr-panel-actions {
+    width: 100%;
+  }
+
+  body.tr-panel-page .tr-panel-actions .btn {
+    flex: 1;
+  }
+
+  body.tr-panel-page > .tr-disclaimer {
+    padding-left: 26px;
+    padding-right: 18px;
+  }
+
+  body.tr-evaluation-page > .tr-disclaimer {
+    padding: 10px 18px;
+    text-align: left;
+  }
+
+  body.tr-evaluation-page .tr-shell {
+    margin: 18px 12px 0;
+    padding: 22px 20px 42px;
+    border-left-width: 6px;
+  }
+
+  body.tr-evaluation-page .tr-result-links {
+    flex-direction: column;
+  }
+}

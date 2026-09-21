@@ -1,0 +1,565 @@
+/* -------------------------------------------------------------------------
+   7iDeas brand layer — Llamador de pacientes
+   Shared visual direction for selector, public screen, control panel,
+   professional mobile view and configuration.
+   ------------------------------------------------------------------------- */
+:root {
+  --brand-red: #ff0000;
+  --brand-yellow: #ffc400;
+  --brand-black: #000000;
+  --brand-dark-gray: #2b2b2b;
+  --brand-gray: #6e6e6e;
+  --brand-light-gray: #ededed;
+  --brand-page: #f4f4f4;
+}
+
+body.ll-selector,
+body.ll-tv,
+body.ll-panel,
+body.ll-mobile,
+body.ll-config {
+  position: relative;
+  font-family: 'Inter', var(--font-body);
+  color: var(--brand-black);
+  background: var(--brand-page);
+}
+
+body.ll-selector,
+body.ll-panel,
+body.ll-mobile,
+body.ll-config {
+  min-height: 100vh;
+}
+
+body.ll-selector::before,
+body.ll-tv::before,
+body.ll-panel::before,
+body.ll-mobile::before,
+body.ll-config::before {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  top: -12vw;
+  right: 8vw;
+  width: clamp(180px, 25vw, 420px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.16);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body.ll-selector::after,
+body.ll-tv::after,
+body.ll-panel::after,
+body.ll-mobile::after,
+body.ll-config::after {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  left: 5vw;
+  bottom: 7vh;
+  width: 12px;
+  height: 96px;
+  background: var(--brand-yellow);
+  pointer-events: none;
+}
+
+body.ll-selector .selector,
+body.ll-tv .tv-header,
+body.ll-tv .tv-body,
+body.ll-panel .ll-topbar,
+body.ll-panel .panel-shell,
+body.ll-mobile .ll-topbar,
+body.ll-mobile .mobile-shell,
+body.ll-config .ll-topbar,
+body.ll-config .cfg {
+  position: relative;
+  z-index: 1;
+}
+
+/* Selector */
+body.ll-selector .selector {
+  max-width: 1080px;
+}
+
+body.ll-selector .selector-head {
+  text-align: left;
+  border-left: 8px solid var(--brand-red);
+  padding-left: var(--sp-6);
+}
+
+body.ll-selector .selector-mark {
+  color: var(--brand-black);
+}
+
+body.ll-selector .selector-mark .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 6px 6px 0 var(--brand-yellow);
+}
+
+body.ll-selector .selector-head h1 {
+  color: var(--brand-black);
+  letter-spacing: -0.04em;
+}
+
+body.ll-selector .selector-head p,
+body.ll-selector .selector-foot {
+  color: var(--brand-gray);
+}
+
+body.ll-selector .selector-back {
+  color: var(--brand-red);
+  font-weight: 700;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+body.ll-selector .demo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.08);
+  background:
+    linear-gradient(135deg, transparent 0 75%, rgba(255, 0, 0, 0.06) 75% 75.3%, transparent 75.3%),
+    #fff;
+}
+
+body.ll-selector .demo-card::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  right: -30px;
+  top: 50%;
+  width: 180px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.18);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+body.ll-selector .demo-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.ll-selector .demo-card:hover {
+  border-color: var(--brand-red);
+  box-shadow: 8px 8px 0 var(--brand-red);
+}
+
+body.ll-selector .demo-icon {
+  border-radius: 0;
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+}
+
+body.ll-selector .demo-card h2 {
+  color: var(--brand-black);
+}
+
+body.ll-selector .demo-card p {
+  color: var(--brand-dark-gray);
+}
+
+body.ll-selector .demo-role {
+  color: var(--brand-gray);
+}
+
+body.ll-selector .demo-cta,
+body.ll-selector .selector-tip {
+  color: var(--brand-red);
+}
+
+/* Shared application topbars */
+body.ll-panel .ll-topbar,
+body.ll-mobile .ll-topbar,
+body.ll-config .ll-topbar {
+  background: var(--brand-black);
+  border-bottom: 4px solid var(--brand-red);
+}
+
+body.ll-panel .ll-mark,
+body.ll-mobile .ll-mark,
+body.ll-config .ll-mark {
+  color: #fff;
+}
+
+body.ll-panel .ll-mark .dot,
+body.ll-mobile .ll-mark .dot,
+body.ll-config .ll-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 5px 5px 0 var(--brand-yellow);
+}
+
+body.ll-panel .ll-role,
+body.ll-mobile .ll-role,
+body.ll-config .ll-role {
+  color: #cfcfcf;
+}
+
+body.ll-panel .ll-back,
+body.ll-mobile .ll-back,
+body.ll-config .ll-back {
+  color: #fff;
+}
+
+body.ll-panel .ll-back:hover,
+body.ll-mobile .ll-back:hover,
+body.ll-config .ll-back:hover {
+  color: var(--brand-yellow);
+}
+
+body.ll-panel .btn,
+body.ll-mobile .btn,
+body.ll-config .btn {
+  border-radius: 0;
+  font-family: inherit;
+}
+
+body.ll-panel .btn-accent,
+body.ll-mobile .btn-accent,
+body.ll-config .btn-accent {
+  background: var(--brand-red);
+  border-color: var(--brand-red);
+  color: var(--brand-black);
+  font-weight: 800;
+}
+
+body.ll-panel .btn-accent:hover,
+body.ll-mobile .btn-accent:hover,
+body.ll-config .btn-accent:hover {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+}
+
+body.ll-panel .btn-secondary,
+body.ll-mobile .btn-secondary,
+body.ll-config .btn-secondary {
+  background: var(--brand-black);
+  border-color: var(--brand-black);
+  color: #fff;
+}
+
+body.ll-panel .btn-ghost,
+body.ll-mobile .btn-ghost,
+body.ll-config .btn-ghost {
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+  background: #fff;
+}
+
+body.ll-panel .btn-ghost:hover,
+body.ll-mobile .btn-ghost:hover,
+body.ll-config .btn-ghost:hover {
+  border-color: var(--brand-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+/* Public waiting-room screen */
+body.ll-tv {
+  background: var(--brand-page);
+  color: var(--brand-black);
+}
+
+body.ll-tv .tv-header {
+  background: var(--brand-black);
+  border-bottom: 8px solid var(--brand-red);
+}
+
+body.ll-tv .tv-header-mark {
+  color: #fff;
+}
+
+body.ll-tv .tv-header-mark .dot {
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 6px 6px 0 var(--brand-yellow);
+}
+
+body.ll-tv .tv-header-sala {
+  border-left-color: #fff;
+  color: #cfcfcf;
+}
+
+body.ll-tv .tv-clock {
+  color: var(--brand-yellow);
+}
+
+body.ll-tv .tv-consultorios {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: 10px 10px 0 var(--brand-red);
+}
+
+body.ll-tv .tv-row {
+  border-bottom-color: var(--brand-black);
+}
+
+body.ll-tv .tv-row-num {
+  background: var(--brand-black);
+}
+
+body.ll-tv .tv-row.is-flash .tv-row-num {
+  background: var(--brand-red);
+  color: var(--brand-black);
+}
+
+body.ll-tv .tv-row.is-flash {
+  background: var(--brand-yellow);
+}
+
+body.ll-tv .tv-row-paciente,
+body.ll-tv .tv-row-turno {
+  color: var(--brand-black);
+}
+
+body.ll-tv .tv-row-prof {
+  color: var(--brand-dark-gray);
+}
+
+body.ll-tv .tv-now {
+  border-radius: 0;
+  border-left: 10px solid var(--brand-red);
+  background: var(--brand-black);
+  box-shadow: 8px 8px 0 var(--brand-yellow);
+}
+
+body.ll-tv .tv-now-label {
+  color: var(--brand-yellow);
+}
+
+body.ll-tv .tv-now-name,
+body.ll-tv .tv-now-dest {
+  color: #fff;
+}
+
+body.ll-tv .tv-now-name.is-empty {
+  color: #cfcfcf;
+}
+
+body.ll-tv .tv-history-title {
+  color: var(--brand-red);
+}
+
+body.ll-tv .tv-history-list {
+  border-top-color: var(--brand-red);
+}
+
+body.ll-tv .tv-history-item {
+  color: var(--brand-black);
+  border-bottom-color: var(--brand-black);
+}
+
+/* Reception panel */
+body.ll-panel .panel-shell {
+  background: transparent;
+}
+
+body.ll-panel .panel-side {
+  border-right-color: var(--brand-black);
+  background: #fff;
+}
+
+body.ll-panel .panel-side-title,
+body.ll-panel .panel-cola-title {
+  color: var(--brand-red);
+}
+
+body.ll-panel .panel-consultorio-btn {
+  border-radius: 0;
+  border-color: var(--brand-black);
+}
+
+body.ll-panel .panel-consultorio-btn:hover {
+  border-color: var(--brand-red);
+}
+
+body.ll-panel .panel-consultorio-btn.is-active {
+  border-color: var(--brand-red);
+  background: var(--brand-black);
+  color: #fff;
+}
+
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-nombre,
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-prof,
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-count small {
+  color: #cfcfcf;
+}
+
+body.ll-panel .panel-consultorio-num {
+  border-radius: 0;
+  background: var(--brand-black);
+}
+
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-num {
+  background: var(--brand-red);
+  color: var(--brand-black);
+}
+
+body.ll-panel .panel-current,
+body.ll-panel .panel-cola-list {
+  border-radius: 0;
+  border-color: var(--brand-black);
+}
+
+body.ll-panel .panel-current {
+  border-width: 2px;
+  box-shadow: 8px 8px 0 rgba(255, 0, 0, 0.1);
+}
+
+body.ll-panel .panel-current-label {
+  background: var(--brand-black);
+  border-bottom: 4px solid var(--brand-red);
+}
+
+body.ll-panel .panel-current-name,
+body.ll-panel .panel-current-turno,
+body.ll-panel .panel-cola-row .doc-name {
+  color: var(--brand-black);
+}
+
+body.ll-panel .panel-cola-list {
+  border-top-color: var(--brand-red);
+}
+
+body.ll-panel .panel-cola-pos {
+  color: var(--brand-red);
+}
+
+body.ll-panel .toast,
+body.ll-mobile .toast {
+  border-radius: 0;
+  border-left: 5px solid var(--brand-red);
+  background: var(--brand-black);
+}
+
+/* Professional mobile view */
+body.ll-mobile .mobile-shell {
+  background: #fff;
+  border-inline-color: var(--brand-black);
+  box-shadow: 10px 0 0 rgba(255, 0, 0, 0.035), -10px 0 0 rgba(255, 196, 0, 0.05);
+}
+
+body.ll-mobile .select {
+  border-radius: 0;
+  border-color: var(--brand-black);
+}
+
+body.ll-mobile .mobile-current {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: 7px 7px 0 rgba(255, 0, 0, 0.1);
+}
+
+body.ll-mobile .mobile-current-label {
+  background: var(--brand-black);
+  border-bottom: 4px solid var(--brand-red);
+}
+
+body.ll-mobile .mobile-current-name,
+body.ll-mobile .mobile-current-turno {
+  color: var(--brand-black);
+}
+
+body.ll-mobile .mobile-cola-title {
+  color: var(--brand-red);
+}
+
+body.ll-mobile .panel-cola-list {
+  border-top: 2px solid var(--brand-red);
+}
+
+body.ll-mobile .panel-cola-row {
+  border-bottom-color: var(--brand-black);
+}
+
+body.ll-mobile .panel-cola-pos {
+  color: var(--brand-red);
+}
+
+/* Configuration */
+body.ll-config .cfg-head h1,
+body.ll-config .cfg-box h2,
+body.ll-config .cfg-box legend,
+body.ll-config .cfg-list b,
+body.ll-config .cfg-roles b {
+  color: var(--brand-black);
+}
+
+body.ll-config .cfg-head p,
+body.ll-config .cfg-hint,
+body.ll-config .cfg-list span,
+body.ll-config .cfg-roles span {
+  color: var(--brand-gray);
+}
+
+body.ll-config .cfg-box {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  border-top: 6px solid var(--brand-red);
+  box-shadow: none;
+}
+
+body.ll-config .cfg-input {
+  border-radius: 0;
+  border-color: var(--brand-black);
+}
+
+body.ll-config .cfg-input:focus-visible {
+  outline-color: var(--brand-red);
+}
+
+body.ll-config .cfg-list li,
+body.ll-config .cfg-roles li {
+  border-bottom-color: var(--brand-black);
+}
+
+body.ll-config .cfg-radio input,
+body.ll-config .cfg-check input {
+  accent-color: var(--brand-red);
+}
+
+body.ll-config .cfg-prev-now {
+  border-radius: 0;
+  border-left: 10px solid var(--brand-red);
+  background: var(--brand-black);
+  box-shadow: 8px 8px 0 var(--brand-yellow);
+}
+
+body.ll-config .cfg-prev-label,
+body.ll-config .cfg-prev-det {
+  color: #cfcfcf;
+}
+
+body.ll-config .cfg-prev-dest {
+  color: var(--brand-yellow);
+}
+
+@media (max-width: 720px) {
+  body.ll-panel .ll-topbar,
+  body.ll-mobile .ll-topbar,
+  body.ll-config .ll-topbar {
+    padding-inline: var(--sp-4);
+  }
+
+  body.ll-panel .ll-role,
+  body.ll-mobile .ll-role,
+  body.ll-config .ll-role {
+    display: none;
+  }
+
+  body.ll-tv .tv-header {
+    padding-inline: var(--sp-5);
+  }
+
+  body.ll-tv .tv-clock {
+    font-size: var(--fs-xl);
+  }
+}

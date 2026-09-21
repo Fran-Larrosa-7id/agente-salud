@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestor de Turnos por WhatsApp · Demo</title>
+<title>7iDeas · Gestor de turnos por WhatsApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <style>
@@ -39,12 +42,13 @@
   .demo-cta { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-sm); color: var(--accent-strong); }
   .selector-foot { text-align: center; margin-top: var(--sp-8); font-size: var(--fs-xs); color: var(--gray-600); }
 </style>
+<link rel="stylesheet" href="css/whatsapp-brand.css">
 </head>
-<body>
+<body class="whatsapp-selector">
 <main class="selector">
-  <a href="../index.html" style="display:inline-block;margin-bottom:var(--sp-5);font-size:var(--fs-sm);font-weight:600;color:var(--accent-strong)">← Volver a soluciones</a>
+  <a class="selector-back" href="../index.html" style="display:inline-block;margin-bottom:var(--sp-5);font-size:var(--fs-sm);font-weight:600">← Volver a soluciones</a>
   <div class="selector-head">
-    <div class="selector-mark"><span class="dot"></span> Gestor de Turnos por WhatsApp</div>
+    <div class="selector-mark"><span class="dot"></span> 7iDeas · Gestor de Turnos por WhatsApp</div>
     <h1>Elegí qué demo querés ver</h1>
     <p>Prototipo conceptual: la conversación que ve el paciente y el panel de automatizaciones de la institución.</p>
   </div>
@@ -66,7 +70,7 @@
       <span class="demo-cta">Ver panel →</span>
     </a>
   </div>
-  <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · Vertical Salud</p>
+  <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · 7iDeas</p>
 </main>
 </body>
 </html>

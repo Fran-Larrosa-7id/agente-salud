@@ -1,0 +1,191 @@
+/* -------------------------------------------------------------------------
+   7iDeas brand layer — Triage selector
+   The demo remains explicitly conceptual and non-clinical.
+   ------------------------------------------------------------------------- */
+:root {
+  --brand-red: #ff0000;
+  --brand-yellow: #ffc400;
+  --brand-black: #000000;
+  --brand-dark-gray: #2b2b2b;
+  --brand-gray: #6e6e6e;
+  --brand-page: #f4f4f4;
+}
+
+body.tr-selector {
+  position: relative;
+  min-height: 100vh;
+  font-family: 'Inter', var(--font-body);
+  color: var(--brand-black);
+  background: var(--brand-page);
+}
+
+body.tr-selector::before {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  top: -12vw;
+  right: 8vw;
+  width: clamp(180px, 25vw, 420px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.16);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body.tr-selector::after {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  left: 5vw;
+  bottom: 7vh;
+  width: 12px;
+  height: 96px;
+  background: var(--brand-yellow);
+  pointer-events: none;
+}
+
+body.tr-selector .selector {
+  position: relative;
+  z-index: 1;
+  max-width: 980px;
+}
+
+body.tr-selector .selector-head {
+  text-align: left;
+  border-left: 8px solid var(--brand-red);
+  padding-left: var(--sp-6);
+}
+
+body.tr-selector .selector-mark {
+  color: var(--brand-black);
+}
+
+body.tr-selector .selector-mark .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 6px 6px 0 var(--brand-yellow);
+}
+
+body.tr-selector .selector-head h1 {
+  color: var(--brand-black);
+  letter-spacing: -0.04em;
+}
+
+body.tr-selector .selector-head p,
+body.tr-selector .selector-foot,
+body.tr-selector .tri-note {
+  color: var(--brand-gray);
+}
+
+body.tr-selector .selector-back {
+  color: var(--brand-red);
+  font-weight: 700;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+body.tr-selector .demo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.08);
+  background:
+    linear-gradient(135deg, transparent 0 75%, rgba(255, 0, 0, 0.06) 75% 75.3%, transparent 75.3%),
+    #fff;
+}
+
+body.tr-selector .demo-card::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  right: -30px;
+  top: 50%;
+  width: 180px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.18);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+body.tr-selector .demo-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.tr-selector .demo-card:hover {
+  border-color: var(--brand-red);
+  box-shadow: 8px 8px 0 var(--brand-red);
+}
+
+body.tr-selector .demo-icon {
+  border-radius: 0;
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+}
+
+body.tr-selector .demo-card h2 {
+  color: var(--brand-black);
+}
+
+body.tr-selector .demo-card p {
+  color: var(--brand-dark-gray);
+}
+
+body.tr-selector .demo-cta,
+body.tr-selector .selector-tip {
+  color: var(--brand-red);
+}
+
+body.tr-selector .tri-pipe {
+  justify-content: flex-start;
+  padding-left: var(--sp-6);
+  border-left: 2px solid var(--brand-black);
+}
+
+body.tr-selector .tri-pipe li {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+  background: #fff;
+}
+
+body.tr-selector .tri-pipe li:nth-child(2) {
+  background: var(--brand-black);
+  color: #fff;
+  border-color: var(--brand-black);
+}
+
+body.tr-selector .tri-pipe li:nth-child(4) {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+}
+
+body.tr-selector .tri-pipe li:nth-child(5) {
+  background: var(--brand-red);
+  border-color: var(--brand-red);
+  color: var(--brand-black);
+}
+
+body.tr-selector .tri-pipe li:not(:last-child)::after {
+  color: var(--brand-red);
+}
+
+body.tr-selector .tri-note {
+  text-align: left;
+  padding: var(--sp-3) var(--sp-4);
+  border-left: 6px solid var(--brand-yellow);
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  body.tr-selector .selector-head {
+    padding-left: var(--sp-4);
+  }
+
+  body.tr-selector .tri-pipe {
+    padding-left: var(--sp-4);
+  }
+}

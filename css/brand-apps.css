@@ -1,0 +1,586 @@
+/* -------------------------------------------------------------------------
+   7iDeas application layer
+   Shared visual treatment for the onboarding selector, patient flow and
+   institutional dashboard. Functional styles remain in their page files.
+   ------------------------------------------------------------------------- */
+:root {
+  --brand-red: #ff0000;
+  --brand-yellow: #ffc400;
+  --brand-black: #000000;
+  --brand-dark-gray: #2b2b2b;
+  --brand-gray: #6e6e6e;
+  --brand-light-gray: #ededed;
+  --brand-page: #f4f4f4;
+  --brand-line: #000000;
+}
+
+body.paciente,
+body.institucion,
+body.onboarding-selector {
+  font-family: 'Inter', var(--font-body);
+  color: var(--brand-black);
+}
+
+body.paciente,
+body.institucion,
+body.onboarding-selector {
+  position: relative;
+  background: var(--brand-page);
+}
+
+body.paciente::before,
+body.institucion::before,
+body.onboarding-selector::before {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  top: -12vw;
+  right: 7vw;
+  width: clamp(180px, 25vw, 420px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.16);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body.paciente::after,
+body.institucion::after,
+body.onboarding-selector::after {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  left: 5vw;
+  bottom: 7vh;
+  width: 12px;
+  height: 96px;
+  background: var(--brand-yellow);
+  pointer-events: none;
+}
+
+.phone-frame,
+.app-shell,
+.onboarding-selector .selector {
+  position: relative;
+  z-index: 1;
+}
+
+/* Shared controls and surfaces */
+body.paciente .btn,
+body.institucion .btn {
+  border-radius: 0;
+  font-family: inherit;
+}
+
+body.paciente .btn-accent,
+body.institucion .btn-accent {
+  background: var(--brand-red);
+  border-color: var(--brand-red);
+  color: var(--brand-black);
+  font-weight: 800;
+}
+
+body.paciente .btn-accent:hover,
+body.institucion .btn-accent:hover {
+  background: var(--brand-yellow);
+  border-color: var(--brand-yellow);
+}
+
+body.paciente .btn-secondary,
+body.institucion .btn-secondary {
+  background: var(--brand-black);
+  border-color: var(--brand-black);
+  color: #fff;
+}
+
+body.paciente .btn-ghost,
+body.institucion .btn-ghost {
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+  background: #fff;
+}
+
+body.paciente .btn-ghost:hover,
+body.institucion .btn-ghost:hover {
+  background: var(--brand-light-gray);
+}
+
+body.paciente .input,
+body.paciente .select,
+body.paciente .textarea,
+body.institucion .input,
+body.institucion .select,
+body.institucion .select-sm {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+  background: #fff;
+}
+
+body.paciente .input:focus,
+body.paciente .select:focus,
+body.paciente .textarea:focus,
+body.institucion .input:focus,
+body.institucion .select:focus,
+body.institucion .select-sm:focus {
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.16);
+  outline: none;
+}
+
+body.paciente .badge,
+body.institucion .badge {
+  border-radius: 0;
+}
+
+/* Patient flow */
+body.paciente {
+  background: var(--brand-page);
+}
+
+body.paciente .phone-frame {
+  background: #fff;
+  border-inline: 1px solid var(--brand-black);
+  box-shadow: 12px 0 0 rgba(255, 0, 0, 0.035), -12px 0 0 rgba(255, 196, 0, 0.05);
+}
+
+body.paciente .top-context {
+  background: var(--brand-black);
+  border-bottom: 4px solid var(--brand-red);
+}
+
+body.paciente .top-context .eyebrow {
+  color: var(--brand-yellow);
+}
+
+body.paciente .top-context strong {
+  color: #fff;
+}
+
+body.paciente .screen-body {
+  background:
+    linear-gradient(135deg, transparent 0 85%, rgba(255, 0, 0, 0.035) 85% 85.3%, transparent 85.3%),
+    linear-gradient(45deg, transparent 0 11%, rgba(0, 0, 0, 0.035) 11% 11.25%, transparent 11.25%),
+    #fff;
+}
+
+body.paciente .screen-title,
+body.paciente .success-wrap h1 {
+  color: var(--brand-black);
+}
+
+body.paciente .screen-sub,
+body.paciente .success-wrap p {
+  color: var(--brand-gray);
+}
+
+body.paciente .sticky-cta {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 30%);
+}
+
+body.paciente .welcome-card,
+body.paciente .phase-card,
+body.paciente .med-card,
+body.paciente .review-item,
+body.paciente .appointment-card {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: none;
+}
+
+body.paciente .welcome-card {
+  background:
+    linear-gradient(135deg, transparent 0 78%, rgba(255, 0, 0, 0.07) 78% 78.3%, transparent 78.3%),
+    #fff;
+}
+
+body.paciente .welcome-hero-icon {
+  border-radius: 0;
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+  box-shadow: 7px 7px 0 var(--brand-red);
+}
+
+body.paciente .duration-chip {
+  border-radius: 0;
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+}
+
+body.paciente .overview-progress-value,
+body.paciente .form-section-label,
+body.paciente .tpl-tag,
+body.paciente .add-link {
+  color: var(--brand-red);
+}
+
+body.paciente .progress-fill {
+  background: var(--brand-red);
+}
+
+body.paciente .uploader {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  background:
+    linear-gradient(135deg, transparent 0 70%, rgba(255, 196, 0, 0.12) 70% 100%),
+    #fff;
+}
+
+body.paciente .uploader:hover,
+body.paciente .uploader:focus {
+  border-color: var(--brand-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+body.paciente .review-item:hover {
+  border-color: var(--brand-red);
+  box-shadow: 5px 5px 0 rgba(255, 0, 0, 0.12);
+}
+
+body.paciente .success-badge {
+  border-radius: 0;
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+  box-shadow: 7px 7px 0 var(--brand-red);
+}
+
+body.paciente .toast {
+  border-left: 5px solid var(--brand-red);
+  border-radius: 0;
+  background: var(--brand-black);
+}
+
+/* Institutional dashboard */
+body.institucion {
+  background: var(--brand-page);
+}
+
+body.institucion .topbar {
+  background: var(--brand-black);
+  border-bottom: 4px solid var(--brand-red);
+}
+
+body.institucion .brand {
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+body.institucion .brand .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 5px 5px 0 var(--brand-yellow);
+}
+
+body.institucion .topbar-date {
+  color: #cfcfcf;
+}
+
+body.institucion .topbar-exit {
+  border-radius: 0;
+  border-color: rgba(255, 255, 255, 0.65);
+  color: #fff;
+}
+
+body.institucion .topbar-exit:hover {
+  border-color: var(--brand-yellow);
+  color: var(--brand-yellow);
+}
+
+body.institucion .main {
+  position: relative;
+  overflow: hidden;
+}
+
+body.institucion .main::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 80px;
+  right: -130px;
+  width: 280px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body.institucion .main > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.institucion .page-head h1,
+body.institucion .panel-head h2,
+body.institucion .drawer-name,
+body.institucion .patient-name,
+body.institucion .turno-name,
+body.institucion .turno-time {
+  color: var(--brand-black);
+}
+
+body.institucion .page-eyebrow,
+body.institucion .drawer-section-title {
+  color: var(--brand-red);
+}
+
+body.institucion .stat-grid {
+  border-radius: 0;
+  border: 2px solid var(--brand-black);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.08);
+}
+
+body.institucion .stat-cell {
+  border-right-color: var(--brand-black);
+}
+
+body.institucion .stat-cell:hover {
+  background: #fff;
+}
+
+body.institucion .stat-cell.is-active {
+  background: var(--brand-black);
+  border-top-color: var(--brand-red);
+}
+
+body.institucion .stat-cell.is-active .stat-cell-label,
+body.institucion .stat-cell.is-active .stat-cell-foot {
+  color: #cfcfcf;
+}
+
+body.institucion .stat-cell.is-active .stat-cell-value {
+  color: #fff;
+}
+
+body.institucion .stat-cell-value.accent {
+  color: var(--brand-red);
+}
+
+body.institucion .stat-cell-value.warn {
+  color: #8a6500;
+}
+
+body.institucion .panel {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  border-top: 6px solid var(--brand-red);
+  box-shadow: none;
+}
+
+body.institucion .panel-head {
+  border-bottom-color: var(--brand-black);
+}
+
+body.institucion .filter-chip {
+  color: var(--brand-gray);
+}
+
+body.institucion .filter-chip:hover,
+body.institucion .filter-chip.is-active {
+  color: var(--brand-black);
+  border-bottom-color: var(--brand-red);
+}
+
+body.institucion .patient-table thead th {
+  color: var(--brand-black);
+  background: var(--brand-light-gray);
+  border-bottom-color: var(--brand-black);
+}
+
+body.institucion .patient-table tbody tr:hover {
+  background: rgba(255, 0, 0, 0.035);
+}
+
+body.institucion .patient-table tbody tr.row-revision {
+  background: rgba(255, 0, 0, 0.08);
+  box-shadow: inset 5px 0 0 var(--brand-red);
+}
+
+body.institucion .activity-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 0;
+  background: var(--brand-red);
+}
+
+body.institucion .drawer {
+  border-left: 8px solid var(--brand-red);
+  border-radius: 0;
+}
+
+body.institucion .drawer-close {
+  border-radius: 0;
+  background: var(--brand-yellow);
+  color: var(--brand-black);
+}
+
+body.institucion .drawer-close:hover {
+  background: var(--brand-red);
+}
+
+body.institucion .checklist-item:hover {
+  background: rgba(255, 0, 0, 0.04);
+}
+
+body.institucion .ai-fab {
+  border-radius: 0;
+  background: var(--brand-red);
+  color: var(--brand-black);
+  box-shadow: 7px 7px 0 var(--brand-black);
+}
+
+body.institucion .ai-fab:hover {
+  background: var(--brand-yellow);
+  box-shadow: 7px 7px 0 var(--brand-red);
+}
+
+body.institucion .ai-bubble,
+body.institucion .ai-typing {
+  border-radius: 0;
+}
+
+body.institucion .ai-bubble.ai,
+body.institucion .ai-typing {
+  background: var(--brand-light-gray);
+  color: var(--brand-black);
+}
+
+body.institucion .ai-bubble.user {
+  background: var(--brand-black);
+  color: #fff;
+  border-right: 4px solid var(--brand-red);
+}
+
+body.institucion .ai-suggestion-chip {
+  border-radius: 0;
+  border-color: var(--brand-black);
+  color: var(--brand-black);
+}
+
+body.institucion .ai-suggestion-chip:hover {
+  border-color: var(--brand-red);
+  background: rgba(255, 0, 0, 0.04);
+}
+
+body.institucion .cfg-check input {
+  accent-color: var(--brand-red);
+}
+
+body.institucion .cfg-link {
+  color: var(--brand-red);
+}
+
+/* Onboarding selector */
+body.onboarding-selector {
+  min-height: 100vh;
+  background: var(--brand-page);
+}
+
+body.onboarding-selector .selector {
+  max-width: 980px;
+}
+
+body.onboarding-selector .selector-head {
+  text-align: left;
+  border-left: 8px solid var(--brand-red);
+  padding-left: var(--sp-6);
+}
+
+body.onboarding-selector .selector-mark {
+  color: var(--brand-black);
+}
+
+body.onboarding-selector .selector-mark .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  background: var(--brand-red);
+  box-shadow: 6px 6px 0 var(--brand-yellow);
+}
+
+body.onboarding-selector .selector-head h1 {
+  color: var(--brand-black);
+  letter-spacing: -0.04em;
+}
+
+body.onboarding-selector .selector-head p,
+body.onboarding-selector .selector-foot {
+  color: var(--brand-gray);
+}
+
+body.onboarding-selector .selector-back {
+  color: var(--brand-red);
+  font-weight: 700;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+body.onboarding-selector .demo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0;
+  border-color: var(--brand-black);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.08);
+  background:
+    linear-gradient(135deg, transparent 0 75%, rgba(255, 0, 0, 0.06) 75% 75.3%, transparent 75.3%),
+    #fff;
+}
+
+body.onboarding-selector .demo-card::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  right: -30px;
+  top: 50%;
+  width: 180px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 0, 0, 0.18);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+body.onboarding-selector .demo-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.onboarding-selector .demo-card:hover {
+  border-color: var(--brand-red);
+  box-shadow: 8px 8px 0 var(--brand-red);
+}
+
+body.onboarding-selector .demo-icon {
+  border-radius: 0;
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+}
+
+body.onboarding-selector .demo-card h2 {
+  color: var(--brand-black);
+}
+
+body.onboarding-selector .demo-card p {
+  color: var(--brand-dark-gray);
+}
+
+body.onboarding-selector .demo-cta {
+  color: var(--brand-red);
+}
+
+@media (max-width: 720px) {
+  body.institucion .topbar {
+    padding-inline: var(--sp-4);
+  }
+
+  body.institucion .topbar-date {
+    display: none;
+  }
+
+  body.institucion .main {
+    padding: var(--sp-5);
+  }
+
+  body.onboarding-selector .selector-head {
+    padding-left: var(--sp-4);
+  }
+}

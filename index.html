@@ -86,6 +86,13 @@
   .demo-card p { color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: var(--sp-5); }
   .demo-cta { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-sm); color: var(--accent-strong); }
   .selector-foot { text-align: center; margin-top: var(--sp-8); font-size: var(--fs-xs); color: var(--gray-600); }
+  .journey { margin-top: var(--sp-8); padding: var(--sp-5); background: var(--white); border: 1px solid var(--line-strong); border-top: 2px solid var(--navy-900); border-radius: var(--r-md); }
+  .journey h2 { font-size: var(--fs-md); font-weight: 800; color: var(--navy-900); margin: 0 0 var(--sp-3); }
+  .journey ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-3); }
+  @media (max-width: 720px) { .journey ol { grid-template-columns: 1fr 1fr; } }
+  .journey li { border-left: 3px solid var(--navy-900); padding-left: var(--sp-3); font-size: var(--fs-xs); color: var(--ink-soft); }
+  .journey li b { display: block; font-size: var(--fs-sm); color: var(--navy-900); }
+  .journey p { margin: var(--sp-3) 0 0; font-size: var(--fs-xs); color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -117,6 +124,16 @@
       <span class="demo-cta">Ver dashboard institucional →</span>
     </a>
   </div>
+  <section class="journey" aria-labelledby="jTitle">
+    <h2 id="jTitle">Cómo pueden convivir, sin ser un solo sistema</h2>
+    <ol>
+      <li><b>1. Turnos por WhatsApp</b>El paciente obtiene, confirma y reprograma su turno.</li>
+      <li><b>2. Onboarding</b>Prepara datos y documentación antes de la atención.</li>
+      <li><b>3. Llamador</b>Ordena la sala de espera cuando el paciente llega.</li>
+      <li><b>4. Atención</b>Ocurre en el sistema clínico de la institución.</li>
+    </ol>
+    <p>Portal del paciente, Triage y Asistente IA se integran de forma transversal. Cada solución es independiente y se adapta a cada cliente.</p>
+  </section>
   <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · Vertical Salud</p>
 </main>
 </body>

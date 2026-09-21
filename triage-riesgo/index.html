@@ -38,6 +38,11 @@
   .demo-card p { color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: var(--sp-5); }
   .demo-cta { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-sm); color: var(--accent-strong); }
   .selector-foot { text-align: center; margin-top: var(--sp-8); font-size: var(--fs-xs); color: var(--gray-600); }
+  .tri-pipe { list-style: none; margin: var(--sp-6) 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-2); counter-reset: p; }
+  .tri-pipe li { counter-increment: p; font-size: var(--fs-xs); font-weight: 700; color: var(--navy-900); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 6px 10px; background: var(--white); }
+  .tri-pipe li:not(:last-child)::after { content: "→"; margin-left: 10px; color: var(--ink-soft); }
+  .tri-pipe li:nth-child(2) { background: var(--navy-900); color: #fff; }
+  .tri-note { text-align: center; margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--ink-soft); }
   .selector-tip { text-align: center; margin-top: var(--sp-4); font-size: var(--fs-sm); color: var(--teal-600); font-weight: 600; }
 </style>
 </head>
@@ -46,7 +51,7 @@
   <div class="selector-head">
     <div class="selector-mark"><span class="dot"></span> Triage / Evaluador de Riesgo</div>
     <h1>Elegí qué demo querés ver</h1>
-    <p>Prototipo conceptual: autoevaluación de síntomas para el paciente y priorización de guardia para la institución.</p>
+    <p>Prototipo conceptual: ordena la cola de guardia aplicando reglas configuradas y validadas por la institución. Siempre hay una instancia de revisión profesional.</p>
   </div>
   <div class="cards">
     <a class="demo-card" href="evaluacion.html">
@@ -66,6 +71,14 @@
       <span class="demo-cta">Ver panel →</span>
     </a>
   </div>
+  <ol class="tri-pipe" aria-label="Cómo funciona">
+    <li>Formulario del paciente</li>
+    <li>Motor de evaluación</li>
+    <li>Reglas configuradas y validadas</li>
+    <li>Nivel de prioridad</li>
+    <li>Revisión profesional</li>
+  </ol>
+  <p class="tri-note">Las reglas de esta demo son ilustrativas: no constituyen un algoritmo clínico validado. El motor solo las aplica; no decide por sí mismo.</p>
   <p class="selector-tip">Tip: abrí "Evaluación" y "Panel" en dos pestañas. Al completar una evaluación, aparece sola en el panel.</p>
   <p class="selector-foot">Prototipo frontend sin backend · datos ficticios · no es asesoramiento médico real · Vertical Salud</p>
 </main>

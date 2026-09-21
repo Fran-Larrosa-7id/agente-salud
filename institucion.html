@@ -23,7 +23,8 @@
   <main class="main" id="main">
     <div class="page-head">
       <h1>Clínica San Rafael</h1>
-      <p>Estado de pre-admisión de los pacientes de hoy.</p>
+      <p class="page-eyebrow">Antes de la atención</p>
+      <p>¿Quién puede ser atendido sin trámites adicionales? Estado de la pre-admisión de los pacientes de hoy.</p>
     </div>
 
     <div class="stat-grid" role="group" aria-label="Filtrar por estado desde el resumen">
@@ -33,19 +34,19 @@
         <span class="stat-cell-foot">Turnos agendados</span>
       </button>
       <button class="stat-cell" type="button" data-status="listo" aria-pressed="false">
-        <span class="stat-cell-label">Onboarding completo</span>
+        <span class="stat-cell-label">Listos para atender</span>
         <span class="stat-cell-value accent num" id="statListos">0</span>
-        <span class="stat-cell-foot">Listos para atender</span>
+        <span class="stat-cell-foot">Sin trámites adicionales</span>
       </button>
       <button class="stat-cell" type="button" data-status="pendiente" aria-pressed="false">
         <span class="stat-cell-label">Pendientes</span>
         <span class="stat-cell-value warn num" id="statPendientes">0</span>
-        <span class="stat-cell-foot">Información o documentación</span>
+        <span class="stat-cell-foot">Falta información o documentación</span>
       </button>
       <button class="stat-cell is-urgent" type="button" data-status="revision" aria-pressed="false">
         <span class="stat-cell-label">Requieren revisión</span>
         <span class="stat-cell-value danger num" id="statRevision">0</span>
-        <span class="stat-cell-foot">Necesitan validación manual</span>
+        <span class="stat-cell-foot">Recepción debe validar</span>
       </button>
     </div>
 
@@ -100,6 +101,23 @@
         <section class="panel">
           <div class="panel-head"><h2>Próximos turnos</h2></div>
           <div class="side-list" id="proximosTurnos"></div>
+        </section>
+        <section class="panel" aria-labelledby="cfgTitle">
+          <div class="panel-head"><h2 id="cfgTitle">Configuración de onboarding</h2></div>
+          <div class="cfg-body">
+            <label class="field-label" for="cfgPlantilla">Plantilla</label>
+            <select class="select-sm cfg-select" id="cfgPlantilla"></select>
+            <p class="cfg-help" id="cfgHelp"></p>
+            <div class="cfg-group">
+              <div class="cfg-group-title">Secciones requeridas</div>
+              <ul class="cfg-checks" id="cfgSecciones"></ul>
+            </div>
+            <div class="cfg-group">
+              <div class="cfg-group-title">Documentación requerida</div>
+              <ul class="cfg-checks" id="cfgDocs"></ul>
+            </div>
+            <p class="cfg-scope">Reúne información <b>previa</b> a la atención. No reemplaza la historia clínica: no registra evoluciones, diagnósticos ni tratamientos.</p>
+          </div>
         </section>
         <section class="panel">
           <div class="panel-head"><h2>Actividad reciente</h2></div>
@@ -162,9 +180,9 @@
       <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
     <div class="drawer-head">
-      <div class="eyebrow">Asistente virtual</div>
+      <div class="eyebrow">Asistente IA · Onboarding · Agenda · Procesos</div>
       <div class="drawer-name" id="aiDrawerTitle">Analista de datos</div>
-      <div class="drawer-meta">Preguntá sobre los pacientes de hoy, en lenguaje natural.</div>
+      <div class="drawer-meta">Consulta información operativa en lenguaje natural. No diagnostica ni da recomendaciones clínicas.</div>
     </div>
   </div>
   <div class="ai-chat-body" id="aiChatBody"></div>
@@ -180,5 +198,46 @@
 <script src="js/data.js"></script>
 <script src="js/institucion.js"></script>
 <script src="js/asistente-ia.js"></script>
+<script>
+  // Configuración conceptual: cada institución define qué solicita antes de una atención (mock, sin persistencia)
+  const CFG_SECCIONES = ['Datos personales', 'Cobertura médica', 'Antecedentes', 'Medicación', 'Documentación'];
+  const CFG_DOCS = ['DNI', 'Credencial', 'Orden médica', 'Estudios previos', 'Consentimiento informado', 'Ayuno confirmado'];
+  const CFG_PLANTILLAS = {
+    general: { nombre: 'Consulta general', ayuda: 'Datos básicos, cobertura y antecedentes para preparar la consulta.',
+      secciones: [1, 1, 1, 1, 1], docs: [1, 1, 0, 0, 0, 0] },
+    quirurgica: { nombre: 'Pre-admisión quirúrgica', ayuda: 'Suma estudios previos y consentimiento informado.',
+      secciones: [1, 1, 1, 1, 1], docs: [1, 1, 1, 1, 1, 0] },
+    imagenes: { nombre: 'Diagnóstico por imágenes', ayuda: 'Prioriza la orden médica y la información previa al estudio.',
+      secciones: [1, 1, 0, 1, 1], docs: [1, 1, 1, 0, 0, 0] },
+    laboratorio: { nombre: 'Laboratorio', ayuda: 'Orden médica y confirmación de ayuno, sin cuestionario largo.',
+      secciones: [1, 1, 0, 1, 1], docs: [1, 1, 1, 0, 0, 1] },
+    personalizado: { nombre: 'Personalizado', ayuda: 'La institución elige cada sección y cada documento.',
+      secciones: [1, 1, 0, 0, 1], docs: [1, 0, 0, 0, 0, 0] },
+  };
+  const cfgSel = document.getElementById('cfgPlantilla');
+  let cfgActual = null;
+  cfgSel.innerHTML = Object.keys(CFG_PLANTILLAS).map((k) => `<option value="${k}">${CFG_PLANTILLAS[k].nombre}</option>`).join('');
+  function cfgRender() {
+    const pl = cfgActual;
+    document.getElementById('cfgHelp').textContent = CFG_PLANTILLAS[cfgSel.value].ayuda;
+    const lista = (id, items, marks, tipo) => {
+      document.getElementById(id).innerHTML = items.map((t, i) => `<li><label class="cfg-check"><input type="checkbox" data-t="${tipo}" data-i="${i}"${marks[i] ? ' checked' : ''}> ${t}</label></li>`).join('');
+    };
+    lista('cfgSecciones', CFG_SECCIONES, pl.secciones, 's');
+    lista('cfgDocs', CFG_DOCS, pl.docs, 'd');
+    document.querySelectorAll('.cfg-check input').forEach((c) => c.addEventListener('change', () => {
+      (c.dataset.t === 's' ? pl.secciones : pl.docs)[Number(c.dataset.i)] = c.checked ? 1 : 0;
+      if (cfgSel.value !== 'personalizado') { cfgSel.value = 'personalizado'; document.getElementById('cfgHelp').textContent = CFG_PLANTILLAS.personalizado.ayuda; }
+    }));
+  }
+  cfgSel.addEventListener('change', () => {
+    const p = CFG_PLANTILLAS[cfgSel.value];
+    cfgActual = { secciones: p.secciones.slice(), docs: p.docs.slice() };
+    cfgRender();
+  });
+  cfgSel.value = 'general';
+  cfgActual = { secciones: CFG_PLANTILLAS.general.secciones.slice(), docs: CFG_PLANTILLAS.general.docs.slice() };
+  cfgRender();
+</script>
 </body>
 </html>

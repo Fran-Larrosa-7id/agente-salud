@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configuración · Llamador de Pacientes</title>
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="css/llamador.css">
+</head>
+<body>
+<header class="ll-topbar">
+  <div class="ll-mark"><span class="dot"></span> Configuración</div>
+  <span class="ll-role">Vista de Administración</span>
+  <a class="ll-back" href="index.html">← Volver</a>
+</header>
+<main class="cfg">
+  <div class="cfg-head">
+    <h1>Configuración del llamador</h1>
+    <p>Cada institución define cómo se identifica al paciente y qué se muestra en la sala de espera. Los cambios se aplican en la pantalla al instante (probá con la pantalla abierta en otra pestaña).</p>
+  </div>
+
+  <div class="cfg-grid">
+    <div class="cfg-col">
+      <section class="cfg-box">
+        <h2>Pantalla</h2>
+        <label class="cfg-label" for="cfgPantalla">Nombre de la pantalla</label>
+        <input class="cfg-input" id="cfgPantalla" type="text" maxlength="40">
+      </section>
+
+      <section class="cfg-box">
+        <h2>Consultorios</h2>
+        <ul class="cfg-list" id="cfgConsultorios"></ul>
+      </section>
+
+      <fieldset class="cfg-box">
+        <legend>Formato del llamado</legend>
+        <p class="cfg-hint">Define cuánto identifica al paciente en la sala. Recepción y el profesional siempre ven el nombre completo.</p>
+        <div id="cfgFormato"></div>
+      </fieldset>
+
+      <fieldset class="cfg-box">
+        <legend>Información visible en pantalla</legend>
+        <label class="cfg-check"><input type="checkbox" data-vis="consultorio"> Consultorio</label>
+        <label class="cfg-check"><input type="checkbox" data-vis="profesional"> Profesional</label>
+        <label class="cfg-check"><input type="checkbox" data-vis="especialidad"> Especialidad</label>
+      </fieldset>
+
+      <fieldset class="cfg-box">
+        <legend>Sonido al llamar</legend>
+        <div id="cfgSonido"></div>
+        <button class="btn btn-secondary btn-sm" id="cfgProbar" type="button" style="margin-top: var(--sp-3)">Probar sonido</button>
+      </fieldset>
+    </div>
+
+    <div class="cfg-col">
+      <section class="cfg-box cfg-preview" aria-labelledby="cfgPrevTitle">
+        <h2 id="cfgPrevTitle">Así se ve en la sala</h2>
+        <div class="cfg-prev-sala" id="cfgPrevSala"></div>
+        <div class="cfg-prev-now" id="cfgPrevNow"></div>
+        <p class="cfg-hint">Ejemplo con el paciente María González llamada al Consultorio 2.</p>
+      </section>
+
+      <section class="cfg-box">
+        <h2>Quién usa cada vista</h2>
+        <ul class="cfg-roles">
+          <li><b>Recepción</b><span>Panel de control. Llama pacientes y gestiona colas de todos los consultorios. Ve nombres completos.</span></li>
+          <li><b>Profesional</b><span>App móvil. Llama a su próximo paciente desde su consultorio. Ve nombres completos.</span></li>
+          <li><b>Paciente / sala de espera</b><span>Pantalla pública. Solo ve lo que la institución decide mostrar.</span></li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="js/llamador.js"></script>
+<script>
+  const cfg = llGetConfig();
+  const $ = (id) => document.getElementById(id);
+  const SONIDOS = [
+    { id: 'campanilla', nombre: 'Campanilla' },
+    { id: 'suave', nombre: 'Tono suave' },
+    { id: 'ninguno', nombre: 'Sin sonido' },
+  ];
+
+  function radios(cont, name, items, selected, ejemplo) {
+    $(cont).innerHTML = items.map((it) => `<label class="cfg-radio">
+      <input type="radio" name="${name}" value="${it.id}"${it.id === selected ? ' checked' : ''}>
+      <span>${it.nombre}${ejemplo ? `<em>${it.ejemplo}</em>` : ''}</span></label>`).join('');
+  }
+  radios('cfgFormato', 'formato', LL_FORMATOS, cfg.formato, true);
+  radios('cfgSonido', 'sonido', SONIDOS, cfg.sonido, false);
+  $('cfgPantalla').value = cfg.pantalla;
+  document.querySelectorAll('[data-vis]').forEach((c) => { c.checked = cfg.visible[c.dataset.vis]; });
+  $('cfgConsultorios').innerHTML = LL_CONSULTORIOS.map((c) => `<li><b>${c.nombre}</b><span>${c.especialidad} · ${c.profesional}</span></li>`).join('');
+
+  function preview() {
+    const c = LL_CONSULTORIOS[1], v = cfg.visible;
+    const nombre = llNombreSala('María González', 'p1', cfg.formato);
+    $('cfgPrevSala').textContent = cfg.pantalla;
+    const detalle = [v.profesional ? c.profesional : '', v.especialidad ? c.especialidad : ''].filter(Boolean).join(' · ');
+    $('cfgPrevNow').innerHTML = `<div class="cfg-prev-label">Llamando</div>
+      <div class="cfg-prev-name"></div>
+      <div class="cfg-prev-dest">${v.consultorio ? c.nombre : (v.profesional ? c.profesional : 'Dirigirse al consultorio')}</div>
+      ${detalle && v.consultorio ? `<div class="cfg-prev-det">${detalle}</div>` : ''}`;
+    $('cfgPrevNow').querySelector('.cfg-prev-name').textContent = nombre;
+  }
+  function guardar() { llSaveConfig(cfg); preview(); }
+
+  $('cfgPantalla').addEventListener('input', (e) => { cfg.pantalla = e.target.value.trim() || LL_CONFIG_DEFAULT.pantalla; guardar(); });
+  document.querySelectorAll('input[name="formato"]').forEach((r) => r.addEventListener('change', () => { cfg.formato = r.value; guardar(); }));
+  document.querySelectorAll('input[name="sonido"]').forEach((r) => r.addEventListener('change', () => { cfg.sonido = r.value; guardar(); llSonar(cfg.sonido); }));
+  document.querySelectorAll('[data-vis]').forEach((c) => c.addEventListener('change', () => { cfg.visible[c.dataset.vis] = c.checked; guardar(); }));
+  $('cfgProbar').addEventListener('click', () => llSonar(cfg.sonido));
+  preview();
+</script>
+</body>
+</html>

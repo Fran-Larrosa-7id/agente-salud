@@ -10,7 +10,7 @@
 </head>
 <body class="ll-tv">
 <header class="tv-header">
-  <div class="tv-header-mark"><span class="dot"></span> Llamador de Pacientes</div>
+  <div class="tv-header-mark"><span class="dot"></span> Llamador de Pacientes<span class="tv-header-sala" id="tvSala"></span></div>
   <div class="tv-clock" id="tvClock" aria-hidden="true"></div>
 </header>
 <main class="tv-body">
@@ -29,19 +29,24 @@
   setInterval(renderClock, 1000 * 15);
   renderClock();
 
+  let lastState = llGetState();
   function render(state) {
+    lastState = state;
+    const cfg = llGetConfig();
+    const vis = cfg.visible;
+    document.getElementById('tvSala').textContent = cfg.pantalla;
     const cont = document.getElementById('tvConsultorios');
     cont.innerHTML = LL_CONSULTORIOS.map((c) => {
       const paciente = state.atendiendo[c.id];
       const cola = state.colas[c.id] || [];
       const num = (c.nombre.match(/\d+/) || [c.nombre])[0];
       return `<div class="tv-row" data-consultorio="${c.id}">
-        <div class="tv-row-num" aria-label="${c.nombre}">${num}</div>
+        <div class="tv-row-num" aria-label="${c.nombre}">${vis.consultorio ? num : '·'}</div>
         <div class="tv-row-main">
           ${paciente
-            ? `<div class="tv-row-paciente">${paciente.nombre}</div>`
+            ? `<div class="tv-row-paciente">${llNombreSala(paciente.nombre, paciente.id, cfg.formato)}</div>`
             : `<div class="tv-row-paciente is-empty">Sin paciente en atención</div>`}
-          <div class="tv-row-prof">${c.profesional} · ${c.especialidad}</div>
+          <div class="tv-row-prof">${[vis.profesional ? c.profesional : '', vis.especialidad ? c.especialidad : ''].filter(Boolean).join(' · ')}</div>
         </div>
         <div class="tv-row-meta">
           ${paciente ? `<div class="tv-row-turno">${paciente.turno}</div>` : ''}
@@ -54,8 +59,8 @@
     const cu = ultimo ? llConsultorio(ultimo.consultorioId) : null;
     document.getElementById('tvNow').innerHTML = ultimo
       ? `<div class="tv-now-label">Llamando</div>
-         <div class="tv-now-name">${ultimo.pacienteNombre}</div>
-         <div class="tv-now-dest">${cu ? cu.nombre : ''}</div>`
+         <div class="tv-now-name">${llNombreSala(ultimo.pacienteNombre, ultimo.pacienteId, cfg.formato)}</div>
+         <div class="tv-now-dest">${cu ? (vis.consultorio ? cu.nombre : (vis.profesional ? cu.profesional : 'Dirigirse al consultorio')) : ''}</div>`
       : `<div class="tv-now-label">Llamando</div><div class="tv-now-name is-empty">Sin llamados todavía</div>`;
 
     const hist = document.getElementById('tvHistory');
@@ -64,8 +69,8 @@
       ? previos.map((h) => {
           const c = llConsultorio(h.consultorioId);
           return `<div class="tv-history-item">
-            <span class="tv-history-name">${h.pacienteNombre}${h.tipo === 'repetido' ? ' (nuevamente)' : ''}</span>
-            <span class="tv-history-sala">${c ? c.nombre : ''} · ${h.hora}</span>
+            <span class="tv-history-name">${llNombreSala(h.pacienteNombre, h.pacienteId, cfg.formato)}${h.tipo === 'repetido' ? ' (nuevamente)' : ''}</span>
+            <span class="tv-history-sala">${c && vis.consultorio ? c.nombre + ' · ' : ''}${h.hora}</span>
           </div>`;
         }).join('')
       : `<div class="tv-history-item" style="color: var(--gray-600)">Sin llamados anteriores</div>`;
@@ -80,6 +85,7 @@
     if (!fila) return;
     void fila.offsetWidth; // fija el estado inicial para que la transición corra
     fila.classList.add('is-flash');
+    llSonar(llGetConfig().sonido);
     clearTimeout(flashTimer);
     flashTimer = setTimeout(() => fila.classList.remove('is-flash'), 4000);
   }
@@ -88,6 +94,7 @@
   render(initial);
 
   llOnStateChange((state) => flashLatest(state));
+  llOnConfigChange(() => render(lastState));
 </script>
 </body>
 </html>

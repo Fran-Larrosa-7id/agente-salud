@@ -55,6 +55,10 @@
   function responder(mensaje) {
     const m = mensaje.toLowerCase();
 
+    if (/diagn|tratamiento|medicaci[oó]n|recet|qu[eé] (le )?(tiene|pasa)|s[ií]ntoma/.test(m)) {
+      return 'Solo puedo consultar información operativa (estados de onboarding, turnos, documentación). No puedo diagnosticar ni dar recomendaciones clínicas: eso corresponde al profesional.';
+    }
+
     for (const prof of PROFESIONALES) {
       const apellido = prof.nombre.split(' ').pop().toLowerCase();
       if (m.includes(apellido)) return pacientesDeProfesional(prof);
@@ -82,6 +86,7 @@
     '¿Quién requiere revisión?',
     '¿Quién tiene información pendiente?',
     '¿Cuáles son los próximos turnos?',
+    'Mostrame pacientes de la Dra. Martínez',
   ];
 
   function addBubble(texto, de) {
@@ -131,7 +136,7 @@
   document.getElementById('aiFabBtn').addEventListener('click', () => {
     if (drawer.classList.contains('is-open')) { closeAiDrawer(); return; }
     if (!chatBody.children.length) {
-      addBubble('Hola 👋 Soy el analista de datos de la clínica. Preguntame lo que necesites sobre los pacientes de hoy.', 'ai');
+      addBubble('Hola 👋 Soy el asistente de información operativa de la clínica. Puedo responder sobre pre-admisión, documentación y turnos de hoy; no doy información clínica.', 'ai');
     }
     openAiDrawer();
   });

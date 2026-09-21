@@ -182,3 +182,6 @@
 .tr-sla-bar span.is-over { background: var(--triage-rojo); }
 .tr-action { text-align: right; white-space: nowrap; }
 .tr-link { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--accent-strong); cursor: pointer; text-decoration: underline; }
+
+/* ---------- Aclaración: reglas ilustrativas ---------- */
+.tr-disclaimer { margin: 0 0 var(--sp-4); padding: var(--sp-3) var(--sp-4); border-left: 4px solid var(--amber-600); background: var(--amber-100); font-size: var(--fs-xs); color: var(--ink); line-height: var(--lh-normal); }

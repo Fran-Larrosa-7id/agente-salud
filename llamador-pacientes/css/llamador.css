@@ -198,3 +198,35 @@ body.ll-tv {
 .mobile-primary { padding-block: var(--sp-5); font-size: var(--fs-md); }
 .mobile-actions-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 .mobile-cola-title { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tracking-caps); font-weight: 700; color: var(--ink-soft); padding-bottom: var(--sp-2); }
+
+/* ---------- Roles y configuración ---------- */
+.ll-role { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-soft); }
+.tv-header-sala { margin-left: var(--sp-4); padding-left: var(--sp-4); border-left: 2px solid var(--line-strong); font-weight: 600; font-size: var(--fs-lg); color: var(--ink-soft); }
+
+.cfg { max-width: 1080px; margin: 0 auto; padding: var(--sp-6); }
+.cfg-head h1 { margin: 0; font-size: var(--fs-xl); font-weight: 800; color: var(--navy-900); }
+.cfg-head p { margin: var(--sp-1) 0 var(--sp-5); max-width: 68ch; font-size: var(--fs-sm); color: var(--ink-soft); }
+.cfg-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
+@media (max-width: 860px) { .cfg-grid { grid-template-columns: 1fr; } }
+.cfg-col { display: grid; gap: var(--sp-5); }
+.cfg-box { margin: 0; background: var(--white); border: 1px solid var(--line-strong); border-top: 2px solid var(--navy-900); border-radius: var(--r-md); padding: var(--sp-4) var(--sp-5); min-width: 0; }
+.cfg-box h2, .cfg-box legend { padding: 0; margin: 0 0 var(--sp-3); font-size: var(--fs-md); font-weight: 800; color: var(--navy-900); }
+.cfg-hint { margin: 0 0 var(--sp-3); font-size: var(--fs-xs); color: var(--ink-soft); }
+.cfg-label { display: block; font-size: var(--fs-sm); font-weight: 600; margin-bottom: 4px; }
+.cfg-input { width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: inherit; }
+.cfg-input:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+.cfg-list, .cfg-roles { list-style: none; margin: 0; padding: 0; }
+.cfg-list li, .cfg-roles li { display: flex; flex-direction: column; padding: var(--sp-2) 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
+.cfg-list li:last-child, .cfg-roles li:last-child { border-bottom: none; }
+.cfg-list b, .cfg-roles b { color: var(--navy-900); }
+.cfg-list span, .cfg-roles span { font-size: var(--fs-xs); color: var(--ink-soft); }
+.cfg-radio, .cfg-check { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-2) 0; font-size: var(--fs-sm); cursor: pointer; }
+.cfg-radio input, .cfg-check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--navy-900); }
+.cfg-radio em { display: block; font-style: normal; font-size: var(--fs-xs); color: var(--ink-soft); }
+.cfg-preview { position: sticky; top: var(--sp-4); }
+.cfg-prev-sala { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-soft); margin-bottom: var(--sp-2); }
+.cfg-prev-now { background: var(--navy-900); color: #fff; border-radius: var(--r-sm); padding: var(--sp-5); margin-bottom: var(--sp-3); }
+.cfg-prev-label { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: #d7e3f4; }
+.cfg-prev-name { font-size: 2rem; font-weight: 800; line-height: 1.1; margin: var(--sp-1) 0; }
+.cfg-prev-dest { font-size: var(--fs-lg); font-weight: 700; }
+.cfg-prev-det { font-size: var(--fs-sm); color: #d7e3f4; }

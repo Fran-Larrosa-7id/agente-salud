@@ -31,6 +31,17 @@
       <div class="wa-phone-body" id="waBody" aria-live="polite" tabindex="-1"></div>
     </div>
   </div>
+  <aside class="wa-trace" aria-labelledby="waTraceTitle">
+    <div class="wa-trace-title" id="waTraceTitle">Qué pasa por detrás</div>
+    <p class="wa-trace-lead">La IA interpreta lo que pide el paciente. La disponibilidad la decide el motor de turnos, consultando la agenda.</p>
+    <ul class="wa-trace-legend">
+      <li><span class="wa-tr-capa ia">IA</span> Interpreta la intención</li>
+      <li><span class="wa-tr-capa motor">Motor</span> Aplica reglas y revalida</li>
+      <li><span class="wa-tr-capa agenda">Agenda</span> Fuente de verdad</li>
+    </ul>
+    <ol class="wa-trace-list" id="waTrace" aria-live="polite"></ol>
+    <div class="wa-trace-empty" id="waTraceEmpty">Elegí un escenario para ver cómo se resuelve cada mensaje.</div>
+  </aside>
 </div>
 <script src="js/escenarios.js"></script>
 <script>
@@ -58,6 +69,8 @@
     renderScenarioList();
     const body = document.getElementById('waBody');
     body.innerHTML = '';
+    document.getElementById('waTrace').innerHTML = '';
+    document.getElementById('waTraceEmpty').hidden = true;
     const esc = WA_ESCENARIOS[key];
     const activo = waFlujoActivo(esc.flujo);
     if (!activo) {
@@ -67,7 +80,25 @@
       body.appendChild(aviso);
     }
     waRegistrarActividad('María González', activo ? esc.actividad : 'escribió y fue derivada a un operador (automatización desactivada)');
+    if (!activo) addTrace([
+      { capa: 'motor', texto: 'Automatización "' + waFlujo(esc.flujo).nombre + '" desactivada' },
+      { capa: 'motor', texto: 'No se intenta resolver: se deriva a un operador' },
+    ]);
     playSteps(activo ? esc.pasos : esc.sinFlujo, body, myToken);
+  }
+
+  const CAPA = { ia: 'IA', motor: 'Motor', agenda: 'Agenda' };
+  function addTrace(items) {
+    const list = document.getElementById('waTrace');
+    items.forEach((t) => {
+      const li = document.createElement('li');
+      li.className = 'wa-tr';
+      li.innerHTML = `<span class="wa-tr-capa ${t.capa}">${CAPA[t.capa]}</span><span class="wa-tr-txt"></span>`;
+      li.querySelector('.wa-tr-txt').textContent = t.texto;
+      list.appendChild(li);
+      requestAnimationFrame(() => li.classList.add('is-visible'));
+    });
+    list.scrollTop = list.scrollHeight;
   }
 
   async function playSteps(pasos, body, myToken) {
@@ -89,9 +120,18 @@
         if (myToken !== playToken) return;
       }
 
+      if (paso.traza) addTrace(paso.traza);
+
       const bubble = document.createElement('div');
-      bubble.className = 'wa-bubble ' + paso.de;
-      bubble.textContent = paso.texto;
+      bubble.className = 'wa-bubble ' + paso.de + (paso.tipo ? ' ' + paso.tipo : '');
+      if (paso.tipo === 'confirmado') {
+        bubble.innerHTML = `<div class="wa-conf-head"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>${paso.titulo}</div>
+          <dl class="wa-conf-data">${paso.datos.map((d) => `<div><dt>${d[0]}</dt><dd></dd></div>`).join('')}</dl><p class="wa-conf-note"></p>`;
+        bubble.querySelectorAll('dd').forEach((dd, i) => { dd.textContent = paso.datos[i][1]; });
+        bubble.querySelector('.wa-conf-note').textContent = paso.texto;
+      } else {
+        bubble.textContent = paso.texto;
+      }
       body.appendChild(bubble);
       body.scrollTop = body.scrollHeight;
       requestAnimationFrame(() => bubble.classList.add('is-visible'));
@@ -101,7 +141,7 @@
         if (myToken !== playToken) return;
         const opcionesEl = document.createElement('div');
         opcionesEl.className = 'wa-bubble-options';
-        opcionesEl.innerHTML = paso.opciones.map((op, i) => `<button class="wa-option-btn" type="button" data-i="${i}">${op.texto}</button>`).join('');
+        opcionesEl.innerHTML = (paso.rotulo ? `<div class="wa-options-label">${paso.rotulo}</div>` : '') + paso.opciones.map((op, i) => `<button class="wa-option-btn" type="button" data-i="${i}">${op.texto}</button>`).join('');
         body.appendChild(opcionesEl);
         body.scrollTop = body.scrollHeight;
         opcionesEl.querySelectorAll('.wa-option-btn').forEach((btn) => {

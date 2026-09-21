@@ -17,7 +17,33 @@
 <main class="wa-panel">
   <div class="wa-stats-grid" id="waStats"></div>
 
-  <div class="wa-section-title">Flujos automáticos</div>
+  <div class="wa-section-title">Cómo funciona: una capa conversacional sobre su agenda</div>
+  <section class="wa-arch" aria-label="Arquitectura conceptual">
+    <ol class="wa-arch-flow">
+      <li class="wa-arch-step"><b>WhatsApp</b><span>El paciente escribe con sus palabras</span></li>
+      <li class="wa-arch-arrow" aria-hidden="true">↓</li>
+      <li class="wa-arch-step"><b>Asistente conversacional</b><span>Interpreta intención: profesional, fecha, franja</span></li>
+      <li class="wa-arch-arrow" aria-hidden="true">↓</li>
+      <li class="wa-arch-step is-motor"><b>Motor de turnos</b><span>Valida disponibilidad real y revalida antes de reservar</span></li>
+      <li class="wa-arch-arrow" aria-hidden="true">↓</li>
+      <li class="wa-arch-step"><b>Agenda de la institución</b><span>Fuente de verdad de los turnos</span></li>
+    </ol>
+    <div>
+      <h3 class="wa-arch-rules-title">Reglas que el motor considera</h3>
+      <ul class="wa-rules">
+        <li><b>Horario habitual</b><span>Días y franjas de atención</span></li>
+        <li><b>Vacaciones y licencias</b><span>Ausencias programadas</span></li>
+        <li><b>Feriados</b><span>Calendario de la sede</span></li>
+        <li><b>Bloqueos</b><span>Reuniones, cirugías, capacitación</span></li>
+        <li><b>Turnos existentes</b><span>Nunca se pisa un turno tomado</span></li>
+        <li><b>Sede y consultorio</b><span>Dónde atiende cada profesional</span></li>
+        <li><b>Duración del turno</b><span>Según tipo de consulta</span></li>
+      </ul>
+      <p class="wa-arch-note">La IA no decide ni inventa horarios. Si algo no se puede resolver, o el paciente lo pide, la conversación se deriva a un operador.</p>
+    </div>
+  </section>
+
+  <div class="wa-section-title">Automatizaciones</div>
   <div class="wa-flows-grid" id="waFlows"></div>
 
   <div class="wa-section-title">Actividad reciente</div>
@@ -40,8 +66,11 @@
           <button class="wa-toggle${f.activo ? ' is-on' : ''}" data-id="${f.id}" data-i="${i}" type="button" role="switch" aria-checked="${f.activo}" aria-label="${f.nombre}"></button>
         </div>
         <div class="wa-flow-desc">${f.descripcion}</div>
-        <div class="wa-flow-trigger"><b>Se dispara con:</b> ${f.disparador}</div>
-        <div class="wa-flow-state${f.activo ? '' : ' is-off'}">${f.activo ? 'Activo' : 'Desactivado: los pacientes se derivan a un operador'}</div>
+        <dl class="wa-flow-rule">
+          <dt>Disparador</dt><dd>${f.disparador}</dd>
+          <dt>Acción</dt><dd>${f.accion}</dd>
+          <dt>Estado</dt><dd class="wa-flow-state${f.activo ? '' : ' is-off'}">${f.activo ? 'ACTIVO' : 'DESACTIVADO · se deriva a un operador'}</dd>
+        </dl>
       </div>`).join('');
 
     document.querySelectorAll('.wa-toggle').forEach((btn) => {

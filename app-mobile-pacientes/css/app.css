@@ -233,3 +233,6 @@ body.app-mobile { background: var(--surface-page); min-height: 100vh; }
 }
 .app-especialidad-btn:hover { border-color: var(--accent); }
 .app-especialidad-btn:active { transform: scale(0.98); }
+
+.app-header-org { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--ink-soft); margin-bottom: 2px; }
+.app-portal-note { margin: var(--sp-3) 0 var(--sp-5); font-size: var(--fs-xs); color: var(--ink-soft); line-height: var(--lh-normal); }

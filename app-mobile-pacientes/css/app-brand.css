@@ -284,3 +284,306 @@ body.app-mobile .toast {
   border-left: 5px solid var(--brand-red);
   background: var(--brand-black);
 }
+
+/* -------------------------------------------------------------------------
+   Vertical Salud layer
+   Patient-facing mobile portal: calm surfaces, clear progress and accessible
+   navy/teal actions. Red remains semantic for destructive actions only.
+   ------------------------------------------------------------------------- */
+:root {
+  --health-primary: #102a43;
+  --health-primary-strong: #081f33;
+  --health-accent: #0f8b8d;
+  --health-accent-hover: #087477;
+  --health-bg: #f7f9fc;
+  --health-surface: #ffffff;
+  --health-surface-alt: #f1f5f9;
+  --health-text: #172033;
+  --health-text-muted: #657184;
+  --health-border: #dce4ec;
+  --health-info: #3478f6;
+  --health-success: #268267;
+  --health-danger: #b54747;
+  --health-mint: #dff3ef;
+  --health-sky: #eaf4fa;
+  --health-shadow-sm: 0 2px 8px rgba(15, 42, 67, 0.05);
+  --health-shadow-lg: 0 12px 32px rgba(15, 42, 67, 0.12);
+  --health-motion-fast: 180ms;
+  --health-motion-base: 240ms;
+}
+
+body.app-mobile {
+  background: var(--health-bg);
+  color: var(--health-text);
+  font-family: Inter, var(--font-body);
+}
+
+body.app-mobile::before,
+body.app-mobile::after {
+  content: none;
+}
+
+body.app-mobile .app-back {
+  color: var(--health-accent-hover);
+  text-decoration-thickness: 1px;
+}
+
+body.app-mobile .app-frame {
+  background: var(--health-surface);
+  border-inline-color: var(--health-border);
+  box-shadow: var(--health-shadow-lg);
+}
+
+/* Header */
+body.app-mobile .app-header {
+  background: var(--health-primary);
+  border-bottom: 0;
+}
+
+body.app-mobile .app-header-org {
+  color: var(--health-mint);
+}
+
+body.app-mobile .app-header-greeting {
+  color: #fff;
+}
+
+body.app-mobile .app-header-sub {
+  color: #c7d9e8;
+}
+
+body.app-mobile .app-bell {
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+body.app-mobile .app-bell:hover {
+  background: var(--health-accent);
+}
+
+body.app-mobile .app-bell-badge {
+  border-radius: 999px;
+  background: var(--health-danger);
+  color: #fff;
+}
+
+/* Screens and cards */
+body.app-mobile .app-screen-body {
+  background: var(--health-surface);
+}
+
+body.app-mobile .app-screen-title {
+  color: var(--health-primary);
+}
+
+body.app-mobile .app-section-title {
+  color: var(--health-accent-hover);
+}
+
+body.app-mobile .app-turno-card,
+body.app-mobile .app-list-card,
+body.app-mobile .app-profile-card,
+body.app-mobile .app-notif-mini-row {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.app-mobile .app-turno-card {
+  background: var(--health-surface);
+  border-left: 4px solid var(--health-accent);
+}
+
+body.app-mobile .app-turno-prof,
+body.app-mobile .app-list-card-title,
+body.app-mobile .app-notif-title,
+body.app-mobile .app-profile-name,
+body.app-mobile .app-drawer-title {
+  color: var(--health-primary);
+}
+
+body.app-mobile .app-turno-when,
+body.app-mobile .app-see-all {
+  color: var(--health-accent-hover);
+}
+
+body.app-mobile .app-quick-btn {
+  border: 1px solid var(--health-border);
+  border-radius: 10px;
+  color: var(--health-primary);
+  background: var(--health-surface);
+}
+
+body.app-mobile .app-quick-btn svg {
+  color: var(--health-accent);
+}
+
+body.app-mobile .app-quick-btn:hover,
+body.app-mobile .app-list-card.is-clickable:hover {
+  border-color: var(--health-accent);
+  background: var(--health-sky);
+}
+
+body.app-mobile .app-notif-mini-row {
+  background: var(--health-surface);
+}
+
+body.app-mobile .app-notif-row:hover,
+body.app-mobile .app-notif-row:focus-visible {
+  background: var(--health-sky);
+}
+
+body.app-mobile .app-notif-icon {
+  border-radius: 50%;
+  background: var(--health-sky);
+  color: var(--health-primary);
+}
+
+body.app-mobile .app-notif-row.is-unread .app-notif-icon {
+  background: var(--health-mint);
+  color: var(--health-accent-hover);
+}
+
+body.app-mobile .app-notif-dot {
+  border-radius: 50%;
+  background: var(--health-accent);
+}
+
+body.app-mobile .app-profile-card {
+  background: var(--health-surface);
+}
+
+body.app-mobile .app-avatar {
+  border-radius: 50%;
+  background: var(--health-mint);
+  color: var(--health-primary);
+  box-shadow: none;
+}
+
+body.app-mobile .app-fab {
+  border-radius: 50%;
+  background: var(--health-accent);
+  color: #fff;
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.app-mobile .app-fab:hover {
+  background: var(--health-accent-hover);
+}
+
+/* Navigation and actions */
+body.app-mobile .app-tabbar {
+  border-top: 1px solid var(--health-border);
+  background: var(--health-surface);
+}
+
+body.app-mobile .app-tab {
+  min-height: 52px;
+  color: var(--health-text-muted);
+}
+
+body.app-mobile .app-tab.is-active {
+  color: var(--health-accent-hover);
+}
+
+body.app-mobile .btn {
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+body.app-mobile .btn-accent {
+  background: var(--health-primary);
+  border-color: var(--health-primary);
+  color: #fff;
+}
+
+body.app-mobile .btn-accent:hover {
+  background: var(--health-primary-strong);
+  border-color: var(--health-primary-strong);
+}
+
+body.app-mobile .btn-danger-ghost {
+  border-radius: 10px;
+  border-color: rgba(181, 71, 71, 0.45);
+  color: var(--health-danger);
+}
+
+body.app-mobile .btn-danger-ghost:hover {
+  background: #fff1f1;
+  border-color: var(--health-danger);
+}
+
+body.app-mobile .badge {
+  border-radius: 999px;
+}
+
+/* Drawers */
+body.app-mobile .drawer {
+  border-left: 4px solid var(--health-accent);
+  border-radius: 12px 0 0 12px;
+}
+
+body.app-mobile .app-drawer-head {
+  border-bottom-color: var(--health-border);
+}
+
+body.app-mobile .app-drawer-close {
+  border-radius: 8px;
+  background: var(--health-surface-alt);
+  color: var(--health-primary);
+}
+
+body.app-mobile .app-drawer-close:hover {
+  background: var(--health-mint);
+}
+
+body.app-mobile .app-especialidad-btn {
+  border: 1px solid var(--health-border);
+  border-radius: 10px;
+  color: var(--health-primary);
+}
+
+body.app-mobile .app-especialidad-btn:hover {
+  border-color: var(--health-accent);
+  background: var(--health-sky);
+}
+
+body.app-mobile .toast {
+  border-left: 4px solid var(--health-accent);
+  border-radius: 10px;
+  background: var(--health-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.app-mobile .app-quick-btn,
+  body.app-mobile .app-list-card,
+  body.app-mobile .app-fab,
+  body.app-mobile .app-especialidad-btn,
+  body.app-mobile .btn {
+    transition: none;
+  }
+}
+
+/* Notificaciones recientes: una lista con divisores, título arriba y detalle abajo (no columnas apretadas) */
+body.app-mobile .app-notif-mini {
+  gap: 0;
+  border: 1px solid var(--health-border, #DCE4EC);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+body.app-mobile .app-notif-mini-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px 16px;
+}
+body.app-mobile .app-notif-mini-row + .app-notif-mini-row { border-top: 1px solid #E9EEF3; }
+body.app-mobile .app-notif-mini-row .app-notif-title { font-size: 0.9375rem; }
+body.app-mobile .app-notif-mini-row .app-notif-body { font-size: 0.875rem; line-height: 1.45; }

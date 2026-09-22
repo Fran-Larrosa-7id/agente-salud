@@ -555,3 +555,444 @@ body {
     height: 64px;
   }
 }
+
+/* -------------------------------------------------------------------------
+   Vertical Salud layer
+   The catalog keeps the 7Ideas signature as a discreet endorsement while
+   following the health system: calm surfaces, navy/teal actions and
+   semantic color used with restraint.
+   ------------------------------------------------------------------------- */
+:root {
+  --health-primary: #102a43;
+  --health-primary-strong: #081f33;
+  --health-accent: #0f8b8d;
+  --health-accent-hover: #087477;
+  --health-bg: #f7f9fc;
+  --health-surface: #ffffff;
+  --health-surface-alt: #f1f5f9;
+  --health-text: #172033;
+  --health-text-muted: #657184;
+  --health-text-subtle: #8b96a8;
+  --health-border: #dce4ec;
+  --health-info: #3478f6;
+  --health-success: #268267;
+  --health-warning: #b7791f;
+  --health-danger: #b54747;
+  --health-shadow-sm: 0 2px 8px rgba(15, 42, 67, 0.05);
+  --health-shadow-lg: 0 12px 32px rgba(15, 42, 67, 0.12);
+}
+
+body {
+  background: var(--health-bg);
+  color: var(--health-text);
+}
+
+:focus-visible {
+  outline: 3px solid var(--health-accent);
+  outline-offset: 3px;
+}
+
+/* Header */
+.h-bar {
+  background: var(--health-surface);
+  border-bottom: 1px solid var(--health-border);
+}
+
+.h-bar.is-stuck {
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom-color: var(--health-border);
+  box-shadow: var(--health-shadow-sm);
+}
+
+.h-brand {
+  color: var(--health-primary);
+  letter-spacing: -0.03em;
+}
+
+.h-brand i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--health-accent);
+  box-shadow: 6px 6px 0 rgba(15, 139, 141, 0.2);
+}
+
+.h-brand small {
+  color: var(--health-text-muted);
+  border-left-color: var(--health-border);
+}
+
+.h-nav a {
+  color: var(--health-primary);
+}
+
+.h-nav a:hover {
+  border-bottom-color: var(--health-accent);
+}
+
+/* Hero: one calm dark surface, without corporate red/yellow dominance. */
+.hero {
+  background: var(--health-primary);
+  border-bottom: 0;
+}
+
+.hero::before {
+  top: -18%;
+  right: 8%;
+  width: clamp(180px, 22vw, 340px);
+  border: 1px solid rgba(223, 243, 239, 0.16);
+  border-radius: 16px;
+  transform: rotate(15deg);
+}
+
+.hero::after {
+  right: 42%;
+  bottom: 10%;
+  width: 12px;
+  height: 76px;
+  background: rgba(15, 139, 141, 0.65);
+}
+
+.hero .eyebrow {
+  color: var(--health-accent);
+}
+
+.hero h1 {
+  max-width: 16ch;
+  color: #fff;
+  letter-spacing: -0.045em;
+}
+
+.hero-sub {
+  color: #d9e5ef;
+}
+
+.btn-h {
+  border-radius: 10px;
+  transition: background var(--health-motion-fast, 180ms) ease, color var(--health-motion-fast, 180ms) ease, border-color var(--health-motion-fast, 180ms) ease, transform var(--health-motion-fast, 180ms) ease;
+}
+
+.btn-h.primary {
+  background: var(--health-accent);
+  color: #fff;
+  border-color: var(--health-accent);
+  box-shadow: var(--health-shadow-sm);
+}
+
+.btn-h.primary:hover {
+  background: var(--health-accent-hover);
+  border-color: var(--health-accent-hover);
+}
+
+.btn-h.ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.btn-h.ghost:hover {
+  background: #fff;
+  color: var(--health-primary);
+  border-color: #fff;
+}
+
+.mosaic::before,
+.mosaic::after {
+  display: none;
+}
+
+.mosaic figure {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow: var(--health-shadow-lg);
+}
+
+.mosaic figure:nth-child(2) {
+  box-shadow: 0 12px 32px rgba(15, 42, 67, 0.16);
+}
+
+.mosaic figure:nth-child(3) {
+  box-shadow: var(--health-shadow-lg);
+}
+
+/* Content surfaces */
+.sec-head h2,
+.feat h3,
+.mini h3 {
+  color: var(--health-primary);
+}
+
+.eyebrow {
+  color: var(--health-accent);
+}
+
+.sec-head p,
+.feat-meta {
+  color: var(--health-text-muted);
+}
+
+.feat,
+.feat:nth-child(even) {
+  border: 1px solid var(--health-border);
+  border-top: 4px solid var(--health-accent);
+  border-radius: 12px;
+  background: var(--health-surface);
+  box-shadow: var(--health-shadow-sm);
+}
+
+.feat.t-sky {
+  border-top-color: var(--health-info);
+}
+
+.feat.t-gray {
+  border-top-color: var(--health-primary);
+}
+
+.feat-body,
+.feat:nth-child(2) .feat-body,
+.feat:nth-child(3) .feat-body {
+  background: var(--health-surface);
+}
+
+.feat-body::before,
+.feat-body::after {
+  display: none;
+}
+
+.feat-desc,
+.mini-desc {
+  color: var(--health-text);
+}
+
+.feat-media {
+  background: var(--health-surface-alt);
+  border-left: 1px solid var(--health-border);
+}
+
+.feat-media img,
+.mini-media img {
+  border-radius: 8px;
+}
+
+.go {
+  color: var(--health-primary);
+  background-image: linear-gradient(var(--health-accent), var(--health-accent));
+}
+
+.go .arr,
+.more summary span {
+  color: var(--health-accent);
+}
+
+.more summary:hover {
+  color: var(--health-primary);
+}
+
+@media (hover: hover) {
+  .feat:hover,
+  .mini:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--health-shadow-lg);
+  }
+}
+
+.mini {
+  padding: var(--sp-5);
+  border: 1px solid var(--health-border);
+  border-top: 3px solid var(--health-primary);
+  border-radius: 12px;
+  background: var(--health-surface);
+  box-shadow: var(--health-shadow-sm);
+}
+
+.mini-media {
+  border-radius: 8px;
+  background: var(--health-surface-alt);
+  border-color: var(--health-border);
+}
+
+.mini.is-transversal {
+  border-top-color: var(--health-accent);
+}
+
+.mini.is-explor {
+  border-top: 3px solid var(--health-warning);
+}
+
+.mini.is-explor .mini-media {
+  border: 1px solid rgba(183, 121, 31, 0.45);
+}
+
+.mini.is-explor .go {
+  border-bottom-color: var(--health-accent);
+  border-bottom-style: solid;
+}
+
+.mini.is-explor .eyebrow {
+  color: var(--health-warning);
+}
+
+/* Journey: a single dark institutional surface, not the whole product. */
+.journey-band {
+  background: var(--health-primary);
+  border-top: 0;
+}
+
+.journey-band .eyebrow {
+  color: var(--health-accent);
+}
+
+.journey-band .sec-head p {
+  color: #d9e5ef;
+}
+
+.jr li::before {
+  background: var(--health-accent);
+  box-shadow: 0 0 0 5px var(--health-primary);
+}
+
+.jr li.is-out::before {
+  background: var(--health-primary);
+  border-color: #b9c8d7;
+}
+
+.j-ia {
+  border-color: rgba(223, 243, 239, 0.34);
+}
+
+.j-ia a {
+  text-decoration-color: var(--health-accent);
+}
+
+/* Footer */
+.h-foot {
+  border-top: 1px solid var(--health-border);
+  background: var(--health-surface);
+}
+
+.h-foot p b,
+.h-foot nav a:hover {
+  color: var(--health-primary);
+}
+
+@media (max-width: 640px) {
+  .hero h1 {
+    max-width: none;
+  }
+
+  .feat,
+  .feat:nth-child(even) {
+    border-top-width: 4px;
+  }
+
+  .feat-media {
+    border-left: 0;
+    border-top: 1px solid var(--health-border);
+  }
+
+  .mini {
+    padding: var(--sp-4);
+  }
+}
+
+/* Hero visual supplied for the main catalog entry point. */
+.hero-visual {
+  position: relative;
+  min-width: 0;
+  isolation: isolate;
+}
+
+.hero-visual::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 8%;
+  right: -7%;
+  width: clamp(92px, 12vw, 170px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(127, 214, 204, 0.55);
+  border-radius: 18px;
+  transform: rotate(15deg);
+}
+
+.hero-visual::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  left: -14px;
+  bottom: -14px;
+  width: 36px;
+  height: 36px;
+  background: var(--health-accent);
+  box-shadow: 16px 16px 0 rgba(223, 243, 239, 0.7);
+}
+
+.hero-visual figure {
+  position: relative;
+  z-index: 1;
+  height: clamp(420px, 52vw, 620px);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(223, 243, 239, 0.55);
+  border-radius: 16px;
+  background: var(--health-surface-alt);
+  box-shadow: var(--health-shadow-lg);
+}
+
+.hero-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+@media (max-width: 900px) {
+  .hero-visual {
+    max-width: 680px;
+  }
+
+  .hero-visual figure {
+    height: min(620px, 78vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-visual {
+    max-width: none;
+    margin-inline: 8px;
+  }
+
+  .hero-visual figure {
+    height: min(500px, 116vw);
+    border-radius: 12px;
+  }
+
+  .hero-visual::after {
+    left: -8px;
+    bottom: -8px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* The agenda capture is horizontal, so keep the complete view visible. */
+.feat-turnos .feat-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+}
+
+.feat-turnos .feat-media img {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 900px) {
+  .feat-turnos .feat-media {
+    height: auto;
+    min-height: 220px;
+  }
+}

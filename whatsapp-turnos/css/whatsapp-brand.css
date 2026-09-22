@@ -485,3 +485,477 @@ body.whatsapp-panel .btn-ghost:hover {
     padding-inline: var(--sp-4);
   }
 }
+
+/* -------------------------------------------------------------------------
+   Vertical Salud layer
+   WhatsApp keeps its messaging green as a product accent, while the
+   surrounding experience follows the calm navy / teal health system.
+   ------------------------------------------------------------------------- */
+:root {
+  --health-primary: #102a43;
+  --health-primary-strong: #081f33;
+  --health-accent: #0f8b8d;
+  --health-accent-hover: #087477;
+  --health-bg: #f7f9fc;
+  --health-surface: #ffffff;
+  --health-surface-alt: #f1f5f9;
+  --health-text: #172033;
+  --health-text-muted: #657184;
+  --health-border: #dce4ec;
+  --health-info: #3478f6;
+  --health-success: #268267;
+  --health-warning: #b7791f;
+  --health-danger: #b54747;
+  --health-mint: #dff3ef;
+  --health-sky: #eaf4fa;
+  --wa-green: #25d366;
+  --wa-green-dark: #075e54;
+  --wa-green-soft: #dcf8c6;
+  --health-shadow-sm: 0 2px 8px rgba(15, 42, 67, 0.05);
+  --health-shadow-lg: 0 12px 32px rgba(15, 42, 67, 0.12);
+  --health-motion-fast: 180ms;
+  --health-motion-base: 240ms;
+}
+
+body.whatsapp-selector,
+body.whatsapp-chat,
+body.whatsapp-panel {
+  background: var(--health-bg);
+  color: var(--health-text);
+  font-family: Inter, var(--font-body);
+}
+
+body.whatsapp-selector::before,
+body.whatsapp-selector::after,
+body.whatsapp-chat::before,
+body.whatsapp-chat::after,
+body.whatsapp-panel::before,
+body.whatsapp-panel::after {
+  content: none;
+}
+
+/* Selector */
+body.whatsapp-selector .selector {
+  max-width: 980px;
+}
+
+body.whatsapp-selector .selector-head {
+  text-align: left;
+  border-left: 4px solid var(--health-accent);
+  padding-left: var(--sp-6);
+}
+
+body.whatsapp-selector .selector-mark {
+  color: var(--health-primary);
+}
+
+body.whatsapp-selector .selector-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--wa-green-dark);
+  box-shadow: none;
+}
+
+body.whatsapp-selector .selector-head h1 {
+  color: var(--health-primary);
+  letter-spacing: -0.035em;
+}
+
+body.whatsapp-selector .selector-head p,
+body.whatsapp-selector .selector-foot {
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-selector .selector-back {
+  color: var(--health-accent-hover);
+  text-decoration-thickness: 1px;
+}
+
+body.whatsapp-selector .demo-card {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  background: var(--health-surface);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.whatsapp-selector .demo-card::before {
+  content: none;
+}
+
+body.whatsapp-selector .demo-card:hover {
+  border-color: var(--health-accent);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.whatsapp-selector .demo-icon {
+  border-radius: 10px;
+  background: var(--health-mint);
+  color: var(--wa-green-dark);
+}
+
+body.whatsapp-selector .demo-card h2 {
+  color: var(--health-primary);
+}
+
+body.whatsapp-selector .demo-card p {
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-selector .demo-cta {
+  color: var(--health-accent-hover);
+}
+
+/* Shared product navigation */
+body.whatsapp-chat .wa-topbar,
+body.whatsapp-panel .wa-topbar {
+  background: var(--health-surface);
+  border-bottom: 1px solid var(--health-border);
+}
+
+body.whatsapp-chat .wa-mark,
+body.whatsapp-panel .wa-mark {
+  color: var(--health-primary);
+}
+
+body.whatsapp-chat .wa-mark .dot,
+body.whatsapp-panel .wa-mark .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--wa-green-dark);
+  box-shadow: none;
+}
+
+body.whatsapp-chat .wa-back,
+body.whatsapp-panel .wa-back {
+  color: var(--health-accent-hover);
+}
+
+body.whatsapp-chat .wa-back:hover,
+body.whatsapp-panel .wa-back:hover {
+  color: var(--health-primary);
+}
+
+/* Conversation */
+body.whatsapp-chat .wa-chat-layout {
+  max-width: 1320px;
+  padding-top: 40px;
+  padding-bottom: 56px;
+}
+
+body.whatsapp-chat .wa-scenarios-title {
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-chat .wa-scenario-btn {
+  border: 1px solid var(--health-border);
+  border-radius: 10px;
+  color: var(--health-primary);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.whatsapp-chat .wa-scenario-btn:hover {
+  border-color: var(--health-accent);
+  background: var(--health-sky);
+}
+
+body.whatsapp-chat .wa-scenario-btn.is-active {
+  border-color: var(--wa-green-dark);
+  background: var(--health-mint);
+  color: var(--health-primary);
+}
+
+body.whatsapp-chat .wa-scenario-off {
+  color: var(--health-danger);
+}
+
+body.whatsapp-chat .wa-phone {
+  border: 8px solid var(--health-primary);
+  border-radius: 28px;
+  background: #edf5f3;
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.whatsapp-chat .wa-phone-header {
+  background: var(--wa-green-dark);
+  border-bottom: 0;
+}
+
+body.whatsapp-chat .wa-phone-avatar {
+  background: var(--wa-green);
+  color: var(--health-primary);
+  box-shadow: none;
+}
+
+body.whatsapp-chat .wa-phone-body {
+  background: #edf5f3;
+}
+
+body.whatsapp-chat .wa-phone-body:empty::after {
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-chat .wa-bubble,
+body.whatsapp-chat .wa-typing,
+body.whatsapp-chat .wa-option-btn,
+body.whatsapp-chat .wa-notice {
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.whatsapp-chat .wa-bubble.bot,
+body.whatsapp-chat .wa-typing {
+  border: 1px solid var(--health-border);
+  border-left: 3px solid var(--wa-green-dark);
+  background: var(--health-surface);
+  color: var(--health-text);
+}
+
+body.whatsapp-chat .wa-bubble.user {
+  border: 1px solid #c2e9c9;
+  border-right: 3px solid var(--wa-green-dark);
+  background: var(--wa-green-soft);
+  color: var(--health-text);
+}
+
+body.whatsapp-chat .wa-bubble.sistema {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-chat .wa-bubble.confirmado {
+  border-left-color: var(--health-success);
+}
+
+body.whatsapp-chat .wa-option-btn {
+  border: 1px solid #b8d8d0;
+  color: var(--wa-green-dark);
+  background: var(--health-surface);
+}
+
+body.whatsapp-chat .wa-option-btn:hover {
+  background: var(--health-mint);
+  border-color: var(--wa-green-dark);
+}
+
+body.whatsapp-chat .wa-notice {
+  border: 1px solid #ead6a6;
+  border-left: 4px solid var(--health-warning);
+  background: #fff8e6;
+  color: #76520d;
+}
+
+body.whatsapp-chat .wa-notice a {
+  color: var(--health-primary);
+}
+
+body.whatsapp-chat .wa-trace {
+  border: 1px solid var(--health-border);
+  border-top: 3px solid var(--health-primary);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.whatsapp-chat .wa-trace-title {
+  color: var(--health-primary);
+}
+
+body.whatsapp-chat .wa-trace-lead,
+body.whatsapp-chat .wa-trace-legend,
+body.whatsapp-chat .wa-trace-empty {
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-chat .wa-trace-legend {
+  border-block-color: var(--health-border);
+}
+
+body.whatsapp-chat .wa-tr-capa {
+  border-radius: 999px;
+}
+
+body.whatsapp-chat .wa-tr-capa.ia {
+  background: var(--health-info);
+}
+
+body.whatsapp-chat .wa-tr-capa.motor {
+  background: var(--health-primary);
+  color: #fff;
+}
+
+body.whatsapp-chat .wa-tr-capa.agenda {
+  background: var(--wa-green-dark);
+}
+
+/* Automation panel */
+body.whatsapp-panel .wa-panel {
+  max-width: 1160px;
+  padding-top: 40px;
+  padding-bottom: 56px;
+}
+
+body.whatsapp-panel .wa-section-title {
+  border-left: 4px solid var(--health-accent);
+  padding-left: var(--sp-3);
+  color: var(--health-primary);
+}
+
+body.whatsapp-panel .stat-card,
+body.whatsapp-panel .wa-flow-card,
+body.whatsapp-panel .wa-arch {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.whatsapp-panel .stat-card {
+  border-top: 3px solid var(--health-primary);
+  background: var(--health-surface);
+}
+
+body.whatsapp-panel .stat-card-label,
+body.whatsapp-panel .stat-card-foot,
+body.whatsapp-panel .wa-flow-desc,
+body.whatsapp-panel .wa-flow-rule dd,
+body.whatsapp-panel .wa-arch-note,
+body.whatsapp-panel .wa-activity-when {
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-panel .stat-card-value {
+  color: var(--health-primary);
+}
+
+body.whatsapp-panel .stat-card-value.accent {
+  color: var(--wa-green-dark);
+}
+
+body.whatsapp-panel .stat-card-value.warn {
+  color: var(--health-warning);
+}
+
+body.whatsapp-panel .stat-card-value.danger {
+  color: var(--health-danger);
+}
+
+body.whatsapp-panel .wa-arch {
+  border-top: 3px solid var(--health-primary);
+  background: var(--health-surface);
+}
+
+body.whatsapp-panel .wa-arch-step {
+  border: 1px solid var(--health-border);
+  border-radius: 10px;
+}
+
+body.whatsapp-panel .wa-arch-step b,
+body.whatsapp-panel .wa-rules b,
+body.whatsapp-panel .wa-flow-name {
+  color: var(--health-primary);
+}
+
+body.whatsapp-panel .wa-arch-step.is-motor {
+  background: var(--health-primary);
+  border-color: var(--health-primary);
+}
+
+body.whatsapp-panel .wa-arch-arrow {
+  color: var(--health-accent);
+}
+
+body.whatsapp-panel .wa-flow-card {
+  border-top: 3px solid var(--wa-green-dark);
+  background: var(--health-surface);
+}
+
+body.whatsapp-panel .wa-flow-card:hover {
+  border-top-color: var(--health-accent);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.whatsapp-panel .wa-flow-rule,
+body.whatsapp-panel .wa-activity-row,
+body.whatsapp-panel .wa-rules li {
+  border-color: var(--health-border);
+}
+
+body.whatsapp-panel .wa-flow-rule dt,
+body.whatsapp-panel .wa-arch-rules-title {
+  color: var(--health-text-muted);
+}
+
+body.whatsapp-panel .wa-toggle {
+  background: #aeb9c6;
+}
+
+body.whatsapp-panel .wa-toggle.is-on {
+  background: var(--wa-green-dark);
+}
+
+body.whatsapp-panel .wa-toggle:focus-visible {
+  outline: 3px solid var(--health-accent);
+  outline-offset: 3px;
+}
+
+body.whatsapp-panel .wa-activity-row b {
+  color: var(--health-primary);
+}
+
+body.whatsapp-panel .btn {
+  border-radius: 10px;
+  font-family: inherit;
+}
+
+body.whatsapp-panel .btn-ghost {
+  border-color: var(--health-border);
+  color: var(--health-primary);
+  background: var(--health-surface);
+}
+
+body.whatsapp-panel .btn-ghost:hover {
+  border-color: var(--health-accent);
+  background: var(--health-mint);
+}
+
+@media (max-width: 720px) {
+  body.whatsapp-chat .wa-phone {
+    box-shadow: var(--health-shadow-lg);
+  }
+
+  body.whatsapp-chat .wa-topbar,
+  body.whatsapp-panel .wa-topbar {
+    padding-inline: var(--sp-4);
+  }
+
+  body.whatsapp-panel .wa-panel {
+    padding-inline: var(--sp-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.whatsapp-chat .wa-bubble,
+  body.whatsapp-chat .wa-tr,
+  body.whatsapp-chat .wa-typing span,
+  body.whatsapp-panel .wa-toggle,
+  body.whatsapp-panel .wa-toggle::after {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Burbujas: la dirección se lee por la esquina y la alineación, no por una barra lateral.
+   El acento lateral queda reservado a la confirmación del turno. */
+body.whatsapp-chat .wa-bubble.bot,
+body.whatsapp-chat .wa-typing {
+  border: 1px solid #e3e9ee;
+  border-radius: 4px 12px 12px 12px;
+}
+body.whatsapp-chat .wa-bubble.user {
+  border: 1px solid #c9ecd0;
+  border-radius: 12px 4px 12px 12px;
+}
+body.whatsapp-chat .wa-bubble.confirmado {
+  border-left: 4px solid var(--health-success);
+}
+body.whatsapp-chat .wa-phone-avatar { border-radius: 50%; }

@@ -136,7 +136,7 @@
   document.getElementById('aiFabBtn').addEventListener('click', () => {
     if (drawer.classList.contains('is-open')) { closeAiDrawer(); return; }
     if (!chatBody.children.length) {
-      addBubble('Hola 👋 Soy el asistente de información operativa de la clínica. Puedo responder sobre pre-admisión, documentación y turnos de hoy; no doy información clínica.', 'ai');
+      addBubble('Hola, soy el asistente de información operativa de la clínica. Puedo responder sobre pre-admisión, documentación y turnos de hoy; no doy información clínica.', 'ai');
     }
     openAiDrawer();
   });

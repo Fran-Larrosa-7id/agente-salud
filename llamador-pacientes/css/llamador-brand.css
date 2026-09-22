@@ -563,3 +563,568 @@ body.ll-config .cfg-prev-dest {
     font-size: var(--fs-xl);
   }
 }
+
+/* -------------------------------------------------------------------------
+   Vertical Salud layer
+   Calm surfaces for the waiting-room workflow, with navy/teal actions and
+   semantic amber/red reserved for attention states.
+   ------------------------------------------------------------------------- */
+:root {
+  --health-primary: #102a43;
+  --health-primary-strong: #081f33;
+  --health-accent: #0f8b8d;
+  --health-accent-hover: #087477;
+  --health-bg: #f7f9fc;
+  --health-surface: #ffffff;
+  --health-surface-alt: #f1f5f9;
+  --health-text: #172033;
+  --health-text-muted: #657184;
+  --health-border: #dce4ec;
+  --health-info: #3478f6;
+  --health-success: #268267;
+  --health-warning: #b7791f;
+  --health-danger: #b54747;
+  --health-mint: #dff3ef;
+  --health-sky: #eaf4fa;
+  --health-shadow-sm: 0 2px 8px rgba(15, 42, 67, 0.05);
+  --health-shadow-lg: 0 12px 32px rgba(15, 42, 67, 0.12);
+  --health-motion-fast: 180ms;
+  --health-motion-base: 240ms;
+}
+
+body.ll-selector,
+body.ll-panel,
+body.ll-mobile,
+body.ll-config {
+  background: var(--health-bg);
+  color: var(--health-text);
+  font-family: Inter, var(--font-body);
+}
+
+body.ll-selector::before,
+body.ll-selector::after,
+body.ll-panel::before,
+body.ll-panel::after,
+body.ll-mobile::before,
+body.ll-mobile::after,
+body.ll-config::before,
+body.ll-config::after {
+  content: none;
+}
+
+/* Selector */
+body.ll-selector .selector {
+  max-width: 1080px;
+}
+
+body.ll-selector .selector-head {
+  text-align: left;
+  border-left: 4px solid var(--health-accent);
+  padding-left: var(--sp-6);
+}
+
+body.ll-selector .selector-mark {
+  color: var(--health-primary);
+}
+
+body.ll-selector .selector-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--health-accent);
+  box-shadow: none;
+}
+
+body.ll-selector .selector-head h1 {
+  color: var(--health-primary);
+  letter-spacing: -0.035em;
+}
+
+body.ll-selector .selector-head p,
+body.ll-selector .selector-foot,
+body.ll-selector .demo-role {
+  color: var(--health-text-muted);
+}
+
+body.ll-selector .selector-back {
+  color: var(--health-accent-hover);
+  text-decoration-thickness: 1px;
+}
+
+body.ll-selector .demo-card {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  background: var(--health-surface);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.ll-selector .demo-card::before {
+  content: none;
+}
+
+body.ll-selector .demo-card:hover {
+  border-color: var(--health-accent);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.ll-selector .demo-icon {
+  border-radius: 10px;
+  background: var(--health-mint);
+  color: var(--health-accent);
+}
+
+body.ll-selector .demo-card h2 {
+  color: var(--health-primary);
+}
+
+body.ll-selector .demo-card p {
+  color: var(--health-text-muted);
+}
+
+body.ll-selector .demo-cta,
+body.ll-selector .selector-tip {
+  color: var(--health-accent-hover);
+}
+
+/* Shared application navigation and controls */
+body.ll-panel .ll-topbar,
+body.ll-mobile .ll-topbar,
+body.ll-config .ll-topbar {
+  background: var(--health-surface);
+  border-bottom: 1px solid var(--health-border);
+}
+
+body.ll-panel .ll-mark,
+body.ll-mobile .ll-mark,
+body.ll-config .ll-mark {
+  color: var(--health-primary);
+}
+
+body.ll-panel .ll-mark .dot,
+body.ll-mobile .ll-mark .dot,
+body.ll-config .ll-mark .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--health-accent);
+  box-shadow: none;
+}
+
+body.ll-panel .ll-role,
+body.ll-mobile .ll-role,
+body.ll-config .ll-role {
+  color: var(--health-text-muted);
+}
+
+body.ll-panel .ll-back,
+body.ll-mobile .ll-back,
+body.ll-config .ll-back {
+  color: var(--health-accent-hover);
+}
+
+body.ll-panel .ll-back:hover,
+body.ll-mobile .ll-back:hover,
+body.ll-config .ll-back:hover {
+  color: var(--health-primary);
+}
+
+body.ll-panel .btn,
+body.ll-mobile .btn,
+body.ll-config .btn {
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+body.ll-panel .btn-accent,
+body.ll-mobile .btn-accent,
+body.ll-config .btn-accent {
+  background: var(--health-primary);
+  border-color: var(--health-primary);
+  color: #fff;
+}
+
+body.ll-panel .btn-accent:hover,
+body.ll-mobile .btn-accent:hover,
+body.ll-config .btn-accent:hover {
+  background: var(--health-primary-strong);
+  border-color: var(--health-primary-strong);
+}
+
+body.ll-panel .btn-secondary,
+body.ll-mobile .btn-secondary,
+body.ll-config .btn-secondary {
+  background: var(--health-accent);
+  border-color: var(--health-accent);
+  color: #fff;
+}
+
+body.ll-panel .btn-secondary:hover,
+body.ll-mobile .btn-secondary:hover,
+body.ll-config .btn-secondary:hover {
+  background: var(--health-accent-hover);
+  border-color: var(--health-accent-hover);
+}
+
+body.ll-panel .btn-ghost,
+body.ll-mobile .btn-ghost,
+body.ll-config .btn-ghost {
+  background: var(--health-surface);
+  border-color: var(--health-border);
+  color: var(--health-primary);
+}
+
+body.ll-panel .btn-ghost:hover,
+body.ll-mobile .btn-ghost:hover,
+body.ll-config .btn-ghost:hover {
+  background: var(--health-surface-alt);
+  border-color: var(--health-accent);
+}
+
+/* Reception panel */
+body.ll-panel .panel-shell {
+  background: var(--health-bg);
+}
+
+body.ll-panel .panel-side {
+  border-right-color: var(--health-border);
+  background: var(--health-surface);
+}
+
+body.ll-panel .panel-side-title,
+body.ll-panel .panel-cola-title {
+  color: var(--health-text-muted);
+}
+
+body.ll-panel .panel-consultorio-btn {
+  border: 1px solid var(--health-border);
+  border-radius: 10px;
+}
+
+body.ll-panel .panel-consultorio-btn:hover {
+  border-color: var(--health-accent);
+  background: var(--health-sky);
+}
+
+body.ll-panel .panel-consultorio-btn.is-active {
+  border-color: var(--health-accent);
+  background: var(--health-mint);
+  color: var(--health-primary);
+}
+
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-nombre,
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-prof,
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-count small {
+  color: var(--health-text-muted);
+}
+
+body.ll-panel .panel-consultorio-num {
+  border-radius: 8px;
+  background: var(--health-primary);
+}
+
+body.ll-panel .panel-consultorio-btn.is-active .panel-consultorio-num {
+  background: var(--health-accent);
+  color: #fff;
+}
+
+body.ll-panel .panel-consultorio-nombre,
+body.ll-panel .panel-consultorio-count,
+body.ll-panel .panel-current-name,
+body.ll-panel .panel-current-turno,
+body.ll-panel .panel-cola-row .doc-name {
+  color: var(--health-primary);
+}
+
+body.ll-panel .panel-current,
+body.ll-panel .panel-cola-list {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.ll-panel .panel-current-label {
+  background: var(--health-primary);
+  border-bottom: 0;
+}
+
+body.ll-panel .panel-cola-list {
+  border-top: 3px solid var(--health-accent);
+}
+
+body.ll-panel .panel-cola-pos {
+  color: var(--health-accent);
+}
+
+body.ll-panel .panel-cola-row {
+  border-bottom-color: var(--health-border);
+}
+
+body.ll-panel .toast,
+body.ll-mobile .toast {
+  border-left: 4px solid var(--health-accent);
+  border-radius: 10px;
+  background: var(--health-primary);
+}
+
+/* Professional mobile view */
+body.ll-mobile .mobile-shell {
+  background: var(--health-surface);
+  border-inline-color: var(--health-border);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.ll-mobile .select {
+  border: 1px solid var(--health-border);
+  border-radius: 8px;
+}
+
+body.ll-mobile .mobile-current {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.ll-mobile .mobile-current-label {
+  background: var(--health-primary);
+  border-bottom: 0;
+}
+
+body.ll-mobile .mobile-current-name,
+body.ll-mobile .mobile-current-turno {
+  color: var(--health-primary);
+}
+
+body.ll-mobile .mobile-cola-title {
+  color: var(--health-text-muted);
+}
+
+body.ll-mobile .panel-cola-list {
+  border-top: 3px solid var(--health-accent);
+}
+
+body.ll-mobile .panel-cola-row {
+  border-bottom-color: var(--health-border);
+}
+
+body.ll-mobile .panel-cola-pos {
+  color: var(--health-accent);
+}
+
+/* Configuration */
+body.ll-config .cfg {
+  max-width: 1080px;
+}
+
+body.ll-config .cfg-head h1,
+body.ll-config .cfg-box h2,
+body.ll-config .cfg-box legend,
+body.ll-config .cfg-list b,
+body.ll-config .cfg-roles b {
+  color: var(--health-primary);
+}
+
+body.ll-config .cfg-head p,
+body.ll-config .cfg-hint,
+body.ll-config .cfg-list span,
+body.ll-config .cfg-roles span {
+  color: var(--health-text-muted);
+}
+
+body.ll-config .cfg-box {
+  border: 1px solid var(--health-border);
+  border-top: 3px solid var(--health-primary);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.ll-config .cfg-input {
+  border: 1px solid var(--health-border);
+  border-radius: 8px;
+}
+
+body.ll-config .cfg-input:focus-visible {
+  outline: 3px solid rgba(15, 139, 141, 0.3);
+  outline-offset: 2px;
+}
+
+body.ll-config .cfg-list li,
+body.ll-config .cfg-roles li {
+  border-bottom-color: var(--health-border);
+}
+
+body.ll-config .cfg-radio input,
+body.ll-config .cfg-check input {
+  accent-color: var(--health-accent);
+}
+
+body.ll-config .cfg-prev-now {
+  border-radius: 12px;
+  border-left: 6px solid var(--health-accent);
+  background: var(--health-primary);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.ll-config .cfg-prev-label,
+body.ll-config .cfg-prev-det {
+  color: #c7d9e8;
+}
+
+body.ll-config .cfg-prev-dest {
+  color: var(--health-mint);
+}
+
+@media (max-width: 720px) {
+  body.ll-panel .ll-topbar,
+  body.ll-mobile .ll-topbar,
+  body.ll-config .ll-topbar {
+    padding-inline: var(--sp-4);
+  }
+
+  body.ll-panel .panel-main {
+    padding: var(--sp-5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ll-panel .btn,
+  body.ll-mobile .btn,
+  body.ll-config .btn,
+  body.ll-panel .panel-consultorio-btn,
+  body.ll-mobile .mobile-current {
+    transition: none;
+  }
+}
+
+/* Public waiting-room screen: readable at a distance, calm at rest. */
+body.ll-tv {
+  background: var(--health-bg);
+  color: var(--health-text);
+  font-family: Inter, var(--font-body);
+}
+
+body.ll-tv::before,
+body.ll-tv::after {
+  content: none;
+}
+
+body.ll-tv .tv-header,
+body.ll-tv .tv-body {
+  position: relative;
+  z-index: 1;
+}
+
+body.ll-tv .tv-header {
+  background: var(--health-surface);
+  border-bottom: 1px solid var(--health-border);
+}
+
+body.ll-tv .tv-header-mark {
+  color: var(--health-primary);
+}
+
+body.ll-tv .tv-header-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--health-accent);
+  box-shadow: none;
+}
+
+body.ll-tv .tv-header-sala {
+  border-left-color: var(--health-border);
+  color: var(--health-text-muted);
+}
+
+body.ll-tv .tv-clock {
+  color: var(--health-primary);
+}
+
+body.ll-tv .tv-consultorios {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.ll-tv .tv-row {
+  border-bottom-color: var(--health-border);
+}
+
+body.ll-tv .tv-row-num {
+  background: var(--health-primary);
+}
+
+body.ll-tv .tv-row.is-flash {
+  background: var(--health-mint);
+  animation: ll-health-flash 1.4s var(--ease-standard) 2;
+}
+
+body.ll-tv .tv-row.is-flash .tv-row-num {
+  background: var(--health-accent);
+  color: #fff;
+}
+
+@keyframes ll-health-flash {
+  50% { background: var(--health-sky); }
+}
+
+body.ll-tv .tv-row-paciente,
+body.ll-tv .tv-row-turno {
+  color: var(--health-primary);
+}
+
+body.ll-tv .tv-row-prof,
+body.ll-tv .tv-row-espera {
+  color: var(--health-text-muted);
+}
+
+body.ll-tv .tv-now {
+  border-radius: 12px;
+  border-left: 6px solid var(--health-accent);
+  background: var(--health-primary);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.ll-tv .tv-now-label {
+  color: var(--health-mint);
+}
+
+body.ll-tv .tv-now-name,
+body.ll-tv .tv-now-dest {
+  color: #fff;
+}
+
+body.ll-tv .tv-now-name.is-empty {
+  color: #c7d9e8;
+}
+
+body.ll-tv .tv-history-title {
+  color: var(--health-accent-hover);
+}
+
+body.ll-tv .tv-history-list {
+  border-top-color: var(--health-accent);
+}
+
+body.ll-tv .tv-history-item {
+  color: var(--health-primary);
+  border-bottom-color: var(--health-border);
+}
+
+body.ll-tv .tv-history-sala {
+  color: var(--health-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ll-tv .tv-row.is-flash {
+    animation: none;
+  }
+}
+
+/* Pantalla pública en pantallas angostas (tablet vertical / preview en celular) */
+@media (max-width: 640px) {
+  .tv-header { gap: 12px; }
+  .tv-header-mark { min-width: 0; font-size: 1rem; flex-wrap: wrap; }
+  .tv-header-sala { display: block; width: 100%; border: none; margin: 2px 0 0; padding: 0; }
+  .tv-clock { font-size: 1.5rem; flex-shrink: 0; }
+}

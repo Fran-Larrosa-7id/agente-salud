@@ -25,9 +25,26 @@ const LL_SEED = {
       { id: 'p5', nombre: 'Carla Suárez', turno: '12:00' },
     ],
   },
-  atendiendo: { c1: null, c2: null, c3: null },
+  // Estado de media mañana: la demo abre con la sala en funcionamiento, no vacía
+  atendiendo: {
+    c1: { id: 'p10', nombre: 'Roberto Aguirre', turno: '10:15' },
+    c2: { id: 'p11', nombre: 'Ana López', turno: '10:40' },
+    c3: null,
+  },
   llamados: [],
 };
+
+// Llamados recientes con hora relativa al momento en que se abre la demo
+function llSeed() {
+  const seed = JSON.parse(JSON.stringify(LL_SEED));
+  const hace = (min) => { const d = new Date(Date.now() - min * 60000); return { ts: d.getTime(), hora: d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') }; };
+  seed.llamados = [
+    { pacienteNombre: 'Ana López', pacienteId: 'p11', consultorioId: 'c2', turno: '10:40', tipo: 'nuevo', ...hace(2) },
+    { pacienteNombre: 'Roberto Aguirre', pacienteId: 'p10', consultorioId: 'c1', turno: '10:15', tipo: 'nuevo', ...hace(9) },
+    { pacienteNombre: 'Julián Castro', pacienteId: 'p12', consultorioId: 'c3', turno: '10:00', tipo: 'nuevo', ...hace(21) },
+  ];
+  return seed;
+}
 
 function llGetState() {
   try {
@@ -35,8 +52,8 @@ function llGetState() {
     if (!raw) throw new Error('empty');
     return JSON.parse(raw);
   } catch (e) {
-    const seed = JSON.parse(JSON.stringify(LL_SEED));
-    localStorage.setItem(LL_STORAGE_KEY, JSON.stringify(seed));
+    const seed = llSeed();
+    try { localStorage.setItem(LL_STORAGE_KEY, JSON.stringify(seed)); } catch (err) { /* sin persistencia */ }
     return seed;
   }
 }
@@ -100,7 +117,7 @@ function llFinalizarAtencion(consultorioId) {
 }
 
 function llResetDemo() {
-  const seed = JSON.parse(JSON.stringify(LL_SEED));
+  const seed = llSeed();
   llSaveState(seed);
   return seed;
 }

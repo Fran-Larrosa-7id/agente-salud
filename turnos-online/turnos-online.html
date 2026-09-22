@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turnos Online · Centro Médico San Martín</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23102A43'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%230F8B8D' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./turnos-online.css">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23102A43'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%230F8B8D' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Turnos Online · Centro Médico San Martín</title>
+</helmet>
+
+<div class="to-root">
+
+<div class="to-demo" role="region" aria-label="Controles de la demo">
+  <div class="to-demo-in">
+    <a href="../index.html"><span class="to-ic to-ic-sm i-arrow-l" aria-hidden="true"></span><span class="to-demo-hide">Catálogo</span></a>
+    <span class="to-demo-sep" aria-hidden="true"></span>
+    <span class="to-demo-tag"><span class="to-demo-hide">Demo · </span><b>Turnos Online</b></span>
+    <div class="to-demo-sw">
+      <span class="to-demo-hide">Ver como</span>
+      <div class="to-demo-seg" role="group" aria-label="Vista de la demo">
+        <button type="button" aria-pressed="{{ isPatientView }}" onClick="{{ selectPatientView }}">Paciente</button>
+        <button type="button" aria-pressed="{{ isAdminView }}" onClick="{{ selectAdminView }}">Recepción</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<sc-if value="{{ isPatientView }}" hint-placeholder-val="{{ true }}">
+<div class="to-p">
+  <header class="to-hdr">
+    <div class="to-hdr-in">
+      <sc-if value="{{ showBackButton }}">
+        <button type="button" class="to-iconbtn" onClick="{{ onBack }}" aria-label="Volver al paso anterior"><span class="to-ic i-arrow-l" aria-hidden="true"></span></button>
+      </sc-if>
+      <button type="button" class="to-inst" onClick="{{ goHome }}" style="border:none;background:none;padding:0;text-align:left" aria-label="Centro Médico San Martín, ir al inicio">
+        <span class="to-inst-mark" aria-hidden="true">SM</span>
+        <span style="min-width:0">
+          <span class="to-inst-name" style="display:block">Centro Médico San Martín</span>
+          <span class="to-inst-loc"><span class="to-ic i-pin" aria-hidden="true"></span>Sede Caballito · Av. Rivadavia 4820</span>
+        </span>
+      </button>
+      <button type="button" class="to-btn to-btn--secondary" onClick="{{ goMisTurnos }}" aria-current="{{ misTurnosCurrent }}">
+        <span class="to-ic i-calendar" aria-hidden="true"></span>Mis turnos
+        <sc-if value="{{ misTurnosCount }}"><span class="to-count to-num" aria-label="{{ misTurnosCountLabel }}">{{ misTurnosCount }}</span></sc-if>
+      </button>
+    </div>
+  </header>
+
+  <sc-if value="{{ showProgress }}">
+    <nav class="to-stepper" aria-label="Progreso de la reserva">
+      <ol class="to-steps">
+        <sc-for list="{{ progressSteps }}" as="ps" hint-placeholder-count="7">
+          <li class="to-step {{ ps.cls }}" aria-current="{{ ps.ariaCurrent }}">
+            <span class="to-step-bar" aria-hidden="true"></span>
+            <span class="to-step-lab"><span class="to-ic i-check" aria-hidden="true"></span>{{ ps.label }}<span class="to-sr">{{ ps.srState }}</span></span>
+          </li>
+        </sc-for>
+      </ol>
+      <div class="to-steps-m" aria-hidden="true">
+        <span><b>{{ stepNowLabel }}</b></span><span class="to-num">Paso {{ stepNow }} de 7</span>
+      </div>
+      <div class="to-steps-m-bar to-mob" aria-hidden="true"><i style="width:{{ progressPct }}%"></i></div>
+    </nav>
+  </sc-if>
+
+  <main class="to-main {{ mainCls }}" id="contenido">
+
+  <sc-if value="{{ stepIsHome }}" hint-placeholder-val="{{ true }}">
+    <div class="to-grid to-enter">
+      <div class="to-col">
+        <p class="to-kicker">Turnos online</p>
+        <h1 class="to-h1">Reservá tu turno</h1>
+        <p class="to-lead">Elegí la especialidad y te mostramos los profesionales y horarios disponibles en la sede. Te lleva menos de dos minutos.</p>
+        <div class="to-search">
+          <span class="to-ic i-search" aria-hidden="true"></span>
+          <label class="to-sr" for="to-q">Buscar especialidad</label>
+          <input id="to-q" class="to-input" type="search" value="{{ search }}" onChange="{{ onSearchChange }}" placeholder="Buscar especialidad" autocomplete="off"/>
+        </div>
+        <sc-if value="{{ specAvailable.length }}" hint-placeholder-val="{{ true }}">
+          <h2 class="to-sec-t"><span>Especialidades con turnos</span></h2>
+          <div class="to-list">
+            <sc-for list="{{ specAvailable }}" as="sp" hint-placeholder-count="3">
+              <button type="button" class="to-row" onClick="{{ sp.onSelect }}">
+                <span class="to-row-main">
+                  <span class="to-row-t" style="display:block">{{ sp.name }}</span>
+                  <span class="to-row-s" style="display:block">{{ sp.profLabel }}</span>
+                </span>
+                <span class="to-row-aside">Próximo turno<b class="to-num">{{ sp.nextLabel }}</b></span>
+                <span class="to-ic i-chevron-r to-row-go" aria-hidden="true"></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ specSoon.length }}">
+          <h2 class="to-sec-t"><span>Próximamente en esta sede</span></h2>
+          <div class="to-soon">
+            <sc-for list="{{ specSoon }}" as="ss" hint-placeholder-count="3"><span>{{ ss.name }}</span></sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noSpecialtyResults }}">
+          <div class="to-empty" role="status">
+            <p class="to-empty-t">No encontramos “{{ search }}”</p>
+            <p class="to-empty-s">Probá con otro nombre o revisá la lista completa de especialidades.</p>
+            <div class="to-empty-a"><button type="button" class="to-btn to-btn--secondary" onClick="{{ clearSearch }}">Ver todas las especialidades</button></div>
+          </div>
+        </sc-if>
+      </div>
+      <aside class="to-rail" aria-label="Información de la sede">
+        <div class="to-rail-box">
+          <p class="to-rail-t">Sede Caballito</p>
+          <p class="to-place" style="margin:0"><b>Av. Rivadavia 4820, CABA</b><br/>A 2 cuadras de la estación Primera Junta (Línea A).</p>
+          <dl class="to-hours">
+            <dt>Lun a vie</dt><dd>08:00 – 19:00</dd>
+            <dt>Sábados</dt><dd>08:00 – 12:00</dd>
+          </dl>
+        </div>
+        <div class="to-rail-box">
+          <p class="to-rail-t">Cómo funciona</p>
+          <p class="to-place" style="margin:0">Reservás online y te confirmamos por WhatsApp. Un día antes te enviamos un recordatorio para confirmar, reprogramar o cancelar.</p>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ showFlowLayout }}">
+  <div class="to-grid">
+  <div class="to-col">
+
+    <details class="to-msum">
+      <summary><span class="to-ic to-ic-sm i-chevron-r" aria-hidden="true"></span><span>Tu selección:</span><b>{{ mobileSummary }}</b></summary>
+      <div class="to-rail-box">
+        <sc-for list="{{ railRows }}" as="rr" hint-placeholder-count="4">
+          <div class="to-rail-row"><div><div class="to-rail-k">{{ rr.k }}</div><div class="to-rail-v {{ rr.cls }}">{{ rr.v }}</div></div>
+            <sc-if value="{{ rr.onEdit }}"><button type="button" class="to-rail-edit" onClick="{{ rr.onEdit }}" aria-label="{{ rr.editLabel }}">Cambiar</button></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </details>
+
+  <sc-if value="{{ stepIsProfessional }}">
+    <div class="to-enter">
+      <p class="to-kicker">{{ currentSpecialtyName }}</p>
+      <h2 class="to-h2">¿Con quién querés atenderte?</h2>
+      <p class="to-sub">Podés elegir un profesional o tomar el primer turno libre de la especialidad.</p>
+
+      <sc-if value="{{ hasProfessionalsForSpecialty }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <sc-if value="{{ firstAv }}">
+            <button type="button" class="to-fast" onClick="{{ selectFirstAvailable }}">
+              <span class="to-fast-when"><small>{{ firstAv.day }}</small><b class="to-num">{{ firstAv.time }}</b></span>
+              <span>
+                <span class="to-fast-t"><span class="to-ic to-ic-sm i-bolt" aria-hidden="true"></span>Primer turno disponible</span>
+                <span class="to-fast-s" style="display:block">{{ firstAv.profName }} · {{ firstAv.modality }}</span>
+              </span>
+              <span class="to-fast-cta">Tomar este turno<span class="to-ic to-ic-sm i-arrow-r" aria-hidden="true"></span></span>
+            </button>
+          </sc-if>
+          <p class="to-or">O elegí un profesional</p>
+          <div class="to-list">
+            <sc-for list="{{ professionalsList }}" as="pro" hint-placeholder-count="2">
+              <button type="button" class="to-row {{ pro.cls }}" onClick="{{ pro.onSelect }}">
+                <span class="to-avatar" aria-hidden="true">{{ pro.initials }}</span>
+                <span class="to-row-main">
+                  <span class="to-row-t" style="display:block">{{ pro.name }}</span>
+                  <span class="to-meta">
+                    <span><span class="to-ic i-pin" aria-hidden="true"></span>Presencial</span>
+                    <sc-if value="{{ pro.hasVideo }}"><span><span class="to-ic i-video" aria-hidden="true"></span>Videoconsulta</span></sc-if>
+                  </span>
+                </span>
+                <span class="to-row-aside">Próximo turno<b class="to-num">{{ pro.nextSlotLabel }}</b></span>
+                <span class="to-ic i-chevron-r to-row-go" aria-hidden="true"></span>
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ noProfessionalsForSpecialty }}">
+        <div class="to-empty">
+          <p class="to-empty-t">Todavía no hay turnos para esta especialidad</p>
+          <p class="to-empty-s">Estamos sumando profesionales. Dejanos tu WhatsApp y te avisamos cuando haya agenda.</p>
+          <div class="to-empty-a">
+            <button type="button" class="to-btn to-btn--primary" onClick="{{ openWaitlist }}">Avisarme por WhatsApp</button>
+            <button type="button" class="to-btn to-btn--secondary" onClick="{{ goHome }}">Ver otras especialidades</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stepIsCoverage }}">
+    <div class="to-enter">
+      <p class="to-kicker">{{ draftProfessionalName }}</p>
+      <h2 class="to-h2">¿Cómo te atendés?</h2>
+      <p class="to-sub">Elegí tu cobertura. Si no la ves en la lista, elegí “Otra obra social”.</p>
+      <div class="to-choices" role="radiogroup" aria-label="Cobertura">
+        <sc-for list="{{ coverages }}" as="cov" hint-placeholder-count="6">
+          <button type="button" role="radio" aria-checked="{{ cov.selected }}" class="to-choice {{ cov.cls }}" onClick="{{ cov.onSelect }}">
+            <span class="to-radio" aria-hidden="true"></span>
+            <span>{{ cov.name }}<small>{{ cov.hint }}</small></span>
+          </button>
+        </sc-for>
+      </div>
+      <p class="to-note"><span class="to-ic to-ic-sm i-tag" aria-hidden="true"></span>Traé tu credencial el día del turno. Si te atendés como particular, el valor de la consulta se abona en la sede.</p>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stepIsType }}">
+    <div class="to-enter">
+      <p class="to-kicker">{{ draftProfessionalName }}</p>
+      <h2 class="to-h2">¿Qué tipo de consulta necesitás?</h2>
+      <p class="to-sub">La duración define cuánto tiempo te reservamos con el profesional.</p>
+      <div class="to-list" role="radiogroup" aria-label="Tipo de consulta">
+        <sc-for list="{{ consultTypes }}" as="ct" hint-placeholder-count="3">
+          <button type="button" role="radio" aria-checked="{{ ct.selected }}" class="to-row {{ ct.cls }}" onClick="{{ ct.onSelect }}">
+            <span class="to-row-main">
+              <span class="to-row-t" style="display:block">{{ ct.name }}</span>
+              <span class="to-row-s" style="display:block">{{ ct.desc }}</span>
+            </span>
+            <span class="to-row-aside"><span class="to-meta" style="margin:0"><span><span class="to-ic i-clock" aria-hidden="true"></span>{{ ct.durationLabel }}</span></span></span>
+            <span class="to-ic i-chevron-r to-row-go" aria-hidden="true"></span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stepIsDatetime }}">
+    <div class="to-enter">
+      <h2 class="to-h2">Elegí día y horario</h2>
+      <p class="to-ctx"><span><b>{{ draftProfessionalName }}</b></span><span>{{ draftTypeName }} · {{ draftDuration }} min</span></p>
+      <sc-if value="{{ reprogramBanner }}">
+        <div class="to-banner" role="note"><span class="to-ic i-refresh" aria-hidden="true"></span><div><b>Estás reprogramando tu turno</b>{{ reprogramBanner }}</div></div>
+      </sc-if>
+
+      <div class="to-daysbar">
+        <span class="to-month" aria-live="polite">{{ monthLabel }}</span>
+        <div class="to-daynav">
+          <button type="button" class="to-iconbtn" onClick="{{ goPrevDays }}" disabled="{{ prevDisabled }}" aria-label="Días anteriores"><span class="to-ic i-chevron-l" aria-hidden="true"></span></button>
+          <button type="button" class="to-iconbtn" onClick="{{ goNextDays }}" aria-label="Días siguientes"><span class="to-ic i-chevron-r" aria-hidden="true"></span></button>
+        </div>
+      </div>
+      <div class="to-days" role="group" aria-label="Días">
+        <sc-for list="{{ days }}" as="d" hint-placeholder-count="5">
+          <button type="button" class="to-day {{ d.cls }}" onClick="{{ d.onSelect }}" disabled="{{ d.noAvail }}" aria-pressed="{{ d.isActive }}" aria-label="{{ d.ariaLabel }}">
+            <span class="to-day-dow">{{ d.dowShort }}</span>
+            <span class="to-day-n to-num">{{ d.dayNum }}</span>
+            <span class="to-day-a">{{ d.availLabel }}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ hasSlots }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <sc-if value="{{ morningSlots.length }}">
+            <h3 class="to-slots-h">Mañana <span>{{ morningSlots.length }} horarios</span></h3>
+            <div class="to-slots" role="group" aria-label="Horarios de la mañana">
+              <sc-for list="{{ morningSlots }}" as="s" hint-placeholder-count="4">
+                <button type="button" class="to-slot {{ s.cls }}" onClick="{{ s.onSelect }}" aria-pressed="{{ s.selected }}"><span class="to-ic i-check" aria-hidden="true"></span>{{ s.time }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ afternoonSlots.length }}">
+            <h3 class="to-slots-h">Tarde <span>{{ afternoonSlots.length }} horarios</span></h3>
+            <div class="to-slots" role="group" aria-label="Horarios de la tarde">
+              <sc-for list="{{ afternoonSlots }}" as="s" hint-placeholder-count="4">
+                <button type="button" class="to-slot {{ s.cls }}" onClick="{{ s.onSelect }}" aria-pressed="{{ s.selected }}"><span class="to-ic i-check" aria-hidden="true"></span>{{ s.time }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <p class="to-wait"><span>¿Ningún horario te sirve?</span><button type="button" class="to-link" onClick="{{ openWaitlist }}">Avisarme si se libera uno antes</button></p>
+        </div>
+      </sc-if>
+      <sc-if value="{{ !hasSlots }}">
+        <div class="to-empty" role="status">
+          <p class="to-empty-t">No hay horarios en estos días</p>
+          <p class="to-empty-s">{{ draftProfessionalName }} no tiene turnos libres en esta semana.</p>
+          <div class="to-empty-a">
+            <button type="button" class="to-btn to-btn--primary" onClick="{{ goNextDays }}">Ver días siguientes</button>
+            <button type="button" class="to-btn to-btn--secondary" onClick="{{ goToProfessionalStep }}">Cambiar profesional</button>
+            <button type="button" class="to-btn to-btn--tertiary" onClick="{{ openWaitlist }}">Sumarme a la lista de espera</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stepIsPatientdata }}">
+    <div class="to-enter">
+      <h2 class="to-h2">Tus datos</h2>
+      <p class="to-sub">Los usamos solo para confirmarte el turno y avisarte si hay cambios.</p>
+      <form class="to-form" onSubmit="{{ onSubmitPatientData }}" noValidate>
+        <fieldset class="to-fieldset">
+          <legend class="to-legend">Quién se atiende</legend>
+          <div class="to-2col">
+            <div class="to-field"><label class="to-label" for="pd-n">Nombre</label><input id="pd-n" class="to-input" value="{{ patientInfo.nombre }}" onChange="{{ setNombre }}" autocomplete="given-name" required/></div>
+            <div class="to-field"><label class="to-label" for="pd-a">Apellido</label><input id="pd-a" class="to-input" value="{{ patientInfo.apellido }}" onChange="{{ setApellido }}" autocomplete="family-name" required/></div>
+          </div>
+          <div class="to-field" style="max-width:270px"><label class="to-label" for="pd-d">DNI <small>(opcional)</small></label><input id="pd-d" class="to-input to-num" value="{{ patientInfo.dni }}" onChange="{{ setDni }}" inputMode="numeric" placeholder="30.123.456"/></div>
+        </fieldset>
+        <fieldset class="to-fieldset">
+          <legend class="to-legend">Cómo te contactamos</legend>
+          <div class="to-field"><label class="to-label" for="pd-w">WhatsApp</label><input id="pd-w" class="to-input to-num" value="{{ patientInfo.whatsapp }}" onChange="{{ setWhatsapp }}" type="tel" inputMode="tel" autocomplete="tel" placeholder="11 5555 5555" aria-describedby="pd-w-h" required/><span class="to-help" id="pd-w-h">Por acá te llegan la confirmación y el recordatorio.</span></div>
+          <div class="to-field"><label class="to-label" for="pd-e">Email</label><input id="pd-e" class="to-input" value="{{ patientInfo.email }}" onChange="{{ setEmail }}" type="email" inputMode="email" autocomplete="email" placeholder="nombre@correo.com" aria-invalid="{{ emailInvalid }}" aria-describedby="pd-e-err" required/>
+            <sc-if value="{{ emailInvalid }}"><span class="to-error" id="pd-e-err">Revisá el email: le falta el “@” o el dominio.</span></sc-if>
+          </div>
+        </fieldset>
+        <label class="to-check"><input type="checkbox" checked="{{ patientInfo.accept }}" onChange="{{ toggleAccept }}"/><span>Acepto recibir por WhatsApp y email información sobre este turno.</span></label>
+        <div class="to-form-foot">
+          <button type="submit" class="to-btn to-btn--primary" disabled="{{ continueDisabled }}" style="align-self:flex-start;min-width:220px">Revisar y confirmar<span class="to-ic to-ic-sm i-arrow-r" aria-hidden="true"></span></button>
+          <sc-if value="{{ missingHint }}"><span class="to-help" role="status">{{ missingHint }}</span></sc-if>
+        </div>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stepIsSummary }}">
+    <div class="to-enter" style="max-width:600px">
+      <h2 class="to-h2">Revisá y confirmá</h2>
+      <p class="to-sub">Chequeá los datos antes de reservar. Podés cambiar cualquier paso.</p>
+      <div class="to-ticket">
+        <div class="to-ticket-when">
+          <div class="to-cal" aria-hidden="true"><small>{{ summaryMonShort }}</small><b class="to-num">{{ summaryDayNum }}</b></div>
+          <div><div class="to-ticket-date">{{ summaryDateLabel }}</div><div class="to-ticket-time to-num">{{ selectedTime }} a {{ endTime }} hs · {{ draftDuration }} min</div></div>
+          <button type="button" class="to-btn to-btn--sm" onClick="{{ goToDatetimeStep }}" style="margin-left:auto;background:rgba(255,255,255,.12);color:#fff" aria-label="Cambiar fecha y horario">Cambiar</button>
+        </div>
+        <dl class="to-dl">
+          <div class="to-dl-row"><div><dt>Profesional</dt><dd>{{ draftProfessionalName }}<small>{{ draftSpecialtyName }}</small></dd></div><button type="button" class="to-rail-edit" onClick="{{ goToProfessionalStep }}" aria-label="Cambiar profesional">Cambiar</button></div>
+          <div class="to-dl-row"><div><dt>Consulta y cobertura</dt><dd>{{ draftTypeName }}<small>{{ draftCoverage }}</small></dd></div><button type="button" class="to-rail-edit" onClick="{{ goToCoverageStep }}" aria-label="Cambiar cobertura y consulta">Cambiar</button></div>
+          <div class="to-dl-row"><div><dt>Paciente</dt><dd>{{ patientFullName }}<small class="to-num">WhatsApp {{ patientInfo.whatsapp }} · {{ patientInfo.email }}</small></dd></div><button type="button" class="to-rail-edit" onClick="{{ goToPatientStep }}" aria-label="Cambiar datos del paciente">Cambiar</button></div>
+          <div class="to-dl-row"><div><dt>Lugar</dt><dd>Centro Médico San Martín<small>Av. Rivadavia 4820, CABA · Sede Caballito</small></dd></div></div>
+        </dl>
+      </div>
+      <div class="to-form-foot" style="margin-top:22px">
+        <button type="button" class="to-btn to-btn--primary" onClick="{{ onConfirm }}" style="min-height:50px;font-size:15.5px">Confirmar turno</button>
+        <span class="to-help">Al confirmar te enviamos el comprobante por WhatsApp. Podés cancelar sin costo hasta 24 hs antes.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  </div>
+  <aside class="to-rail" aria-label="Tu selección">
+    <div class="to-rail-box">
+      <p class="to-rail-t">Tu selección</p>
+      <sc-for list="{{ railRows }}" as="rr" hint-placeholder-count="4">
+        <div class="to-rail-row"><div><div class="to-rail-k">{{ rr.k }}</div><div class="to-rail-v {{ rr.cls }}">{{ rr.v }}</div></div>
+          <sc-if value="{{ rr.onEdit }}"><button type="button" class="to-rail-edit" onClick="{{ rr.onEdit }}" aria-label="{{ rr.editLabel }}">Cambiar</button></sc-if>
+        </div>
+      </sc-for>
+      <div class="to-rail-when {{ railWhenCls }}">
+        <sc-if value="{{ railDatetime }}"><b class="to-num">{{ railDatetime }}</b><span>{{ railWhenSub }}</span></sc-if>
+        <sc-if value="{{ !railDatetime }}"><span>Día y horario: todavía sin elegir</span></sc-if>
+      </div>
+    </div>
+    <sc-if value="{{ railCta }}">
+      <div class="to-rail-cta">
+        <button type="button" class="to-btn to-btn--primary to-btn--block" onClick="{{ onContinue }}">{{ continueLabel }}<span class="to-ic to-ic-sm i-arrow-r" aria-hidden="true"></span></button>
+      </div>
+    </sc-if>
+    <p class="to-place" style="margin:0 0 0 22px"><b>Sede Caballito</b> · Av. Rivadavia 4820</p>
+  </aside>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ stepIsConfirmed }}">
+    <div class="to-done to-enter">
+      <div>
+        <div class="to-done-head">
+          <span class="to-done-ic" aria-hidden="true"><span class="to-ic to-ic-lg i-check"></span></span>
+          <div>
+            <h1 class="to-h1" style="font-size:30px" tabIndex="-1" data-autofocus="true">Listo, tu turno está reservado</h1>
+            <p class="to-sub" style="margin:0">Te enviamos el comprobante por WhatsApp{{ confirmedWhatsapp }}.</p>
+            <span class="to-code">Código de reserva <b>{{ bookingCode }}</b></span>
+          </div>
+        </div>
+        <div class="to-ticket">
+          <div class="to-ticket-when">
+            <div class="to-cal" aria-hidden="true"><small>{{ summaryMonShort }}</small><b class="to-num">{{ summaryDayNum }}</b></div>
+            <div><div class="to-ticket-date">{{ summaryDateLabel }}</div><div class="to-ticket-time to-num">{{ selectedTime }} hs · {{ draftDuration }} min</div></div>
+          </div>
+          <dl class="to-dl">
+            <div class="to-dl-row"><div><dt>Profesional</dt><dd>{{ draftProfessionalName }}<small>{{ draftSpecialtyName }} · {{ draftTypeName }}</small></dd></div></div>
+            <div class="to-dl-row"><div><dt>Lugar</dt><dd>Centro Médico San Martín<small>Av. Rivadavia 4820, CABA · Sede Caballito</small></dd></div></div>
+            <div class="to-dl-row"><div><dt>Cobertura</dt><dd>{{ draftCoverage }}</dd></div></div>
+          </dl>
+        </div>
+      </div>
+      <div>
+        <h2 class="to-grp-t" style="font-size:16px;margin-bottom:16px">Qué sigue</h2>
+        <ol class="to-next">
+          <li><b>Recordatorio el día anterior</b><span>Te escribimos por WhatsApp para que confirmes, reprogrames o canceles con un toque.</span></li>
+          <li><b>Llegá 10 minutos antes</b><span>Traé tu DNI y la credencial de tu cobertura. Recepción está en planta baja.</span></li>
+          <li><b>¿Surgió algo?</b><span>Podés reprogramar o cancelar desde “Mis turnos” hasta 24 hs antes.</span></li>
+        </ol>
+        <div class="to-actions">
+          <button type="button" class="to-btn to-btn--secondary" onClick="{{ addToCalendar }}"><span class="to-ic i-calendar" aria-hidden="true"></span>Agregar al calendario</button>
+          <button type="button" class="to-btn to-btn--secondary" onClick="{{ comoLlegar }}"><span class="to-ic i-pin" aria-hidden="true"></span>Cómo llegar</button>
+          <button type="button" class="to-btn to-btn--primary" onClick="{{ goMisTurnos }}">Ver mis turnos</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stepIsMyturnos }}">
+    <div class="to-enter" style="max-width:760px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+        <div><h1 class="to-h1" style="font-size:28px">Mis turnos</h1><p class="to-sub" style="margin:0">Turnos reservados desde este dispositivo.</p></div>
+        <button type="button" class="to-btn to-btn--primary" onClick="{{ goHome }}"><span class="to-ic to-ic-sm i-plus" aria-hidden="true"></span>Reservar otro turno</button>
+      </div>
+      <sc-if value="{{ myAppointments.length }}" hint-placeholder-val="{{ true }}">
+        <div class="to-appts">
+          <sc-for list="{{ myAppointments }}" as="a" hint-placeholder-count="1">
+            <article class="to-appt {{ a.cls }}">
+              <div class="to-cal" aria-hidden="true"><small>{{ a.dowLabel }}</small><b class="to-num">{{ a.dayNum }}</b></div>
+              <div style="min-width:0">
+                <div class="to-appt-t to-num">{{ a.dateLong }} · {{ a.time }} hs</div>
+                <div class="to-row-t" style="margin-top:4px">{{ a.professionalName }}</div>
+                <div class="to-row-s">{{ a.specialtyName }} · {{ a.typeName }} · Sede Caballito</div>
+                <sc-if value="{{ a.hasActions }}">
+                  <div class="to-appt-a">
+                    <sc-if value="{{ a.canConfirm }}"><button type="button" class="to-btn to-btn--primary to-btn--sm" onClick="{{ a.onConfirmClick }}">Confirmar asistencia</button></sc-if>
+                    <sc-if value="{{ a.canAct }}"><button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ a.onReprogramClick }}">Reprogramar</button></sc-if>
+                    <sc-if value="{{ a.canAct }}"><button type="button" class="to-btn to-btn--danger-ghost to-btn--sm" onClick="{{ a.onCancelClick }}">Cancelar turno</button></sc-if>
+                  </div>
+                </sc-if>
+              </div>
+              <span class="to-status st-{{ a.status }}">{{ a.statusMeta.label }}</span>
+            </article>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ !myAppointments.length }}">
+        <div class="to-empty">
+          <p class="to-empty-t">Todavía no reservaste turnos</p>
+          <p class="to-empty-s">Cuando reserves, vas a poder confirmarlos, reprogramarlos o cancelarlos desde acá.</p>
+          <div class="to-empty-a"><button type="button" class="to-btn to-btn--primary" onClick="{{ goHome }}">Reservar turno</button></div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  </main>
+
+  <sc-if value="{{ showMobileBar }}">
+    <div class="to-mbar">
+      <div class="to-mbar-s">Elegiste<b class="to-num">{{ railDatetime }}</b></div>
+      <button type="button" class="to-btn to-btn--primary" onClick="{{ onContinue }}">{{ continueLabel }}</button>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAdminView }}">
+<div class="to-a">
+  <nav class="to-side" aria-label="Secciones del panel">
+    <div class="to-side-brand"><span class="to-inst-mark" aria-hidden="true">SM</span><div><b>Centro Médico San Martín</b><small>Turnos · Sede Caballito</small></div></div>
+    <sc-for list="{{ sidebarGroups }}" as="g" hint-placeholder-count="3">
+      <div class="to-side-g">
+        <div class="to-side-gt">{{ g.title }}</div>
+        <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="3">
+          <button type="button" class="to-nav" onClick="{{ it.onClick }}" aria-current="{{ it.ariaCurrent }}" title="{{ it.label }}">
+            <span class="to-ic {{ it.icon }}" aria-hidden="true"></span><span class="to-nav-lab">{{ it.label }}</span>
+            <sc-if value="{{ it.badge }}"><span class="to-nav-b to-num">{{ it.badge }}</span></sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </sc-for>
+    <div class="to-side-user"><span class="to-avatar to-avatar--sm" aria-hidden="true">MF</span><div><b>María Fernández</b><small>Recepción</small></div></div>
+  </nav>
+
+  <main class="to-work">
+  <sc-if value="{{ adminSectionIsAgenda }}" hint-placeholder-val="{{ true }}">
+    <div class="to-top">
+      <div>
+        <h1>Agenda del día</h1>
+        <div class="to-top-s to-num"><span><b>{{ agendaStats.total }}</b> turnos</span><span><b>{{ agendaStats.pending }}</b> sin confirmar</span><span><b>{{ agendaStats.done }}</b> {{ agendaStats.doneLabel }}</span><span>{{ agendaStats.freeLabel }}</span></div>
+      </div>
+      <button type="button" class="to-btn to-btn--primary" onClick="{{ openNewTurno }}"><span class="to-ic to-ic-sm i-plus" aria-hidden="true"></span>Nuevo turno</button>
+    </div>
+
+    <div class="to-toolbar" role="toolbar" aria-label="Navegación de la agenda">
+      <div class="to-tb-date">
+        <button type="button" class="to-iconbtn to-iconbtn--ghost" onClick="{{ prevDay }}" aria-label="Día anterior"><span class="to-ic i-chevron-l" aria-hidden="true"></span></button>
+        <button type="button" class="to-iconbtn to-iconbtn--ghost" onClick="{{ nextDay }}" aria-label="Día siguiente"><span class="to-ic i-chevron-r" aria-hidden="true"></span></button>
+        <span class="to-tb-label" aria-live="polite">{{ agendaDateLabel }}</span>
+        <sc-if value="{{ !agendaIsToday }}"><button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ goToday }}">Hoy</button></sc-if>
+      </div>
+      <div class="to-tb-right">
+        <div class="to-seg" role="group" aria-label="Vista">
+          <button type="button" aria-pressed="true">Día</button>
+          <button type="button" aria-pressed="false" onClick="{{ notImplementedToast }}">Semana</button>
+        </div>
+        <label class="to-sr" for="ag-prof">Profesional</label>
+        <select id="ag-prof" class="to-select to-select--sm" value="{{ filterProf }}" onChange="{{ onFilterProfChange }}" style="width:auto;min-width:210px">
+          <option value="all">Todos los profesionales</option>
+          <sc-for list="{{ professionalsAll }}" as="p" hint-placeholder-count="4"><option value="{{ p.id }}">{{ p.name }}</option></sc-for>
+        </select>
+      </div>
+    </div>
+    <div class="to-legend2" aria-label="Referencias">
+      <span class="to-status st-confirmado">Confirmado</span>
+      <span class="to-status st-pendiente">Sin confirmar</span>
+      <span class="to-status st-atendido">Atendido</span>
+      <span class="to-status st-ausente">Ausente</span>
+      <span class="to-status st-block">Bloqueado</span>
+      <span style="margin-left:auto;font-size:12.5px;color:#566276">Hacé clic en un espacio libre para crear un turno o bloquear el horario.</span>
+    </div>
+
+    <div class="to-cal-wrap">
+      <div class="to-cal-grid to-cal-head">
+        <div></div>
+        <div style="display:grid;grid-template-columns:{{ columnsTemplate }}">
+          <sc-for list="{{ columns }}" as="col" hint-placeholder-count="3">
+            <div class="to-colh">
+              <span class="to-avatar to-avatar--sm" aria-hidden="true">{{ col.initials }}</span>
+              <div style="min-width:0"><b>{{ col.name }}</b><small>{{ col.specialty }} · {{ col.countLabel }}</small></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div class="to-cal-grid">
+        <div class="to-gutter" style="height:{{ gridHeight }}px">
+          <sc-for list="{{ hourLabels }}" as="h" hint-placeholder-count="10">
+            <div class="to-hour" style="top:{{ h.top }}px">{{ h.label }}</div>
+          </sc-for>
+          <sc-if value="{{ nowIndicator.show }}"><div class="to-now-tag" style="top:{{ nowIndicator.top }}px">{{ nowIndicator.label }}</div></sc-if>
+        </div>
+        <div style="display:grid;grid-template-columns:{{ columnsTemplate }};position:relative;height:{{ gridHeight }}px">
+          <sc-if value="{{ nowIndicator.show }}"><div class="to-now" style="top:{{ nowIndicator.top }}px" aria-hidden="true"></div></sc-if>
+          <sc-for list="{{ columns }}" as="col" hint-placeholder-count="3">
+            <div class="to-colbody" onClick="{{ col.onColumnClick }}" style="height:{{ gridHeight }}px">
+              <sc-for list="{{ col.slotLines }}" as="hl" hint-placeholder-count="10">
+                <div class="to-hl {{ hl.cls }}" style="top:{{ hl.top }}px"></div>
+              </sc-for>
+              <sc-for list="{{ col.lockBlocks }}" as="lb" hint-placeholder-count="1">
+                <div data-agenda-block="true" class="to-lock" style="top:{{ lb.top }}px;height:{{ lb.height }}px" title="{{ lb.label }}"><span class="to-ic i-lock" aria-hidden="true"></span>{{ lb.label }}</div>
+              </sc-for>
+              <sc-for list="{{ col.blocks }}" as="b" hint-placeholder-count="2">
+                <button type="button" data-agenda-block="true" class="to-blk {{ b.cls }}" onClick="{{ b.onOpen }}" style="top:{{ b.top }}px;height:{{ b.height }}px" aria-label="{{ b.ariaLabel }}">
+                  <span class="to-blk-l1"><span class="to-num">{{ b.timeLabel }}</span><span class="to-nm">{{ b.patientName }}</span></span>
+                  <sc-if value="{{ b.showType }}"><span class="to-blk-l2">{{ b.typeName }} · {{ b.statusLabel }}</span></sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ adminSectionIsProfesionales }}">
+    <div class="to-top">
+      <div><h1>Profesionales</h1><div class="to-top-s"><span><b>{{ professionalsRows.length }}</b> activos en la sede</span></div></div>
+      <button type="button" class="to-btn to-btn--secondary" onClick="{{ notImplementedToast }}"><span class="to-ic to-ic-sm i-plus" aria-hidden="true"></span>Agregar profesional</button>
+    </div>
+    <div class="to-table">
+      <div class="to-thead to-prof-cols"><span>Profesional</span><span class="c-mod">Modalidad</span><span class="c-week">Días de atención</span><span>Próximo turno libre</span><span class="c-state">Estado</span><span></span></div>
+      <sc-for list="{{ professionalsRows }}" as="pr" hint-placeholder-count="4">
+        <button type="button" class="to-trow to-prof-cols" onClick="{{ pr.onOpen }}" aria-label="{{ pr.ariaLabel }}">
+          <span style="display:flex;align-items:center;gap:12px;min-width:0"><span class="to-avatar" aria-hidden="true">{{ pr.initials }}</span><span style="min-width:0"><span class="to-cell-b" style="display:block">{{ pr.name }}</span><span class="to-cell-s">{{ pr.specialtyName }}</span></span></span>
+          <span class="to-cell-s c-mod">{{ pr.modalitiesStr }}</span>
+          <span class="to-week c-week" aria-label="{{ pr.availSummary }}"><sc-for list="{{ pr.weekDots }}" as="wd" hint-placeholder-count="7"><span class="{{ wd.cls }}">{{ wd.l }}</span></sc-for></span>
+          <span class="to-cell-b teal to-num">{{ pr.nextSlotLabel }}</span>
+          <span class="to-status st-confirmado c-state">Activo</span>
+          <span class="to-ic i-chevron-r to-row-go" aria-hidden="true"></span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ adminSectionIsProfDetail }}">
+    <div class="to-top" style="align-items:center;justify-content:flex-start">
+      <button type="button" class="to-iconbtn" onClick="{{ backToProfesionales }}" aria-label="Volver a profesionales"><span class="to-ic i-arrow-l" aria-hidden="true"></span></button>
+      <span class="to-avatar" aria-hidden="true">{{ profDetail.initials }}</span>
+      <div><h1 style="font-size:22px">{{ profDetail.name }}</h1><div class="to-top-s" style="margin-top:2px"><span>{{ profDetail.specialtyName }}</span><span>{{ profDetail.modalitiesStr }}</span></div></div>
+    </div>
+    <div class="to-tabs" role="tablist" aria-label="Detalle del profesional">
+      <sc-for list="{{ profDetailTabs }}" as="t" hint-placeholder-count="3">
+        <button type="button" role="tab" class="to-tab" aria-selected="{{ t.active }}" onClick="{{ t.onSelect }}">{{ t.label }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ profDetailTabIsInfo }}">
+      <div class="to-panel" style="max-width:560px">
+        <dl class="to-rules">
+          <div><dt>Especialidad</dt><dd>{{ profDetail.specialtyName }}</dd></div>
+          <div><dt>Modalidad</dt><dd>{{ profDetail.modalitiesStr }}</dd></div>
+          <div><dt>Sede</dt><dd>Caballito · Consultorio 3</dd></div>
+          <div><dt>Estado</dt><dd><span class="to-status st-confirmado">Activo · recibe reservas online</span></dd></div>
+        </dl>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ profDetailTabIsAvailability }}">
+      <div class="to-avail">
+        <div class="to-wk">
+          <div class="to-wk-scale"><span>Horario semanal</span><span class="to-wk-ticks"><span>08</span><span>11</span><span>14</span><span>17</span><span>20</span></span></div>
+          <sc-for list="{{ profDetail.weekRows }}" as="wr" hint-placeholder-count="7">
+            <div class="to-wk-row">
+              <label class="to-sw"><input type="checkbox" role="switch" checked="{{ wr.active }}" onChange="{{ wr.onToggle }}" aria-label="{{ wr.switchLabel }}"/>{{ wr.dayLabel }}</label>
+              <div style="min-width:0">
+                <div class="to-tl" aria-hidden="true"><sc-for list="{{ wr.segments }}" as="sg" hint-placeholder-count="1"><i style="left:{{ sg.left }}%;width:{{ sg.width }}%"></i></sc-for></div>
+                <sc-if value="{{ wr.active }}" hint-placeholder-val="{{ true }}">
+                  <div class="to-wins">
+                    <sc-for list="{{ wr.windows }}" as="w" hint-placeholder-count="1">
+                      <div class="to-win">
+                        <input type="time" class="to-input to-num" value="{{ w.from }}" onChange="{{ w.onFromChange }}" aria-label="{{ w.fromLabel }}"/>
+                        <span class="to-win-sep">a</span>
+                        <input type="time" class="to-input to-num" value="{{ w.to }}" onChange="{{ w.onToChange }}" aria-label="{{ w.toLabel }}"/>
+                        <button type="button" class="to-iconbtn to-iconbtn--ghost" onClick="{{ w.onRemove }}" aria-label="{{ w.removeLabel }}" style="color:#B54747"><span class="to-ic to-ic-sm i-trash" aria-hidden="true"></span></button>
+                      </div>
+                    </sc-for>
+                    <button type="button" class="to-btn to-btn--tertiary to-btn--sm" onClick="{{ wr.onAddWindow }}" style="align-self:flex-start;margin-left:-10px"><span class="to-ic to-ic-sm i-plus" aria-hidden="true"></span>Agregar franja</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ !wr.active }}"><div class="to-off" style="padding-top:0">No atiende</div></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div>
+          <div class="to-panel">
+            <div class="to-panel-h"><h3>Reglas de reserva</h3></div>
+            <dl class="to-rules">
+              <div><dt>Duración por defecto</dt><dd>30 min</dd></div>
+              <div><dt>Intervalo entre turnos</dt><dd>10 min</dd></div>
+              <div><dt>Anticipación mínima</dt><dd>2 horas</dd></div>
+              <div><dt>Reservas hasta</dt><dd>60 días</dd></div>
+            </dl>
+          </div>
+          <div class="to-panel">
+            <div class="to-panel-h"><h3>Excepciones</h3><button type="button" class="to-btn to-btn--tertiary to-btn--sm" onClick="{{ openExceptionModal }}"><span class="to-ic to-ic-sm i-plus" aria-hidden="true"></span>Agregar</button></div>
+            <sc-if value="{{ profDetail.exceptions.length }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <sc-for list="{{ profDetail.exceptions }}" as="ex" hint-placeholder-count="2">
+                  <div class="to-ex">
+                    <div class="to-cal" aria-hidden="true"><small>{{ ex.mon }}</small><b class="to-num">{{ ex.dayNum }}</b></div>
+                    <div class="to-ex-m"><b>{{ ex.dateLabel }}</b><span>{{ ex.summary }}</span></div>
+                    <button type="button" class="to-iconbtn to-iconbtn--ghost" onClick="{{ ex.onRemove }}" aria-label="{{ ex.removeLabel }}" style="color:#B54747"><span class="to-ic to-ic-sm i-trash" aria-hidden="true"></span></button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ !profDetail.exceptions.length }}"><p class="to-off" style="margin:0">Sin excepciones cargadas. Usalas para licencias, feriados u horarios especiales.</p></sc-if>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ profDetailTabIsTypes }}">
+      <div class="to-table" style="max-width:640px">
+        <div class="to-thead" style="grid-template-columns:1fr 120px"><span>Tipo de consulta</span><span>Duración</span></div>
+        <sc-for list="{{ consultTypesReadonly }}" as="ct" hint-placeholder-count="3">
+          <div class="to-trow" style="grid-template-columns:1fr 120px;min-height:60px"><span class="to-cell-b">{{ ct.name }}</span><span class="to-cell-s to-num">{{ ct.durationLabel }}</span></div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ adminSectionIsEspera }}">
+    <div class="to-top"><div><h1>Lista de espera</h1></div></div>
+    <p class="to-sumline"><span><b>{{ waitlistRows.length }}</b> {{ waitlistNoun }}</span><span><b>{{ waitlistMatchCount }}</b> con un turno disponible ahora</span></p>
+    <sc-if value="{{ waitlistRows.length }}" hint-placeholder-val="{{ true }}">
+      <div class="to-table">
+        <div class="to-thead to-wl-cols"><span>Paciente</span><span class="c-want">Busca</span><span class="c-pref">Preferencia</span><span class="c-age">Espera</span><span>Disponibilidad</span></div>
+        <sc-for list="{{ waitlistRows }}" as="w" hint-placeholder-count="2">
+          <div class="to-trow to-wl-cols to-wl-row {{ w.cls }}">
+            <span><span class="to-cell-b" style="display:block">{{ w.patientName }}</span><span class="to-cell-s to-num">{{ w.whatsapp }}</span></span>
+            <span class="c-want"><span class="to-cell-b" style="display:block">{{ w.specialtyName }}</span><span class="to-cell-s">{{ w.preferredLabel }}</span></span>
+            <span class="to-cell-s c-pref">{{ w.prefLabel }}</span>
+            <span class="to-cell-s c-age">{{ w.ageLabel }}</span>
+            <span class="c-match">
+              <sc-if value="{{ w.match }}">
+                <span class="to-match"><span><small><span class="to-ic to-ic-sm i-bolt" aria-hidden="true"></span>Turno disponible</small><b class="to-num">{{ w.match.label }} · {{ w.match.profName }}</b></span><button type="button" class="to-btn to-btn--accent to-btn--sm" onClick="{{ w.onContact }}"><span class="to-ic to-ic-sm i-chat" aria-hidden="true"></span>Ofrecer</button></span>
+              </sc-if>
+              <sc-if value="{{ !w.match }}"><span class="to-nomatch">Sin horarios compatibles por ahora</span></sc-if>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ !waitlistRows.length }}"><div class="to-empty"><p class="to-empty-t">No hay pacientes en lista de espera</p><p class="to-empty-s">Cuando un paciente no encuentra horario, puede anotarse desde la reserva online.</p></div></sc-if>
+  </sc-if>
+  </main>
+
+  <sc-if value="{{ drawerOpen }}">
+    <div class="to-scrim" onClick="{{ closeDrawer }}"></div>
+    <section class="to-drawer" role="dialog" aria-modal="true" aria-labelledby="dw-title" data-dialog="true">
+      <div class="to-dw-h">
+        <div style="min-width:0">
+          <span class="to-status st-{{ selectedAppt.status }}">{{ selectedAppt.statusMeta.label }}</span>
+          <h2 id="dw-title">{{ selectedAppt.patientName }}</h2>
+          <p class="to-num">DNI {{ selectedAppt.dni }} · {{ selectedAppt.coverage }}</p>
+        </div>
+        <button type="button" class="to-iconbtn to-iconbtn--ghost" onClick="{{ closeDrawer }}" aria-label="Cerrar detalle" data-autofocus="true"><span class="to-ic i-x" aria-hidden="true"></span></button>
+      </div>
+
+      <sc-if value="{{ !reprogramming }}" hint-placeholder-val="{{ true }}">
+        <div class="to-dw-b">
+          <div class="to-when">
+            <div class="to-cal" aria-hidden="true"><small>{{ selectedAppt.mon }}</small><b class="to-num">{{ selectedAppt.dayNum }}</b></div>
+            <div><b class="to-num">{{ selectedAppt.time }} – {{ selectedAppt.endTime }} hs</b><span>{{ selectedAppt.dateLabel }} · {{ selectedAppt.duration }} min</span></div>
+          </div>
+          <div>
+            <h3 class="to-grp-t">Turno</h3>
+            <dl class="to-kv">
+              <dt>Profesional</dt><dd>{{ selectedAppt.professionalName }}</dd>
+              <dt>Especialidad</dt><dd>{{ selectedAppt.specialtyName }}</dd>
+              <dt>Consulta</dt><dd>{{ selectedAppt.typeName }}</dd>
+              <dt>Cobertura</dt><dd>{{ selectedAppt.coverage }}</dd>
+              <dt>Reservado por</dt><dd><span class="to-ic {{ selectedAppt.originIcon }}" aria-hidden="true"></span>{{ selectedAppt.origin }}</dd>
+            </dl>
+          </div>
+          <div>
+            <h3 class="to-grp-t">Contacto</h3>
+            <dl class="to-kv">
+              <dt>WhatsApp</dt><dd class="to-num">{{ selectedAppt.whatsapp }}</dd>
+              <dt>Email</dt><dd>{{ selectedAppt.email }}</dd>
+            </dl>
+          </div>
+        </div>
+        <div class="to-dw-f">
+          <sc-if value="{{ selectedAppt.canConfirm }}">
+            <div class="to-dw-row">
+              <button type="button" class="to-btn to-btn--primary" onClick="{{ adminConfirm }}">Confirmar turno</button>
+              <button type="button" class="to-btn to-btn--secondary" onClick="{{ startReprogram }}">Reprogramar</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ !selectedAppt.canConfirm }}">
+            <button type="button" class="to-btn to-btn--secondary to-btn--block" onClick="{{ startReprogram }}"><span class="to-ic to-ic-sm i-refresh" aria-hidden="true"></span>Reprogramar</button>
+          </sc-if>
+          <div class="to-dw-row">
+            <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ adminMarkAttended }}" aria-pressed="{{ selectedAppt.isAtendido }}"><span class="to-ic to-ic-sm i-check" aria-hidden="true"></span>Atendido</button>
+            <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ adminMarkAbsent }}" aria-pressed="{{ selectedAppt.isAusente }}">No asistió</button>
+          </div>
+          <div class="to-dw-danger"><button type="button" class="to-btn to-btn--danger-ghost to-btn--sm" onClick="{{ openCancelAdminForSelected }}"><span class="to-ic to-ic-sm i-x" aria-hidden="true"></span>Cancelar turno</button></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ reprogramming }}">
+        <div class="to-dw-b">
+          <div class="to-rp">
+            <div class="to-rp-c is-old"><small>Turno actual</small><b class="to-num">{{ selectedAppt.shortDate }} · {{ selectedAppt.time }}</b></div>
+            <span class="to-ic i-arrow-r" aria-hidden="true"></span>
+            <div class="to-rp-c is-new {{ reNewCls }}"><small>Nuevo horario</small><b class="to-num">{{ reNewLabel }}</b></div>
+          </div>
+          <div>
+            <h3 class="to-grp-t">Día</h3>
+            <div class="to-mini-days" role="group" aria-label="Días">
+              <sc-for list="{{ reDays }}" as="d" hint-placeholder-count="5">
+                <button type="button" class="to-day {{ d.cls }}" onClick="{{ d.onSelect }}" disabled="{{ d.noAvail }}" aria-pressed="{{ d.isActive }}" aria-label="{{ d.ariaLabel }}">
+                  <span class="to-day-dow">{{ d.dowShort }}</span><span class="to-day-n to-num">{{ d.dayNum }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+          <div>
+            <h3 class="to-grp-t">Horario · {{ selectedAppt.professionalName }}</h3>
+            <sc-if value="{{ reSlots.length }}" hint-placeholder-val="{{ true }}">
+              <div class="to-mini-slots">
+                <sc-for list="{{ reSlots }}" as="s" hint-placeholder-count="4">
+                  <button type="button" class="to-slot {{ s.cls }}" onClick="{{ s.onSelect }}" aria-pressed="{{ s.selected }}"><span class="to-ic i-check" aria-hidden="true"></span>{{ s.time }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ !reSlots.length }}"><p class="to-off" style="margin:0">No hay horarios disponibles este día.</p></sc-if>
+          </div>
+        </div>
+        <div class="to-dw-f">
+          <div class="to-dw-row">
+            <button type="button" class="to-btn to-btn--secondary" onClick="{{ cancelReprogramSub }}">Volver</button>
+            <button type="button" class="to-btn to-btn--primary" onClick="{{ confirmReprogram }}" disabled="{{ reConfirmDisabled }}">Confirmar cambio</button>
+          </div>
+          <span class="to-help">Le avisamos al paciente por WhatsApp con el nuevo horario.</span>
+        </div>
+      </sc-if>
+    </section>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ agendaMenu }}">
+  <div class="to-menu-scrim" onClick="{{ closeAgendaMenu }}"></div>
+  <div class="to-menu" role="menu" aria-label="Acciones del horario" style="left:{{ agendaMenu.x }}px;top:{{ agendaMenu.y }}px;transform-origin:{{ agendaMenu.origin }}" data-dialog="true">
+    <div class="to-menu-h"><b class="to-num">{{ agendaMenu.time }} hs</b>{{ agendaMenu.profName }}</div>
+    <button type="button" role="menuitem" class="to-mi" onClick="{{ mockCreateTurno }}" data-autofocus="true"><span class="to-ic to-ic-sm i-plus" aria-hidden="true"></span>Crear turno</button>
+    <button type="button" role="menuitem" class="to-mi" onClick="{{ mockBlockSlot }}"><span class="to-ic to-ic-sm i-lock" aria-hidden="true"></span>Bloquear horario</button>
+  </div>
+</sc-if>
+
+<sc-if value="{{ createTurnoOpen }}">
+  <div class="to-scrim" onClick="{{ closeCreateTurno }}"></div>
+  <section class="to-drawer" role="dialog" aria-modal="true" aria-labelledby="ct-title" data-dialog="true">
+    <div class="to-dw-h">
+      <div><h2 id="ct-title" style="margin-top:0">Nuevo turno</h2><p>Carga manual desde recepción</p></div>
+      <button type="button" class="to-iconbtn to-iconbtn--ghost" onClick="{{ closeCreateTurno }}" aria-label="Cerrar"><span class="to-ic i-x" aria-hidden="true"></span></button>
+    </div>
+    <div class="to-dw-b">
+      <div>
+        <h3 class="to-grp-t">Paciente</h3>
+        <div class="to-seg" role="group" aria-label="Tipo de paciente" style="margin-bottom:12px">
+          <button type="button" aria-pressed="{{ ctPatientModeIsSearch }}" onClick="{{ setPatientModeSearch }}">Ya es paciente</button>
+          <button type="button" aria-pressed="{{ !ctPatientModeIsSearch }}" onClick="{{ setPatientModeNew }}">Paciente nuevo</button>
+        </div>
+        <sc-if value="{{ ctPatientModeIsSearch }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <label class="to-sr" for="ct-q">Buscar paciente</label>
+            <input id="ct-q" class="to-input" value="{{ ctPatientQuery }}" onChange="{{ onCtPatientQueryChange }}" placeholder="Buscar por nombre, DNI o teléfono" data-autofocus="true"/>
+            <div class="to-matches">
+              <sc-for list="{{ ctPatientMatches }}" as="pm" hint-placeholder-count="2">
+                <button type="button" class="to-pm {{ pm.cls }}" onClick="{{ pm.onSelect }}" aria-pressed="{{ pm.selected }}">
+                  <span><b>{{ pm.name }}</b><span class="to-num">DNI {{ pm.dni }} · {{ pm.whatsapp }}</span></span>
+                  <span class="to-ic i-check" aria-hidden="true"></span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ !ctPatientModeIsSearch }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="to-2col" style="gap:10px">
+              <div class="to-field"><label class="to-label" for="ct-n">Nombre</label><input id="ct-n" class="to-input" value="{{ ctNewPatient.nombre }}" onChange="{{ setCtNewNombre }}"/></div>
+              <div class="to-field"><label class="to-label" for="ct-a">Apellido</label><input id="ct-a" class="to-input" value="{{ ctNewPatient.apellido }}" onChange="{{ setCtNewApellido }}"/></div>
+            </div>
+            <div class="to-2col" style="gap:10px">
+              <div class="to-field"><label class="to-label" for="ct-d">DNI</label><input id="ct-d" class="to-input" value="{{ ctNewPatient.dni }}" onChange="{{ setCtNewDni }}" inputMode="numeric"/></div>
+              <div class="to-field"><label class="to-label" for="ct-w">WhatsApp</label><input id="ct-w" class="to-input" value="{{ ctNewPatient.whatsapp }}" onChange="{{ setCtNewWhatsapp }}" inputMode="tel"/></div>
+            </div>
+            <div class="to-field"><label class="to-label" for="ct-e">Email <small>(opcional)</small></label><input id="ct-e" class="to-input" value="{{ ctNewPatient.email }}" onChange="{{ setCtNewEmail }}" type="email"/></div>
+          </div>
+        </sc-if>
+      </div>
+      <div>
+        <h3 class="to-grp-t">Turno</h3>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div class="to-2col" style="gap:10px">
+            <div class="to-field"><label class="to-label" for="ct-sp">Especialidad</label>
+              <select id="ct-sp" class="to-select" value="{{ ctSpecialtyId }}" onChange="{{ onCtSpecialtyChange }}"><option value="">Elegir</option><sc-for list="{{ ctSpecialtyOptions }}" as="sp" hint-placeholder-count="6"><option value="{{ sp.id }}">{{ sp.name }}</option></sc-for></select></div>
+            <div class="to-field"><label class="to-label" for="ct-pr">Profesional</label>
+              <select id="ct-pr" class="to-select" value="{{ ctProfessionalId }}" onChange="{{ onCtProfessionalChange }}"><option value="">Elegir</option><sc-for list="{{ ctProfessionalOptions }}" as="p" hint-placeholder-count="2"><option value="{{ p.id }}">{{ p.name }}</option></sc-for></select></div>
+          </div>
+          <div class="to-2col" style="gap:10px">
+            <div class="to-field"><label class="to-label" for="ct-co">Cobertura</label>
+              <select id="ct-co" class="to-select" value="{{ ctCoverage }}" onChange="{{ onCtCoverageChange }}"><option value="">Particular</option><sc-for list="{{ coverages }}" as="cov" hint-placeholder-count="6"><option value="{{ cov.name }}">{{ cov.name }}</option></sc-for></select></div>
+            <div class="to-field"><label class="to-label" for="ct-ty">Consulta</label>
+              <select id="ct-ty" class="to-select" value="{{ ctTypeId }}" onChange="{{ onCtTypeChange }}"><option value="">Primera consulta</option><sc-for list="{{ consultTypes }}" as="ct" hint-placeholder-count="3"><option value="{{ ct.id }}">{{ ct.name }}</option></sc-for></select></div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ ctProfessionalId }}">
+        <div>
+          <h3 class="to-grp-t">Día y horario</h3>
+          <div class="to-mini-days" role="group" aria-label="Días" style="margin-bottom:12px">
+            <sc-for list="{{ ctDays }}" as="d" hint-placeholder-count="5">
+              <button type="button" class="to-day {{ d.cls }}" onClick="{{ d.onSelect }}" aria-pressed="{{ d.isActive }}"><span class="to-day-dow">{{ d.dowShort }}</span><span class="to-day-n to-num">{{ d.dayNum }}</span></button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ ctSlots.length }}" hint-placeholder-val="{{ true }}">
+            <div class="to-mini-slots">
+              <sc-for list="{{ ctSlots }}" as="s" hint-placeholder-count="4">
+                <button type="button" class="to-slot {{ s.cls }}" onClick="{{ s.onSelect }}" aria-pressed="{{ s.selected }}"><span class="to-ic i-check" aria-hidden="true"></span>{{ s.time }}</button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ !ctSlots.length }}"><p class="to-off" style="margin:0">{{ ctNoSlotsLabel }}</p></sc-if>
+        </div>
+      </sc-if>
+    </div>
+    <div class="to-dw-f">
+      <button type="button" class="to-btn to-btn--primary to-btn--block" onClick="{{ confirmCreateTurno }}" disabled="{{ ctConfirmDisabled }}">{{ ctConfirmLabel }}</button>
+    </div>
+  </section>
+</sc-if>
+
+<sc-if value="{{ blockModalOpen }}">
+  <div class="to-modal-wrap" onClick="{{ closeBlockModal }}">
+    <div class="to-modal" onClick="{{ stopProp }}" role="dialog" aria-modal="true" aria-labelledby="bk-t" data-dialog="true">
+      <div class="to-modal-b">
+        <h3 id="bk-t">Bloquear horario</h3>
+        <p>{{ blockDraft.profName }} · {{ blockDraft.dateLabel }}. Los pacientes no van a poder reservar en esta franja.</p>
+        <div class="to-2col" style="gap:10px;margin-bottom:18px">
+          <div class="to-field"><label class="to-label" for="bk-f">Desde</label><input id="bk-f" type="time" class="to-input to-num" value="{{ blockDraft.from }}" onChange="{{ onBlockFromChange }}" data-autofocus="true"/></div>
+          <div class="to-field"><label class="to-label" for="bk-h">Hasta</label><input id="bk-h" type="time" class="to-input to-num" value="{{ blockDraft.to }}" onChange="{{ onBlockToChange }}"/></div>
+        </div>
+        <div class="to-label" style="margin-bottom:8px" id="bk-r">Motivo</div>
+        <div class="to-opts" role="radiogroup" aria-labelledby="bk-r">
+          <sc-for list="{{ blockReasons }}" as="r" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{ r.selected }}" class="to-opt {{ r.cls }}" onClick="{{ r.onSelect }}"><span class="to-radio" aria-hidden="true"></span>{{ r.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div class="to-modal-f">
+        <button type="button" class="to-btn to-btn--secondary" onClick="{{ closeBlockModal }}">Cancelar</button>
+        <button type="button" class="to-btn to-btn--primary" onClick="{{ confirmBlock }}">Bloquear horario</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ exceptionModalOpen }}">
+  <div class="to-modal-wrap" onClick="{{ closeExceptionModal }}">
+    <div class="to-modal" onClick="{{ stopProp }}" role="dialog" aria-modal="true" aria-labelledby="ex-t" data-dialog="true">
+      <div class="to-modal-b">
+        <h3 id="ex-t">Agregar excepción</h3>
+        <p>Cambia la disponibilidad de un día puntual sin tocar el horario semanal.</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="to-field"><label class="to-label" for="ex-d">Fecha</label><input id="ex-d" type="date" class="to-input to-num" value="{{ exceptionDraft.dateISO }}" onChange="{{ onExceptionDateChange }}" data-autofocus="true"/></div>
+          <div class="to-opts to-opts--row" role="radiogroup" aria-label="Tipo de excepción">
+            <button type="button" role="radio" aria-checked="{{ !exceptionModeIsSpecial }}" class="to-opt {{ exceptionClosedCls }}" onClick="{{ setExceptionModeClosed }}">No atiende</button>
+            <button type="button" role="radio" aria-checked="{{ exceptionModeIsSpecial }}" class="to-opt {{ exceptionSpecialCls }}" onClick="{{ setExceptionModeSpecial }}">Horario especial</button>
+          </div>
+          <sc-if value="{{ exceptionModeIsSpecial }}">
+            <div class="to-2col" style="gap:10px">
+              <div class="to-field"><label class="to-label" for="ex-f">Desde</label><input id="ex-f" type="time" class="to-input to-num" value="{{ exceptionDraft.from }}" onChange="{{ onExceptionFromChange }}"/></div>
+              <div class="to-field"><label class="to-label" for="ex-h">Hasta</label><input id="ex-h" type="time" class="to-input to-num" value="{{ exceptionDraft.to }}" onChange="{{ onExceptionToChange }}"/></div>
+            </div>
+          </sc-if>
+          <div class="to-field"><label class="to-label" for="ex-m">Motivo <small>(opcional)</small></label><input id="ex-m" class="to-input" value="{{ exceptionDraft.reason }}" onChange="{{ onExceptionReasonChange }}" placeholder="Licencia, congreso, feriado…"/></div>
+        </div>
+      </div>
+      <div class="to-modal-f">
+        <button type="button" class="to-btn to-btn--secondary" onClick="{{ closeExceptionModal }}">Cancelar</button>
+        <button type="button" class="to-btn to-btn--primary" onClick="{{ confirmException }}">Guardar excepción</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ waitlistOpen }}">
+  <div class="to-modal-wrap" onClick="{{ closeWaitlist }}">
+    <div class="to-modal" onClick="{{ stopProp }}" role="dialog" aria-modal="true" aria-labelledby="wl-t" data-dialog="true">
+      <sc-if value="{{ !waitlistDone }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <div class="to-modal-b">
+            <h3 id="wl-t">Te avisamos si se libera un turno</h3>
+            <p>Si se libera un horario de {{ waitlistSpecialty }} que te sirva, te escribimos por WhatsApp para que lo tomes.</p>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div class="to-field"><label class="to-label" for="wl-n">Nombre y apellido</label><input id="wl-n" class="to-input" value="{{ waitlistForm.nombre }}" onChange="{{ setWaitlistNombre }}" autocomplete="name" data-autofocus="true"/></div>
+              <div class="to-field"><label class="to-label" for="wl-w">WhatsApp</label><input id="wl-w" class="to-input to-num" value="{{ waitlistForm.whatsapp }}" onChange="{{ setWaitlistWhatsapp }}" type="tel" inputMode="tel" autocomplete="tel" placeholder="11 5555 5555"/></div>
+              <div>
+                <div class="to-label" id="wl-p" style="margin-bottom:8px">¿Qué horario te queda mejor?</div>
+                <div class="to-opts to-opts--row" role="radiogroup" aria-labelledby="wl-p">
+                  <sc-for list="{{ waitlistPrefs }}" as="wp" hint-placeholder-count="3">
+                    <button type="button" role="radio" aria-checked="{{ wp.selected }}" class="to-opt {{ wp.cls }}" onClick="{{ wp.onSelect }}">{{ wp.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="to-modal-f">
+            <button type="button" class="to-btn to-btn--secondary" onClick="{{ closeWaitlist }}">Cancelar</button>
+            <button type="button" class="to-btn to-btn--primary" onClick="{{ submitWaitlist }}" disabled="{{ waitlistInvalid }}">Avisarme</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ waitlistDone }}">
+        <div>
+          <div class="to-modal-b" style="text-align:center;padding-top:32px">
+            <span class="to-done-ic" style="margin:0 auto 14px" aria-hidden="true"><span class="to-ic to-ic-lg i-check"></span></span>
+            <h3 id="wl-t" tabIndex="-1" data-autofocus="true">Listo, estás en la lista</h3>
+            <p>Te escribimos por WhatsApp apenas se libere un turno compatible.</p>
+          </div>
+          <div class="to-modal-f"><button type="button" class="to-btn to-btn--primary to-btn--block" onClick="{{ closeWaitlist }}">Entendido</button></div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ cancelModal }}">
+  <div class="to-modal-wrap" onClick="{{ closeCancelModal }}">
+    <div class="to-modal" onClick="{{ stopProp }}" role="alertdialog" aria-modal="true" aria-labelledby="cn-t" aria-describedby="cn-d" data-dialog="true">
+      <div class="to-modal-b">
+        <h3 id="cn-t">¿Cancelar este turno?</h3>
+        <p id="cn-d">{{ cancelSummary }} El horario queda libre para otro paciente.</p>
+        <div class="to-label" id="cn-r" style="margin-bottom:8px">Motivo <small>(opcional)</small></div>
+        <div class="to-opts" role="radiogroup" aria-labelledby="cn-r">
+          <sc-for list="{{ cancelReasons }}" as="r" hint-placeholder-count="4">
+            <button type="button" role="radio" aria-checked="{{ r.selected }}" class="to-opt {{ r.cls }}" onClick="{{ r.onSelect }}"><span class="to-radio" aria-hidden="true"></span>{{ r.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div class="to-modal-f">
+        <button type="button" class="to-btn to-btn--secondary" onClick="{{ closeCancelModal }}" data-autofocus="true">Mantener turno</button>
+        <button type="button" class="to-btn to-btn--danger" onClick="{{ confirmCancel }}">Sí, cancelar</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<div aria-live="polite" role="status" class="to-sr-live">
+  <sc-if value="{{ toast }}">
+    <div class="to-toast"><span class="to-ic i-check" aria-hidden="true"></span>{{ toast }}</div>
+  </sc-if>
+</div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SPECIALTIES = [
+  {id:'trauma',name:'Traumatología',tint:'#EAF4FA',tintText:'#3478F6'},
+  {id:'cardio',name:'Cardiología',tint:'#FBEDEC',tintText:'#B54747'},
+  {id:'clinica',name:'Clínica médica',tint:'#DFF3EF',tintText:'#0F8B8D'},
+  {id:'nutricion',name:'Nutrición',tint:'#F1F5F9',tintText:'#657184'},
+  {id:'psicologia',name:'Psicología',tint:'#EAF4FA',tintText:'#3478F6'},
+  {id:'pediatria',name:'Pediatría',tint:'#DFF3EF',tintText:'#0F8B8D'},
+];
+const PROFESSIONALS = [
+  {id:'gomez',name:'Dra. Laura Gómez',specialtyId:'trauma',modalities:['Presencial','Videoconsulta'],initials:'LG'},
+  {id:'perez',name:'Dr. Martín Pérez',specialtyId:'trauma',modalities:['Presencial'],initials:'MP'},
+  {id:'fernandez',name:'Dra. Sofía Fernández',specialtyId:'clinica',modalities:['Presencial','Videoconsulta'],initials:'SF'},
+  {id:'romero',name:'Dr. Nicolás Romero',specialtyId:'cardio',modalities:['Presencial'],initials:'NR'},
+];
+const COVERAGES = ['Particular','IOMA','OSDE','Swiss Medical','Galeno','Otra obra social'];
+const CONSULT_TYPES = [
+  {id:'primera',name:'Primera consulta',duration:30},
+  {id:'control',name:'Control',duration:20},
+  {id:'prolongada',name:'Consulta prolongada',duration:40},
+];
+const WEEKLY_AVAIL = {0:[],1:[['08:00','12:00'],['14:00','18:00']],2:[],3:[['08:00','13:00']],4:[['10:00','18:00']],5:[['08:00','12:00']],6:[]};
+const DOW_SHORT = ['dom','lun','mar','mié','jue','vie','sáb'];
+const DOW_LONG = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MONTHS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MONTHS_SHORT = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+const STATUS_META = {
+  pendiente:{bg:'#FFF7EA',border:'#EDD9AE',dot:'#B7791F',label:'Sin confirmar'},
+  confirmado:{bg:'#EAF6F1',border:'#BFE2D3',dot:'#268267',label:'Confirmado'},
+  cancelado:{bg:'#FBEDEC',border:'#E9C6C4',dot:'#B54747',label:'Cancelado'},
+  atendido:{bg:'#F1F5F9',border:'#DCE4EC',dot:'#657184',label:'Atendido'},
+  ausente:{bg:'#F1F5F9',border:'#DCE4EC',dot:'#8A94A6',label:'No asistió'},
+};
+const HOVER_ROW = {background:'#F7F9FC'};
+const HOVER_CARD_SOFT = {borderColor:'#0F8B8D'};
+const HOVER_TEAL = {borderColor:'#0F8B8D'};
+function timeToMin(t){const [h,m]=t.split(':').map(Number);return h*60+m;}
+function minToTime(m){const h=Math.floor(m/60),mm=m%60;return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
+function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function addDays(base,n){const d=new Date(base);d.setDate(d.getDate()+n);return d;}
+function seedHash(str){let h=0;for(let i=0;i<str.length;i++){h=(h*31+str.charCodeAt(i))|0;}return Math.abs(h);}
+function cloneWeekly(){ return JSON.parse(JSON.stringify(WEEKLY_AVAIL)); }
+const WEEK_ORDER = [1,2,3,4,5,6,0];
+const TURNOS_STORAGE_KEY = 'vertical-salud-turnos-online-v1';
+const ROW_H = 44; const TOP_PAD = 12; /*__TO_V2__*/
+
+function readTurnosPersistedState(){
+  try{
+    if(typeof localStorage==='undefined') return null;
+    const raw = localStorage.getItem(TURNOS_STORAGE_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed!=='object') return null;
+    const saved = {};
+    if(Array.isArray(parsed.appointments)) saved.appointments = parsed.appointments;
+    if(Array.isArray(parsed.blocks)) saved.blocks = parsed.blocks;
+    if(Array.isArray(parsed.exceptions)) saved.exceptions = parsed.exceptions;
+    if(Array.isArray(parsed.waitlistEntries)) saved.waitlistEntries = parsed.waitlistEntries;
+    if(parsed.profAvailability && typeof parsed.profAvailability==='object') saved.profAvailability = parsed.profAvailability;
+    return Object.keys(saved).length ? saved : null;
+  }catch(_e){ return null; }
+}
+
+function persistTurnosState(state){
+  try{
+    if(typeof localStorage==='undefined') return;
+    localStorage.setItem(TURNOS_STORAGE_KEY, JSON.stringify({
+      appointments:state.appointments,
+      blocks:state.blocks,
+      exceptions:state.exceptions,
+      waitlistEntries:state.waitlistEntries,
+      profAvailability:state.profAvailability,
+    }));
+  }catch(_e){ /* localStorage puede estar bloqueado en modo privado */ }
+}
+
+class Component extends DCLogic {
+  state = {
+    view:'patient', toast:null,
+    step:'home', search:'',
+    draft:{specialtyId:null,professionalId:null,isFirstAvailable:false,coverage:null,typeId:null,dateISO:null,time:null,reprogramApptId:null},
+    patientInfo:{nombre:'',apellido:'',dni:'',whatsapp:'',email:'',accept:false},
+    dayOffset:0,
+    waitlistOpen:false, waitlistDone:false, waitlistForm:{nombre:'',whatsapp:'',pref:'cualquiera'},
+    cancelModal:null, cancelReason:null,
+    myApptFocusId:null,
+    admin:{dateOffset:0,filterProf:'all',selectedApptId:null,reprogramming:false,reprogramDayOffset:0,reSelectedDateISO:null,reSelectedTime:null},
+    agendaMenu:null,
+    adminSection:'agenda', selectedProfDetailId:null, profDetailTab:'disponibilidad',
+    profAvailability:{gomez:cloneWeekly(),perez:cloneWeekly(),fernandez:cloneWeekly(),romero:cloneWeekly()},
+    exceptions:[
+      {id:'ex1',profId:'gomez',dateISO:isoOf(addDays(new Date(),2)),mode:'closed',from:null,to:null,reason:''},
+      {id:'ex2',profId:'gomez',dateISO:isoOf(addDays(new Date(),6)),mode:'special',from:'10:00',to:'13:00',reason:''},
+      {id:'ex3',profId:'gomez',dateISO:isoOf(addDays(new Date(),9)),mode:'closed',from:null,to:null,reason:'Licencia'},
+    ],
+    blocks:[],
+    waitlistEntries:[
+      {id:'w1',patientName:'Laura Pérez',whatsapp:'11 4433 2210',specialtyId:'trauma',preferredProfId:null,pref:'mañana',daysAgo:2},
+    ],
+    createTurnoOpen:false, ctPatientMode:'search', ctPatientQuery:'', ctSelectedPatientId:null,
+    ctNewPatient:{nombre:'',apellido:'',dni:'',whatsapp:'',email:''},
+    ctSpecialtyId:'', ctProfessionalId:'', ctCoverage:'', ctTypeId:'', ctDateISO:null, ctTime:null,
+    blockModalOpen:false, blockDraft:null,
+    exceptionModalOpen:false, exceptionDraft:null,
+    appointments:[
+      {id:'a1',patientName:'Juan Pérez',professionalId:'gomez',dateISO:isoOf(new Date()),time:'09:00',coverage:'IOMA',typeId:'primera',status:'confirmado',origin:'Web',whatsapp:'11 4455 2211',email:'juan.perez@mail.com',dni:'34.221.556'},
+      {id:'a2',patientName:'Lucía Martínez',professionalId:'gomez',dateISO:isoOf(new Date()),time:'11:00',coverage:'Particular',typeId:'control',status:'pendiente',origin:'WhatsApp',whatsapp:'11 6633 8890',email:'lucia.martinez@mail.com',dni:'29.887.001'},
+      {id:'a3',patientName:'Mateo Rodríguez',professionalId:'perez',dateISO:isoOf(new Date()),time:'10:00',coverage:'OSDE',typeId:'prolongada',status:'atendido',origin:'Recepción',whatsapp:'11 2211 7744',email:'mateo.rodriguez@mail.com',dni:'31.556.220'},
+      {id:'a4',patientName:'Camila Torres',professionalId:'fernandez',dateISO:isoOf(new Date()),time:'09:30',coverage:'Swiss Medical',typeId:'control',status:'confirmado',origin:'WhatsApp',whatsapp:'11 5544 3390',email:'camila.torres@mail.com',dni:'38.001.774'},
+      {id:'a5',patientName:'Santiago López',professionalId:'romero',dateISO:isoOf(new Date()),time:'14:00',coverage:'Galeno',typeId:'primera',status:'ausente',origin:'Recepción',whatsapp:'11 7788 1122',email:'santiago.lopez@mail.com',dni:'27.998.410'},
+      {id:'a6',patientName:'Sofía López',professionalId:'gomez',dateISO:isoOf(addDays(new Date(),1)),time:'08:30',coverage:'IOMA',typeId:'control',status:'pendiente',origin:'Web',whatsapp:'11 3322 9981',email:'sofia.lopez@mail.com',dni:'33.445.109'},
+    ],
+  };
+  _nextId = 100;
+  _toastTimer = null;
+
+  componentDidMount(){
+    const saved = readTurnosPersistedState();
+    if(saved) this.setState(saved);
+    try{ if(/recepcion|admin/.test(location.hash+location.search)) this.setState({view:'admin'}); }catch(_e){}
+    this.syncNextId();
+    persistTurnosState(this.state);
+    this._prevSnap = {step:this.state.step, view:this.state.view, adminSection:this.state.adminSection};
+    this._onKey = (e)=>this.handleKey(e);
+    window.addEventListener('keydown', this._onKey);
+  }
+  componentWillUnmount(){ window.removeEventListener('keydown', this._onKey); document.body.classList.remove('to-noscroll'); }
+  componentDidUpdate(_p, prev){
+    this.syncNextId();
+    persistTurnosState(this.state);
+    this.syncOverlayFocus();
+    const s = this.state;
+    prev = this._prevSnap; this._prevSnap = {step:s.step, view:s.view, adminSection:s.adminSection};
+    if(prev && (prev.step!==s.step || prev.view!==s.view || prev.adminSection!==s.adminSection)){
+      try{ window.scrollTo({top:0}); }catch(_e){}
+      if(prev.step!==s.step && s.view==='patient'){
+        requestAnimationFrame(()=>{ const h=document.querySelector('.to-main h1, .to-main h2'); if(h && !this.topOverlay()){ h.setAttribute('tabindex','-1'); h.focus({preventScroll:true}); } });
+      }
+    }
+    if(prev && prev.view!==s.view){
+      try{ history.replaceState(null,'', s.view==='admin' ? '#recepcion' : location.pathname+location.search); }catch(_e){}
+      if(s.view==='admin') this.scrollAgendaToNow();
+    }
+  }
+  scrollAgendaToNow(){
+    requestAnimationFrame(()=>{
+      const w = document.querySelector('.to-cal-wrap'); if(!w) return;
+      const n = new Date(); const m = n.getHours()*60+n.getMinutes();
+      const top = Math.max(0, ((Math.min(Math.max(m,8*60),19*60)-8*60)/30)*ROW_H - 120);
+      w.scrollTop = top;
+    });
+  }
+  topOverlay(){
+    const s = this.state;
+    if(s.agendaMenu) return 'menu';
+    if(s.cancelModal) return 'cancel';
+    if(s.blockModalOpen) return 'block';
+    if(s.exceptionModalOpen) return 'exception';
+    if(s.waitlistOpen) return 'waitlist'+(s.waitlistDone?'-done':'');
+    if(s.createTurnoOpen) return 'create';
+    if(s.view==='admin' && s.admin.selectedApptId) return 'drawer'+(s.admin.reprogramming?'-re':'');
+    return null;
+  }
+  syncOverlayFocus(){
+    const key = this.topOverlay();
+    const modalish = key && key!=='menu';
+    document.body.classList.toggle('to-noscroll', !!modalish);
+    if(key===this._overlayKey) return;
+    const prevKey = this._overlayKey; this._overlayKey = key;
+    if(key){
+      if(!prevKey) this._returnFocus = document.activeElement;
+      requestAnimationFrame(()=>{
+        const dlgs = document.querySelectorAll('[data-dialog]'); const dlg = dlgs[dlgs.length-1]; if(!dlg) return;
+        const t = dlg.querySelector('[data-autofocus]') || dlg.querySelector('button,input,select,[tabindex]');
+        if(t) t.focus({preventScroll:true});
+      });
+    } else if(this._returnFocus){
+      const el = this._returnFocus; this._returnFocus = null;
+      requestAnimationFrame(()=>{ if(el && document.contains(el)) el.focus({preventScroll:true}); });
+    }
+  }
+  handleKey(e){
+    const key = this.topOverlay();
+    if(!key) return;
+    if(e.key==='Escape'){
+      e.preventDefault();
+      const s = this.state;
+      if(s.agendaMenu) return this.closeAgendaMenu();
+      if(s.cancelModal) return this.closeCancelModal();
+      if(s.blockModalOpen) return this.closeBlockModal();
+      if(s.exceptionModalOpen) return this.closeExceptionModal();
+      if(s.waitlistOpen) return this.closeWaitlist();
+      if(s.createTurnoOpen) return this.closeCreateTurno();
+      if(s.admin.reprogramming) return this.cancelReprogramSub();
+      return this.closeDrawer();
+    }
+    if(key==='menu' && (e.key==='ArrowDown'||e.key==='ArrowUp')){
+      const items = [...document.querySelectorAll('.to-menu [role=menuitem]')]; if(!items.length) return;
+      e.preventDefault();
+      const i = items.indexOf(document.activeElement);
+      const n = e.key==='ArrowDown' ? (i+1)%items.length : (i-1+items.length)%items.length;
+      items[n].focus();
+      return;
+    }
+    if(e.key==='Tab'){
+      const dlgs = document.querySelectorAll('[data-dialog]'); const dlg = dlgs[dlgs.length-1]; if(!dlg) return;
+      const f = [...dlg.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(el=>el.offsetParent!==null);
+      if(!f.length) return;
+      const first = f[0], last = f[f.length-1];
+      if(!dlg.contains(document.activeElement)){ e.preventDefault(); first.focus(); return; }
+      if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+    }
+  }
+  syncNextId(){
+    const ids = [
+      ...(this.state.appointments||[]),
+      ...(this.state.blocks||[]),
+      ...(this.state.exceptions||[]),
+      ...(this.state.waitlistEntries||[]),
+    ].map(item=>Number(String(item.id||'').replace(/\D/g,''))).filter(Number.isFinite);
+    const maxId = ids.length ? Math.max(...ids) : 0;
+    if(maxId >= this._nextId) this._nextId = maxId + 1;
+  }
+
+  getSpecialty(id){ return SPECIALTIES.find(s=>s.id===id); }
+  getProfessional(id){ return PROFESSIONALS.find(p=>p.id===id); }
+  getConsultType(id){ return CONSULT_TYPES.find(c=>c.id===id); }
+
+  fmtDateLong(iso){
+    const d = new Date(iso+'T00:00:00');
+    const dow = DOW_LONG[d.getDay()];
+    return dow.charAt(0).toUpperCase()+dow.slice(1)+' '+d.getDate()+' de '+MONTHS[d.getMonth()];
+  }
+  relLabel(iso){
+    const today = isoOf(new Date()); const tomorrow = isoOf(addDays(new Date(),1));
+    if(iso===today) return 'Hoy';
+    if(iso===tomorrow) return 'Mañana';
+    const d=new Date(iso+'T00:00:00');
+    return DOW_SHORT[d.getDay()].charAt(0).toUpperCase()+DOW_SHORT[d.getDay()].slice(1)+' '+d.getDate();
+  }
+
+  buildSlots(profId, iso){
+    const s = this.state;
+    const d = new Date(iso+'T00:00:00');
+    const dow = d.getDay();
+    const exception = s.exceptions.find(e=>e.profId===profId && e.dateISO===iso);
+    let windows;
+    if(exception){ windows = exception.mode==='closed' ? [] : [[exception.from, exception.to]]; }
+    else { windows = (s.profAvailability[profId]||{})[dow] || []; }
+    const mañana=[], tarde=[];
+    const dayBlocks = s.blocks.filter(b=>b.profId===profId && b.dateISO===iso);
+    const bookedTimes = new Set(s.appointments.filter(a=>a.professionalId===profId && a.dateISO===iso && a.status!=='cancelado').map(a=>a.time));
+    windows.forEach(([from,to])=>{
+      let t=timeToMin(from); const end=timeToMin(to);
+      while(t<end){
+        const time = minToTime(t);
+        const blocked = dayBlocks.some(b=> t>=timeToMin(b.from) && t<timeToMin(b.to));
+        if(!bookedTimes.has(time) && !blocked){ (t<13*60?mañana:tarde).push(time); }
+        t+=30;
+      }
+    });
+    return {mañana,tarde};
+  }
+  firstAvailableSlotPref(profIds, pref){
+    for(let dayN=0; dayN<21; dayN++){
+      const iso = isoOf(addDays(new Date(),dayN));
+      for(const profId of profIds){
+        const {mañana,tarde}=this.buildSlots(profId,iso);
+        const pool = pref==='mañana'?mañana:(pref==='tarde'?tarde:[...mañana,...tarde]);
+        if(pool.length) return {profId,iso,time:pool[0]};
+      }
+    }
+    return null;
+  }
+  getPatientsMock(){
+    const seen = new Map();
+    this.state.appointments.forEach(a=>{
+      const key = (a.dni&&a.dni!=='—') ? a.dni : a.patientName;
+      if(!seen.has(key)) seen.set(key, {id:a.id, name:a.patientName, dni:a.dni, whatsapp:a.whatsapp});
+    });
+    return Array.from(seen.values());
+  }
+  firstAvailableSlot(profIds){
+    for(let dayN=0; dayN<21; dayN++){
+      const iso = isoOf(addDays(new Date(),dayN));
+      for(const profId of profIds){
+        const {mañana,tarde}=this.buildSlots(profId,iso);
+        const all=[...mañana,...tarde];
+        if(all.length) return {profId,iso,time:all[0]};
+      }
+    }
+    return null;
+  }
+
+  setView(v){ this.setState({view:v}); }
+  selectPatientView = ()=> this.setView('patient');
+  selectAdminView = ()=> this.setView('admin');
+  showToast(msg){
+    if(this._toastTimer) clearTimeout(this._toastTimer);
+    this.setState({toast:msg});
+    this._toastTimer = setTimeout(()=>this.setState({toast:null}), 2600);
+  }
+  notImplementedToast = ()=> this.showToast('Esta sección no está incluida en la demo');
+  stopProp = (e)=>{ if(e&&e.stopPropagation) e.stopPropagation(); };
+
+  onSearchChange = (e)=> this.setState({search:e.target.value});
+  clearSearch = ()=> this.setState({search:''});
+  selectSpecialty = (id)=> this.setState(s=>({step:'professional', draft:{...s.draft,specialtyId:id,professionalId:null,isFirstAvailable:false}}));
+  selectProfessional = (id)=> this.setState(s=>({step:'coverage', draft:{...s.draft,professionalId:id,isFirstAvailable:false,...(s.draft.professionalId!==id?{dateISO:null,time:null}:{})}}));
+  selectFirstAvailable = ()=>{
+    const specId = this.state.draft.specialtyId;
+    const profIds = PROFESSIONALS.filter(p=>p.specialtyId===specId).map(p=>p.id);
+    const found = this.firstAvailableSlot(profIds);
+    if(found){ this.setState(s=>({step:'coverage', draft:{...s.draft,professionalId:found.profId,isFirstAvailable:true,dateISO:found.iso,time:found.time}})); }
+  };
+
+  selectCoverage = (cov)=> this.setState(s=>({step:'type', draft:{...s.draft,coverage:cov}}));
+  selectType = (id)=> this.setState(s=>({step:'datetime', draft:{...s.draft,typeId:id}, dayOffset: s.draft.dateISO ? Math.max(0, Math.floor(Math.round((new Date(s.draft.dateISO+'T00:00:00') - new Date(isoOf(new Date())+'T00:00:00'))/864e5)/5)*5) : 0}));
+  goToTypeStep = ()=> this.setState({step:'type'});
+  goToPatientStep = ()=> this.setState({step:'patientdata'});
+  goToProfessionalStep = ()=> this.setState({step:'professional'});
+  goToCoverageStep = ()=> this.setState({step:'coverage'});
+  goToDatetimeStep = ()=> this.setState({step:'datetime'});
+
+  goPrevDays = ()=> this.setState(s=>({dayOffset:Math.max(0,s.dayOffset-5)}));
+  goNextDays = ()=> this.setState(s=>({dayOffset:s.dayOffset+5}));
+  selectDay = (iso)=> this.setState(s=>({draft:{...s.draft,dateISO:iso,time:null}}));
+  selectSlot = (t)=> this.setState(s=>({draft:{...s.draft,time:t}}));
+  selectSlotAt = (iso,t)=> this.setState(s=>({draft:{...s.draft,dateISO:iso,time:t}}));
+
+  openWaitlist = ()=> this.setState({waitlistOpen:true, waitlistDone:false});
+  closeWaitlist = ()=> this.setState({waitlistOpen:false});
+  setWaitlistField = (k,v)=> this.setState(s=>({waitlistForm:{...s.waitlistForm,[k]:v}}));
+  setWaitlistNombre = (e)=> this.setWaitlistField('nombre', e.target.value);
+  setWaitlistWhatsapp = (e)=> this.setWaitlistField('whatsapp', e.target.value);
+  setWaitlistPref = (k)=> this.setState(s=>({waitlistForm:{...s.waitlistForm,pref:k}}));
+  submitWaitlist = ()=>{
+    const s = this.state;
+    const entry = {id:'w'+(this._nextId++), patientName:s.waitlistForm.nombre||'Paciente', whatsapp:s.waitlistForm.whatsapp||'—', specialtyId:s.draft.specialtyId, preferredProfId:s.draft.professionalId||null, pref:s.waitlistForm.pref, daysAgo:0};
+    this.setState(s2=>({waitlistDone:true, waitlistEntries:[...s2.waitlistEntries, entry]}));
+  };
+  contactWaitlist = (id)=>{ const w = this.state.waitlistEntries.find(x=>x.id===id); this.showToast('Oferta enviada por WhatsApp'+(w?' a '+w.patientName:'')); };
+
+  setPatientField = (k,v)=> this.setState(s=>({patientInfo:{...s.patientInfo,[k]:v}}));
+  setNombre = (e)=> this.setPatientField('nombre', e.target.value);
+  setApellido = (e)=> this.setPatientField('apellido', e.target.value);
+  setDni = (e)=> this.setPatientField('dni', e.target.value);
+  setWhatsapp = (e)=> this.setPatientField('whatsapp', e.target.value);
+  setEmail = (e)=> this.setPatientField('email', e.target.value);
+  toggleAccept = ()=> this.setState(s=>({patientInfo:{...s.patientInfo,accept:!s.patientInfo.accept}}));
+
+  onContinue = ()=>{
+    const {draft} = this.state;
+    if(draft.reprogramApptId){
+      this.setState(s=>({
+        appointments: s.appointments.map(a=> a.id===draft.reprogramApptId ? {...a,dateISO:draft.dateISO,time:draft.time} : a),
+        step:'myturnos', draft:{...s.draft,reprogramApptId:null},
+      }));
+      this.showToast('Turno reprogramado');
+      return;
+    }
+    this.setState({step:'patientdata'});
+  };
+  onContinuePatientDataClick = ()=> this.setState({step:'summary'});
+  onSubmitPatientData = (e)=>{ if(e&&e.preventDefault) e.preventDefault(); const p=this.state.patientInfo; const ok = p.nombre.trim()&&p.apellido.trim()&&p.whatsapp.trim()&&/^\S+@\S+\.\S{2,}$/.test(p.email.trim())&&p.accept; if(ok) this.setState({step:'summary'}); };
+  onModify = ()=> this.setState({step:'professional'});
+  onConfirm = ()=>{
+    const {draft, patientInfo} = this.state;
+    const id = 'p'+(this._nextId++);
+    const appt = {
+      id, patientName:(patientInfo.nombre+' '+patientInfo.apellido).trim()||'Paciente',
+      professionalId:draft.professionalId, dateISO:draft.dateISO, time:draft.time,
+      coverage:draft.coverage, typeId:draft.typeId, status:'confirmado', origin:'Web',
+      whatsapp:patientInfo.whatsapp, email:patientInfo.email, dni:patientInfo.dni||'—', mine:true,
+    };
+    this.setState(s=>({appointments:[...s.appointments,appt], step:'confirmed', myApptFocusId:id}));
+  };
+  addToCalendar = ()=> this.showToast('Evento agregado a tu calendario');
+  comoLlegar = ()=> this.showToast('Abrimos la ubicación en el mapa');
+  goMisTurnos = ()=> this.setState({step:'myturnos'});
+  goHome = ()=> this.setState({step:'home'});
+
+  confirmAppt = (id)=>{ this.setState(s=>({appointments:s.appointments.map(a=>a.id===id?{...a,status:'confirmado'}:a)})); this.showToast('Turno confirmado'); };
+  openReprogram = (id)=>{
+    const a = this.state.appointments.find(x=>x.id===id);
+    this.setState(s=>({step:'datetime', dayOffset:0, draft:{...s.draft,specialtyId:this.getProfessional(a.professionalId).specialtyId,professionalId:a.professionalId,coverage:a.coverage,typeId:a.typeId,dateISO:null,time:null,reprogramApptId:id}}));
+  };
+  openCancelPatient = (id)=> this.setState({cancelModal:{apptId:id,context:'patient'},cancelReason:null});
+  setCancelReason = (r)=> this.setState({cancelReason:r});
+  closeCancelModal = ()=> this.setState({cancelModal:null});
+  confirmCancel = ()=>{
+    const m = this.state.cancelModal; if(!m) return;
+    this.setState(s=>({appointments:s.appointments.map(a=>a.id===m.apptId?{...a,status:'cancelado'}:a), cancelModal:null, admin:{...s.admin, selectedApptId: m.context==='admin' ? null : s.admin.selectedApptId}}));
+    this.showToast('Turno cancelado');
+  };
+
+  onBack = ()=>{
+    const map = {professional:'home',coverage:'professional',type:'coverage',datetime:'type',patientdata:'datetime',summary:'patientdata',myturnos:'home'};
+    this.setState(s=>({step:map[s.step]||'home'}));
+  };
+
+  onSidebarClick = (key)=>{
+    if(['agenda','profesionales','espera'].includes(key)){ this.setState({adminSection:key}); return; }
+    this.notImplementedToast();
+  };
+  openProfessionalDetail = (id)=> this.setState({adminSection:'profesionalDetail', selectedProfDetailId:id, profDetailTab:'disponibilidad'});
+  backToProfesionales = ()=> this.setState({adminSection:'profesionales'});
+  selectProfDetailTab = (tab)=> this.setState({profDetailTab:tab});
+
+  toggleDayActive = (profId,dow)=> this.setState(s=>{
+    const avail = {...s.profAvailability}; const profAvail = {...(avail[profId]||{})};
+    profAvail[dow] = (profAvail[dow]||[]).length ? [] : [['09:00','13:00']];
+    avail[profId]=profAvail; return {profAvailability:avail};
+  });
+  updateWindowField = (profId,dow,idx,field,value)=> this.setState(s=>{
+    const avail = {...s.profAvailability}; const profAvail = {...(avail[profId]||{})};
+    profAvail[dow] = (profAvail[dow]||[]).map((w,i)=> i===idx ? (field==='from'?[value,w[1]]:[w[0],value]) : w);
+    avail[profId]=profAvail; return {profAvailability:avail};
+  });
+  addWindow = (profId,dow)=> this.setState(s=>{
+    const avail = {...s.profAvailability}; const profAvail = {...(avail[profId]||{})};
+    profAvail[dow] = [...(profAvail[dow]||[]), ['14:00','18:00']];
+    avail[profId]=profAvail; return {profAvailability:avail};
+  });
+  removeWindow = (profId,dow,idx)=> this.setState(s=>{
+    const avail = {...s.profAvailability}; const profAvail = {...(avail[profId]||{})};
+    profAvail[dow] = (profAvail[dow]||[]).filter((_,i)=>i!==idx);
+    avail[profId]=profAvail; return {profAvailability:avail};
+  });
+
+  openExceptionModal = ()=> this.setState(s=>({exceptionModalOpen:true, exceptionDraft:{profId:s.selectedProfDetailId, dateISO:isoOf(new Date()), mode:'closed', from:'09:00', to:'13:00', reason:''}}));
+  closeExceptionModal = ()=> this.setState({exceptionModalOpen:false, exceptionDraft:null});
+  setExceptionField = (k,v)=> this.setState(s=>({exceptionDraft:{...s.exceptionDraft,[k]:v}}));
+  onExceptionDateChange = (e)=> this.setExceptionField('dateISO', e.target.value);
+  setExceptionModeClosed = ()=> this.setExceptionField('mode','closed');
+  setExceptionModeSpecial = ()=> this.setExceptionField('mode','special');
+  onExceptionFromChange = (e)=> this.setExceptionField('from', e.target.value);
+  onExceptionToChange = (e)=> this.setExceptionField('to', e.target.value);
+  onExceptionReasonChange = (e)=> this.setExceptionField('reason', e.target.value);
+  confirmException = ()=>{
+    const d = this.state.exceptionDraft; if(!d || !d.dateISO) return;
+    const id = 'ex'+(this._nextId++);
+    this.setState(s=>({exceptions:[...s.exceptions, {...d,id}], exceptionModalOpen:false, exceptionDraft:null}));
+    this.showToast('Excepción guardada');
+  };
+  removeException = (id)=> this.setState(s=>({exceptions:s.exceptions.filter(e=>e.id!==id)}));
+  goToday = ()=> this.setState(s=>({admin:{...s.admin,dateOffset:0}}));
+  prevDay = ()=> this.setState(s=>({admin:{...s.admin,dateOffset:s.admin.dateOffset-1}}));
+  nextDay = ()=> this.setState(s=>({admin:{...s.admin,dateOffset:s.admin.dateOffset+1}}));
+  setFilterProf = (v)=> this.setState(s=>({admin:{...s.admin,filterProf:v}}));
+  onFilterProfChange = (e)=> this.setFilterProf(e.target.value);
+
+  onColumnClick = (profId,iso,e)=>{
+    if(e.target && e.target.closest && e.target.closest('[data-agenda-block]')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top - TOP_PAD;
+    const idx = Math.max(0, Math.min(21, Math.floor(y/ROW_H)));
+    const time = minToTime(8*60 + idx*30);
+    const W = 230, H = 150;
+    const flipX = e.clientX + W > window.innerWidth - 8, flipY = e.clientY + H > window.innerHeight - 8;
+    const x = flipX ? Math.max(8, e.clientX - W) : e.clientX, y2 = flipY ? Math.max(8, e.clientY - H) : e.clientY;
+    this.setState({agendaMenu:{profId, iso, time, x, y:y2, origin:(flipY?'bottom ':'top ')+(flipX?'right':'left')}});
+  };
+  closeAgendaMenu = ()=> this.setState({agendaMenu:null});
+  mockCreateTurno = ()=>{
+    const m = this.state.agendaMenu; if(!m) return;
+    const prof = this.getProfessional(m.profId);
+    this.setState({
+      createTurnoOpen:true, agendaMenu:null,
+      ctPatientMode:'search', ctPatientQuery:'', ctSelectedPatientId:null,
+      ctNewPatient:{nombre:'',apellido:'',dni:'',whatsapp:'',email:''},
+      ctSpecialtyId: prof?.specialtyId||'', ctProfessionalId: m.profId,
+      ctCoverage:'', ctTypeId:'', ctDateISO:m.iso, ctTime:m.time,
+    });
+  };
+  mockBlockSlot = ()=>{
+    const m = this.state.agendaMenu; if(!m) return;
+    const toTime = minToTime(timeToMin(m.time)+30);
+    this.setState({blockModalOpen:true, agendaMenu:null, blockDraft:{profId:m.profId, dateISO:m.iso, from:m.time, to:toTime, reason:'Bloqueo manual'}});
+  };
+  closeBlockModal = ()=> this.setState({blockModalOpen:false, blockDraft:null});
+  setBlockField = (k,v)=> this.setState(s=>({blockDraft:{...s.blockDraft,[k]:v}}));
+  onBlockFromChange = (e)=> this.setBlockField('from', e.target.value);
+  onBlockToChange = (e)=> this.setBlockField('to', e.target.value);
+  setBlockReason = (label)=> this.setBlockField('reason', label);
+  confirmBlock = ()=>{
+    const d = this.state.blockDraft; if(!d) return;
+    const id = 'blk'+(this._nextId++);
+    this.setState(s=>({blocks:[...s.blocks, {...d,id}], blockModalOpen:false, blockDraft:null}));
+    this.showToast('Horario bloqueado');
+  };
+
+  closeCreateTurno = ()=> this.setState({createTurnoOpen:false});
+  openNewTurno = ()=>{
+    const s = this.state; const prof = s.admin.filterProf!=='all' ? this.getProfessional(s.admin.filterProf) : null;
+    const off = s.admin.dateOffset; const iso = (off>=0 && off<5) ? isoOf(addDays(new Date(),off)) : isoOf(new Date());
+    this.setState({createTurnoOpen:true, agendaMenu:null, ctPatientMode:'search', ctPatientQuery:'', ctSelectedPatientId:null,
+      ctNewPatient:{nombre:'',apellido:'',dni:'',whatsapp:'',email:''}, ctSpecialtyId:prof?.specialtyId||'', ctProfessionalId:prof?.id||'',
+      ctCoverage:'', ctTypeId:'', ctDateISO:iso, ctTime:null});
+  };
+  setPatientModeSearch = ()=> this.setState({ctPatientMode:'search'});
+  setPatientModeNew = ()=> this.setState({ctPatientMode:'new', ctSelectedPatientId:null});
+  onCtPatientQueryChange = (e)=> this.setState({ctPatientQuery:e.target.value, ctSelectedPatientId:null});
+  selectCtPatient = (id)=> this.setState({ctSelectedPatientId:id});
+  setCtNewField = (k,v)=> this.setState(s=>({ctNewPatient:{...s.ctNewPatient,[k]:v}}));
+  setCtNewNombre = (e)=> this.setCtNewField('nombre', e.target.value);
+  setCtNewApellido = (e)=> this.setCtNewField('apellido', e.target.value);
+  setCtNewDni = (e)=> this.setCtNewField('dni', e.target.value);
+  setCtNewWhatsapp = (e)=> this.setCtNewField('whatsapp', e.target.value);
+  setCtNewEmail = (e)=> this.setCtNewField('email', e.target.value);
+  onCtSpecialtyChange = (e)=> this.setState({ctSpecialtyId:e.target.value, ctProfessionalId:'', ctDateISO:null, ctTime:null});
+  onCtProfessionalChange = (e)=> this.setState({ctProfessionalId:e.target.value, ctDateISO:null, ctTime:null});
+  onCtCoverageChange = (e)=> this.setState({ctCoverage:e.target.value});
+  onCtTypeChange = (e)=> this.setState({ctTypeId:e.target.value});
+  selectCtDay = (iso)=> this.setState({ctDateISO:iso, ctTime:null});
+  selectCtSlot = (t)=> this.setState({ctTime:t});
+  confirmCreateTurno = ()=>{
+    const s = this.state;
+    let patientName, whatsapp, email, dni;
+    if(s.ctPatientMode==='search' && s.ctSelectedPatientId){
+      const p = this.getPatientsMock().find(x=>x.id===s.ctSelectedPatientId);
+      patientName=p?.name; whatsapp=p?.whatsapp; email=''; dni=p?.dni;
+    } else {
+      patientName = (s.ctNewPatient.nombre+' '+s.ctNewPatient.apellido).trim();
+      whatsapp = s.ctNewPatient.whatsapp; email = s.ctNewPatient.email; dni = s.ctNewPatient.dni||'—';
+    }
+    if(!patientName || !s.ctProfessionalId || !s.ctDateISO || !s.ctTime) return;
+    const id = 'r'+(this._nextId++);
+    const appt = {id, patientName, professionalId:s.ctProfessionalId, dateISO:s.ctDateISO, time:s.ctTime, coverage:s.ctCoverage||'Particular', typeId:s.ctTypeId||CONSULT_TYPES[0].id, status:'confirmado', origin:'Recepción', whatsapp:whatsapp||'—', email:email||'—', dni:dni||'—'};
+    this.setState(s2=>({appointments:[...s2.appointments, appt], createTurnoOpen:false}));
+    this.showToast('Turno creado');
+  };
+  openDrawer = (id)=> this.setState(s=>({admin:{...s.admin,selectedApptId:id,reprogramming:false,reSelectedTime:null,reSelectedDateISO:null,reprogramDayOffset:0}}));
+  closeDrawer = ()=> this.setState(s=>({admin:{...s.admin,selectedApptId:null,reprogramming:false}}));
+  adminConfirm = ()=>{ const id=this.state.admin.selectedApptId; this.setState(s=>({appointments:s.appointments.map(a=>a.id===id?{...a,status:'confirmado'}:a)})); this.showToast('Turno confirmado'); };
+  adminMarkAttended = ()=>{ const id=this.state.admin.selectedApptId; this.setState(s=>({appointments:s.appointments.map(a=>a.id===id?{...a,status:'atendido'}:a)})); this.showToast('Marcado como atendido'); };
+  adminMarkAbsent = ()=>{ const id=this.state.admin.selectedApptId; this.setState(s=>({appointments:s.appointments.map(a=>a.id===id?{...a,status:'ausente'}:a)})); this.showToast('Marcado como ausente'); };
+  openCancelAdmin = (id)=> this.setState({cancelModal:{apptId:id,context:'admin'},cancelReason:null});
+
+  startReprogram = ()=> this.setState(s=>({admin:{...s.admin,reprogramming:true,reprogramDayOffset:0,reSelectedTime:null,reSelectedDateISO:null}}));
+  cancelReprogramSub = ()=> this.setState(s=>({admin:{...s.admin,reprogramming:false}}));
+  selectReDay = (iso)=> this.setState(s=>({admin:{...s.admin,reSelectedDateISO:iso,reSelectedTime:null}}));
+  selectReSlot = (t)=> this.setState(s=>({admin:{...s.admin,reSelectedTime:t}}));
+  selectReSlotAt = (iso,t)=> this.setState(s=>({admin:{...s.admin,reSelectedDateISO:iso,reSelectedTime:t}}));
+  confirmReprogram = ()=>{
+    const {admin} = this.state; const id = admin.selectedApptId;
+    const iso = admin.reSelectedDateISO;
+    if(!iso || !admin.reSelectedTime) return;
+    this.setState(s=>({
+      appointments:s.appointments.map(a=>a.id===id?{...a,dateISO:iso,time:admin.reSelectedTime}:a),
+      admin:{...s.admin,reprogramming:false},
+    }));
+    this.showToast('Turno reprogramado');
+  };
+
+  renderVals(){
+    const s = this.state;
+    const todayISO = isoOf(new Date());
+    const cx = (...a)=> a.filter(Boolean).join(' ');
+    const shortDay = (iso)=>{ const d=new Date(iso+'T00:00:00'); const w=DOW_SHORT[d.getDay()]; return w.charAt(0).toUpperCase()+w.slice(1)+' '+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3); };
+    const relShort = (iso)=> (iso===todayISO||iso===isoOf(addDays(new Date(),1))) ? this.relLabel(iso) : shortDay(iso);
+    const specName = (id)=> this.getSpecialty(id)?.name||'';
+
+    /* ---------- home ---------- */
+    const q = s.search.trim().toLowerCase();
+    const specAll = SPECIALTIES.filter(sp=>sp.name.toLowerCase().includes(q)).map(sp=>{
+      const profs = PROFESSIONALS.filter(p=>p.specialtyId===sp.id);
+      const found = profs.length ? this.firstAvailableSlot(profs.map(p=>p.id)) : null;
+      return {...sp, count:profs.length, profLabel: profs.length===1 ? '1 profesional' : profs.length+' profesionales',
+        nextLabel: found ? relShort(found.iso)+' · '+found.time : 'Sin turnos próximos', onSelect: ()=>this.selectSpecialty(sp.id)};
+    });
+    const specAvailable = specAll.filter(sp=>sp.count>0);
+    const specSoon = specAll.filter(sp=>sp.count===0);
+
+    /* ---------- flow ---------- */
+    const currentSpecialty = this.getSpecialty(s.draft.specialtyId);
+    const proForSpec = PROFESSIONALS.filter(p=>p.specialtyId===s.draft.specialtyId);
+    const professionalsList = proForSpec.map(p=>{
+      const found = this.firstAvailableSlot([p.id]);
+      return {...p, hasVideo:p.modalities.includes('Videoconsulta'), cls: s.draft.professionalId===p.id ? 'is-selected' : '',
+        nextSlotLabel: found ? relShort(found.iso)+' · '+found.time : 'Sin turnos próximos', onSelect: ()=>this.selectProfessional(p.id)};
+    });
+    const fa = s.draft.specialtyId ? this.firstAvailableSlot(proForSpec.map(p=>p.id)) : null;
+    const firstAv = fa ? {day:relShort(fa.iso), time:fa.time, profName:this.getProfessional(fa.profId)?.name||'', modality:(this.getProfessional(fa.profId)?.modalities||[]).join(' o ').toLowerCase().replace(/^./,c=>c.toUpperCase())} : null;
+
+    const draftProfessional = this.getProfessional(s.draft.professionalId);
+    const draftConsultType = this.getConsultType(s.draft.typeId);
+    const draftDuration = draftConsultType?.duration || 30;
+
+    const COVER_HINT = {'Particular':'Sin cobertura','IOMA':'Obra social','OSDE':'Prepaga','Swiss Medical':'Prepaga','Galeno':'Prepaga','Otra obra social':'La validamos en recepción'};
+    const coverages = COVERAGES.map(name=>({name, hint:COVER_HINT[name]||'', selected:s.draft.coverage===name, cls:s.draft.coverage===name?'is-selected':'', onSelect:()=>this.selectCoverage(name)}));
+    const TYPE_DESC = {primera:'Primera vez con este profesional o por un tema nuevo.', control:'Seguimiento de un tratamiento o lectura de estudios.', prolongada:'Evaluación completa o varios temas en la misma consulta.'};
+    const consultTypes = CONSULT_TYPES.map(c=>({...c, desc:TYPE_DESC[c.id]||'', durationLabel:c.duration+' min', selected:s.draft.typeId===c.id, cls:s.draft.typeId===c.id?'is-selected':'', onSelect:()=>this.selectType(c.id)}));
+
+    const days = Array.from({length:5},(_,i)=>{
+      const d = addDays(new Date(), s.dayOffset+i);
+      const iso = isoOf(d);
+      const sl = draftProfessional ? this.buildSlots(draftProfessional.id,iso) : {mañana:[],tarde:[]};
+      const n = sl.mañana.length+sl.tarde.length;
+      return {iso, d, n, noAvail: n===0, isToday: iso===todayISO, dowShort: iso===todayISO ? 'Hoy' : DOW_SHORT[d.getDay()], dayNum:d.getDate()};
+    });
+    let activeDateISO = s.draft.dateISO;
+    const inView = days.find(d=>d.iso===activeDateISO && !d.noAvail);
+    if(!inView){ const firstOpen = days.find(d=>!d.noAvail); activeDateISO = (firstOpen||days[0]).iso; }
+    const daysOut = days.map(d=>({...d, isActive:d.iso===activeDateISO && !d.noAvail,
+      cls: cx(d.isToday&&'is-today', d.iso===activeDateISO && !d.noAvail && 'is-active'),
+      availLabel: d.noAvail ? 'Sin turnos' : d.n+' libres',
+      ariaLabel: this.fmtDateLong(d.iso)+', '+(d.noAvail?'sin turnos':d.n+' horarios libres'),
+      onSelect: ()=>this.selectDay(d.iso)}));
+    const m0 = days[0].d, m1 = days[4].d;
+    const monthLabel = m0.getMonth()===m1.getMonth() ? MONTHS[m0.getMonth()]+' '+m0.getFullYear() : MONTHS[m0.getMonth()].slice(0,3)+' – '+MONTHS[m1.getMonth()].slice(0,3)+' '+m1.getFullYear();
+    const slotsRaw = draftProfessional ? this.buildSlots(draftProfessional.id, activeDateISO) : {mañana:[],tarde:[]};
+    const mkSlot = (t)=>{ const sel = t===s.draft.time && activeDateISO===s.draft.dateISO; return {time:t, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.selectSlotAt(activeDateISO,t)}; };
+    const morningSlots = slotsRaw.mañana.map(mkSlot);
+    const afternoonSlots = slotsRaw.tarde.map(mkSlot);
+
+    const reprogramBanner = s.draft.reprogramApptId ? (()=>{
+      const a = s.appointments.find(x=>x.id===s.draft.reprogramApptId);
+      return a ? `Turno actual: ${this.fmtDateLong(a.dateISO)} a las ${a.time}. Elegí el nuevo horario.` : null;
+    })() : null;
+
+    const showFlowLayout = ['professional','coverage','type','datetime','patientdata','summary'].includes(s.step);
+    const hasDateTime = !!(s.draft.dateISO && s.draft.time);
+    const emailInvalid = !!s.patientInfo.email.trim() && !/^\S+@\S+\.\S{2,}$/.test(s.patientInfo.email.trim());
+    const pi = s.patientInfo;
+    const missing = [!pi.nombre.trim()&&'nombre', !pi.apellido.trim()&&'apellido', !pi.whatsapp.trim()&&'WhatsApp', !pi.email.trim()&&'email'].filter(Boolean);
+    const patientDataValid = missing.length===0 && !emailInvalid && pi.accept;
+    const missingHint = patientDataValid ? null : (missing.length ? 'Falta completar: '+missing.join(', ')+'.' : (emailInvalid ? null : 'Aceptá recibir información del turno para continuar.'));
+    const railCta = s.step==='datetime' && hasDateTime;
+
+    const STEP_LABELS = ['Especialidad','Profesional','Cobertura','Consulta','Día y hora','Tus datos','Confirmar'];
+    const STEP_TO_IDX = {home:0,professional:1,coverage:2,type:3,datetime:4,patientdata:5,summary:6};
+    const curIdx = STEP_TO_IDX[s.step] ?? 0;
+    const progressSteps = STEP_LABELS.map((label,i)=>({label, cls: i<curIdx?'is-done':(i===curIdx?'is-current':''), ariaCurrent: i===curIdx?'step':undefined, srState: i<curIdx?' (completado)':(i===curIdx?' (paso actual)':'')}));
+
+    const railRows = [
+      {k:'Especialidad', v:currentSpecialty?.name, onEdit:this.goHome, step:'home'},
+      {k:'Profesional', v:draftProfessional?.name, onEdit:this.goToProfessionalStep, step:'professional'},
+      {k:'Cobertura', v:s.draft.coverage, onEdit:this.goToCoverageStep, step:'coverage'},
+      {k:'Consulta', v:draftConsultType ? draftConsultType.name+' · '+draftConsultType.duration+' min' : null, onEdit:this.goToTypeStep, step:'type'},
+    ].map(r=>({k:r.k, v:r.v||'Sin elegir', cls:r.v?'':'is-empty', onEdit:(r.v && r.step!==s.step && !s.draft.reprogramApptId)?r.onEdit:null, editLabel:'Cambiar '+r.k.toLowerCase()}));
+    const railDatetime = hasDateTime ? shortDay(s.draft.dateISO)+' · '+s.draft.time+' hs' : null;
+    const mobileSummary = [currentSpecialty?.name, draftProfessional?.name, railDatetime].filter(Boolean).join(' · ') || 'Sin elegir';
+
+    const endTime = s.draft.time ? minToTime(timeToMin(s.draft.time)+draftDuration) : '';
+    const sd = s.draft.dateISO ? new Date(s.draft.dateISO+'T00:00:00') : null;
+
+    const myAppointments = s.appointments.filter(a=>a.mine).slice().sort((x,y)=> (x.dateISO+x.time).localeCompare(y.dateISO+y.time)).map(a=>{
+      const d = new Date(a.dateISO+'T00:00:00');
+      const canAct = a.status!=='cancelado'&&a.status!=='atendido'&&a.status!=='ausente';
+      return {
+        ...a, professionalName:this.getProfessional(a.professionalId)?.name||'—', specialtyName:specName(this.getProfessional(a.professionalId)?.specialtyId)||'—',
+        typeName:this.getConsultType(a.typeId)?.name||'', dateLong:this.fmtDateLong(a.dateISO),
+        dowLabel:MONTHS_SHORT[d.getMonth()], dayNum:d.getDate(), cls:cx(a.status==='cancelado'&&'is-cancelado', a.id===s.myApptFocusId&&'is-focus'),
+        statusMeta:STATUS_META[a.status], canConfirm:a.status==='pendiente', canAct, hasActions: canAct,
+        onConfirmClick:()=>this.confirmAppt(a.id), onReprogramClick:()=>this.openReprogram(a.id), onCancelClick:()=>this.openCancelPatient(a.id),
+      };
+    });
+    const misTurnosCount = s.appointments.filter(a=>a.mine && (a.status==='pendiente'||a.status==='confirmado') && a.dateISO>=todayISO).length;
+    const focusNum = String(s.myApptFocusId||'').replace(/\D/g,'');
+    const bookingCode = 'SM-'+String(4800+Number(focusNum||0)).padStart(5,'0');
+
+    /* ---------- admin ---------- */
+    const navItem = (key,label,icon,badge)=>({key,label,icon,badge, ariaCurrent:(key===s.adminSection || (key==='profesionales' && s.adminSection==='profesionalDetail'))?'page':undefined, onClick:()=>this.onSidebarClick(key)});
+    const sidebarGroups = [
+      {title:'Operación', items:[navItem('agenda','Agenda','i-calendar'), navItem('turnos','Turnos','i-list'), navItem('espera','Lista de espera','i-hourglass', s.waitlistEntries.length||null)]},
+      {title:'Gestión', items:[navItem('pacientes','Pacientes','i-users'), navItem('profesionales','Profesionales','i-steth'), navItem('especialidades','Especialidades','i-tag')]},
+      {title:'Sistema', items:[navItem('config','Configuración','i-settings')]},
+    ];
+    const agendaDate = addDays(new Date(), s.admin.dateOffset);
+    const agendaISO = isoOf(agendaDate);
+    const agendaDateLabel = this.fmtDateLong(agendaISO)+(agendaISO===todayISO?' · Hoy':'');
+    const professionalsForAgenda = s.admin.filterProf==='all' ? PROFESSIONALS : PROFESSIONALS.filter(p=>p.id===s.admin.filterProf);
+    const rowH = ROW_H, startMin = 8*60, endMin = 19*60, totalRows = (endMin-startMin)/30;
+    const gridHeight = totalRows*rowH + TOP_PAD + 10;
+    const hourLabels = [];
+    for(let m=startMin;m<=endMin;m+=60) hourLabels.push({label:minToTime(m), top:((m-startMin)/30)*rowH+TOP_PAD});
+    const slotLines = Array.from({length:totalRows+1},(_,i)=>({top:i*rowH+TOP_PAD, cls:i%2?'is-half':''}));
+    const now = new Date();
+    const nowMin = now.getHours()*60+now.getMinutes();
+    const nowShow = agendaISO===todayISO && nowMin>=startMin && nowMin<=endMin;
+    const nowIndicator = {show:nowShow, top: nowShow ? ((nowMin-startMin)/30)*rowH+TOP_PAD : 0, label:minToTime(nowMin)};
+    let statTotal=0, statPending=0, statDone=0, statFree=0;
+    const columns = professionalsForAgenda.map(p=>{
+      const dayAppts = s.appointments.filter(a=>a.professionalId===p.id && a.dateISO===agendaISO && a.status!=='cancelado');
+      const sl = this.buildSlots(p.id, agendaISO);
+      statTotal += dayAppts.length; statPending += dayAppts.filter(a=>a.status==='pendiente').length; statDone += dayAppts.filter(a=>a.status==='atendido').length; statFree += sl.mañana.length+sl.tarde.length;
+      const blocks = dayAppts.map(a=>{
+        const dur = this.getConsultType(a.typeId)?.duration||30;
+        const top = ((timeToMin(a.time)-startMin)/30)*rowH + TOP_PAD + 2;
+        const height = Math.max((dur/30)*rowH-4, 26);
+        const meta = STATUS_META[a.status];
+        const parts = a.patientName.split(' ');
+        return {id:a.id, top, height, timeLabel:a.time, patientName:parts[0]+' '+(parts[1]||''), typeName:this.getConsultType(a.typeId)?.name||'', statusLabel:meta.label, showType: height>=40,
+          cls: cx('st-b-'+a.status, a.id===s.admin.selectedApptId && 'is-selected'),
+          ariaLabel: a.time+' a '+minToTime(timeToMin(a.time)+dur)+', '+a.patientName+', '+(this.getConsultType(a.typeId)?.name||'')+', '+meta.label,
+          onOpen:()=>this.openDrawer(a.id)};
+      });
+      const lockBlocks = s.blocks.filter(b=>b.profId===p.id && b.dateISO===agendaISO).map(b=>({
+        id:b.id, label:(b.reason||'Bloqueado')+' · '+b.from+'–'+b.to, top:((timeToMin(b.from)-startMin)/30)*rowH+TOP_PAD+2,
+        height:Math.max(((timeToMin(b.to)-timeToMin(b.from))/30)*rowH-4, 24)}));
+      return {profId:p.id, name:p.name, initials:p.initials, specialty:specName(p.specialtyId), countLabel: dayAppts.length===1?'1 turno':dayAppts.length+' turnos',
+        blocks, lockBlocks, slotLines, onColumnClick:(e)=>this.onColumnClick(p.id,agendaISO,e)};
+    });
+    const columnsTemplate = `repeat(${Math.max(columns.length,1)}, minmax(200px,1fr))`;
+    const agendaMenu = s.agendaMenu ? {...s.agendaMenu, profName:this.getProfessional(s.agendaMenu.profId)?.name||''} : null;
+
+    const adminSectionIsAgenda = s.adminSection==='agenda', adminSectionIsProfesionales = s.adminSection==='profesionales',
+      adminSectionIsProfDetail = s.adminSection==='profesionalDetail', adminSectionIsEspera = s.adminSection==='espera';
+
+    const WEEK_LETTERS = {1:'L',2:'M',3:'M',4:'J',5:'V',6:'S',0:'D'};
+    const professionalsRows = PROFESSIONALS.map(p=>{
+      const activeDows = WEEK_ORDER.filter(dow=> (s.profAvailability[p.id]||{})[dow]?.length);
+      const found = this.firstAvailableSlot([p.id]);
+      return {...p, specialtyName:specName(p.specialtyId), modalitiesStr:p.modalities.join(' · '),
+        availSummary:'Atiende '+activeDows.map(d=>DOW_LONG[d]).join(', '),
+        weekDots: WEEK_ORDER.map(dow=>({l:WEEK_LETTERS[dow], cls: activeDows.includes(dow)?'on':''})),
+        nextSlotLabel: found ? relShort(found.iso)+' · '+found.time : 'Sin disponibilidad',
+        ariaLabel: p.name+', '+specName(p.specialtyId)+'. Ver disponibilidad',
+        onOpen:()=>this.openProfessionalDetail(p.id)};
+    });
+
+    const profDetailRaw = this.getProfessional(s.selectedProfDetailId);
+    const TL0 = 8*60, TL1 = 20*60;
+    const profDetail = profDetailRaw ? {
+      ...profDetailRaw, specialtyName:specName(profDetailRaw.specialtyId), modalitiesStr:profDetailRaw.modalities.join(' · '),
+      weekRows: WEEK_ORDER.map(dow=>{
+        const windows = (s.profAvailability[profDetailRaw.id]||{})[dow] || [];
+        const active = windows.length>0;
+        const dl = DOW_LONG[dow];
+        return {dow, dayLabel:dl, active, switchLabel:'Atiende los '+dl, onToggle:()=>this.toggleDayActive(profDetailRaw.id,dow),
+          segments: windows.map(w=>{ const a=Math.max(TL0,timeToMin(w[0]||'08:00')), b=Math.min(TL1,timeToMin(w[1]||'08:00')); return {left:((a-TL0)/(TL1-TL0)*100).toFixed(2), width:Math.max(0,(b-a)/(TL1-TL0)*100).toFixed(2)}; }),
+          windows: windows.map((w,wi)=>({from:w[0], to:w[1], fromLabel:dl+', franja '+(wi+1)+', desde', toLabel:dl+', franja '+(wi+1)+', hasta', removeLabel:'Quitar franja '+(wi+1)+' del '+dl,
+            onFromChange:(e)=>this.updateWindowField(profDetailRaw.id,dow,wi,'from',e.target.value),
+            onToChange:(e)=>this.updateWindowField(profDetailRaw.id,dow,wi,'to',e.target.value),
+            onRemove:()=>this.removeWindow(profDetailRaw.id,dow,wi)})),
+          onAddWindow:()=>this.addWindow(profDetailRaw.id,dow)};
+      }),
+      exceptions: s.exceptions.filter(e=>e.profId===profDetailRaw.id).slice().sort((a,b)=>a.dateISO.localeCompare(b.dateISO)).map(e=>{
+        const d = new Date(e.dateISO+'T00:00:00');
+        return {...e, dateLabel:this.fmtDateLong(e.dateISO), mon:MONTHS_SHORT[d.getMonth()], dayNum:d.getDate(), removeLabel:'Quitar excepción del '+this.fmtDateLong(e.dateISO),
+          summary: e.mode==='closed' ? ('No atiende'+(e.reason?(' · '+e.reason):'')) : ('Horario especial '+e.from+' a '+e.to+(e.reason?(' · '+e.reason):'')),
+          onRemove:()=>this.removeException(e.id)};
+      }),
+    } : null;
+    const profDetailTabs = [{key:'informacion',label:'Información'},{key:'disponibilidad',label:'Disponibilidad'},{key:'tipos',label:'Tipos de consulta'}].map(t=>({...t, active:t.key===s.profDetailTab, onSelect:()=>this.selectProfDetailTab(t.key)}));
+    const consultTypesReadonly = CONSULT_TYPES.map(c=>({...c,durationLabel:c.duration+' minutos'}));
+
+    const prefLabelMap = {mañana:'Por la mañana',tarde:'Por la tarde',cualquiera:'Cualquier horario'};
+    const waitlistRows = s.waitlistEntries.map(w=>{
+      const preferredLabel = w.preferredProfId ? (this.getProfessional(w.preferredProfId)?.name||'') : 'Cualquier profesional';
+      const candProfIds = w.preferredProfId ? [w.preferredProfId] : PROFESSIONALS.filter(p=>p.specialtyId===w.specialtyId).map(p=>p.id);
+      const match = this.firstAvailableSlotPref(candProfIds, w.pref);
+      return {...w, specialtyName:specName(w.specialtyId), preferredLabel, prefLabel:prefLabelMap[w.pref]||w.pref,
+        ageLabel: w.daysAgo===0 ? 'Hoy' : (w.daysAgo===1 ? 'Hace 1 día' : 'Hace '+w.daysAgo+' días'),
+        cls: match ? 'has-match' : '',
+        match: match ? {profName:this.getProfessional(match.profId)?.name, label:relShort(match.iso)+' · '+match.time} : null,
+        onContact:()=>this.contactWaitlist(w.id)};
+    }).sort((a,b)=> (b.match?1:0)-(a.match?1:0));
+
+    const ctPatientModeIsSearch = s.ctPatientMode==='search';
+    const ctQ = (s.ctPatientQuery||'').trim().toLowerCase();
+    const ctPatientMatches = this.getPatientsMock().filter(p=> !ctQ || p.name.toLowerCase().includes(ctQ) || (p.dni||'').toLowerCase().includes(ctQ) || (p.whatsapp||'').toLowerCase().includes(ctQ)).map(p=>{
+      const sel = p.id===s.ctSelectedPatientId;
+      return {...p, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.selectCtPatient(p.id)};
+    });
+    const ctProfessionalOptions = s.ctSpecialtyId ? PROFESSIONALS.filter(p=>p.specialtyId===s.ctSpecialtyId) : PROFESSIONALS;
+    const ctDays = Array.from({length:5},(_,i)=>{
+      const d = addDays(new Date(), i); const iso = isoOf(d);
+      const isActive = iso===s.ctDateISO;
+      return {iso, dowShort: iso===todayISO?'Hoy':DOW_SHORT[d.getDay()], dayNum:d.getDate(), isActive, cls:cx(iso===todayISO&&'is-today', isActive&&'is-active'), onSelect:()=>this.selectCtDay(iso)};
+    });
+    const ctActiveISO = (s.ctDateISO && ctDays.find(d=>d.iso===s.ctDateISO)) ? s.ctDateISO : null;
+    const ctSlotsData = (s.ctProfessionalId && ctActiveISO) ? this.buildSlots(s.ctProfessionalId, ctActiveISO) : {mañana:[],tarde:[]};
+    const ctTimes = [...ctSlotsData.mañana, ...ctSlotsData.tarde];
+    if(s.ctTime && ctActiveISO && !ctTimes.includes(s.ctTime)) ctTimes.unshift(s.ctTime);
+    const ctSlots = ctTimes.map(t=>{ const sel = t===s.ctTime; return {time:t, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.selectCtSlot(t)}; });
+    const ctValidPatient = (s.ctPatientMode==='search' && !!s.ctSelectedPatientId) || (s.ctPatientMode==='new' && s.ctNewPatient.nombre.trim() && s.ctNewPatient.apellido.trim() && s.ctNewPatient.whatsapp.trim());
+    const ctConfirmDisabled = !ctValidPatient || !s.ctProfessionalId || !s.ctDateISO || !s.ctTime;
+
+    const blockReasons = ['Reunión','Ausencia','Trámite','Bloqueo manual'].map(label=>{ const sel = !!s.blockDraft && label===s.blockDraft.reason; return {label, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.setBlockReason(label)}; });
+    const blockDraft = s.blockDraft ? {...s.blockDraft, profName:this.getProfessional(s.blockDraft.profId)?.name||'', dateLabel:this.fmtDateLong(s.blockDraft.dateISO)} : null;
+    const exceptionModeIsSpecial = s.exceptionDraft?.mode==='special';
+
+    const selApptRaw = s.admin.selectedApptId ? s.appointments.find(a=>a.id===s.admin.selectedApptId) : null;
+    const ORIGIN = {Web:['Turnos online','i-calendar'], WhatsApp:['WhatsApp','i-chat'], 'Recepción':['Recepción','i-users']};
+    const selectedAppt = selApptRaw ? (()=>{
+      const dur = this.getConsultType(selApptRaw.typeId)?.duration||30;
+      const d = new Date(selApptRaw.dateISO+'T00:00:00');
+      const o = ORIGIN[selApptRaw.origin] || [selApptRaw.origin,'i-calendar'];
+      return {...selApptRaw, professionalName:this.getProfessional(selApptRaw.professionalId)?.name, specialtyName:specName(this.getProfessional(selApptRaw.professionalId)?.specialtyId),
+        dateLabel:this.fmtDateLong(selApptRaw.dateISO), shortDate:shortDay(selApptRaw.dateISO), mon:MONTHS_SHORT[d.getMonth()], dayNum:d.getDate(),
+        typeName:this.getConsultType(selApptRaw.typeId)?.name, duration:dur, endTime:minToTime(timeToMin(selApptRaw.time)+dur),
+        statusMeta:STATUS_META[selApptRaw.status], canConfirm:selApptRaw.status==='pendiente', isAtendido:selApptRaw.status==='atendido', isAusente:selApptRaw.status==='ausente',
+        origin:o[0], originIcon:o[1]};
+    })() : null;
+
+    const reDaysRaw = Array.from({length:5},(_,i)=>{
+      const d = addDays(new Date(), s.admin.reprogramDayOffset+i); const iso=isoOf(d);
+      const sl = selApptRaw ? this.buildSlots(selApptRaw.professionalId, iso) : {mañana:[],tarde:[]};
+      return {iso, d, noAvail: sl.mañana.length+sl.tarde.length===0};
+    });
+    let reActiveISO = s.admin.reSelectedDateISO;
+    if(!reActiveISO || !reDaysRaw.find(d=>d.iso===reActiveISO)) reActiveISO = (reDaysRaw.find(d=>!d.noAvail)||reDaysRaw[0]).iso;
+    const reDays = reDaysRaw.map(r=>({...r, dowShort: r.iso===todayISO?'Hoy':DOW_SHORT[r.d.getDay()], dayNum:r.d.getDate(), isActive:r.iso===reActiveISO,
+      cls:cx(r.iso===todayISO&&'is-today', r.iso===reActiveISO&&!r.noAvail&&'is-active'), ariaLabel:this.fmtDateLong(r.iso)+(r.noAvail?', sin turnos':''), onSelect:()=>this.selectReDay(r.iso)}));
+    const reSlotsData = selApptRaw ? this.buildSlots(selApptRaw.professionalId, reActiveISO) : {mañana:[],tarde:[]};
+    const reSlots = [...reSlotsData.mañana, ...reSlotsData.tarde].map(t=>{ const sel = t===s.admin.reSelectedTime && reActiveISO===s.admin.reSelectedDateISO; return {time:t, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.selectReSlotAt(reActiveISO,t)}; });
+    const reHasNew = !!(s.admin.reSelectedTime && s.admin.reSelectedDateISO);
+
+    const waitlistPrefs = [{key:'cualquiera',label:'Cualquiera'},{key:'mañana',label:'Mañana'},{key:'tarde',label:'Tarde'}].map(wp=>{ const sel = wp.key===s.waitlistForm.pref; return {...wp, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.setWaitlistPref(wp.key)}; });
+    const cancelReasons = ['No puedo asistir','Conseguí otro horario','Ya no necesito el turno','Otro'].map(label=>{ const sel = label===s.cancelReason; return {label, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.setCancelReason(label)}; });
+    const cancelAppt = s.cancelModal ? s.appointments.find(a=>a.id===s.cancelModal.apptId) : null;
+    const cancelSummary = cancelAppt ? (s.cancelModal.context==='admin'
+      ? `${cancelAppt.patientName}, ${this.fmtDateLong(cancelAppt.dateISO)} a las ${cancelAppt.time} con ${this.getProfessional(cancelAppt.professionalId)?.name}. Le avisamos por WhatsApp.`
+      : `Tu turno del ${this.fmtDateLong(cancelAppt.dateISO)} a las ${cancelAppt.time} con ${this.getProfessional(cancelAppt.professionalId)?.name}.`) : '';
+
+    return {
+      isPatientView:s.view==='patient', isAdminView:s.view==='admin',
+      selectPatientView:this.selectPatientView, selectAdminView:this.selectAdminView,
+      toast:s.toast, notImplementedToast:this.notImplementedToast, stopProp:this.stopProp,
+
+      showBackButton: !['home','confirmed'].includes(s.step), onBack:this.onBack,
+      stepIsHome:s.step==='home', stepIsProfessional:s.step==='professional', stepIsCoverage:s.step==='coverage', stepIsType:s.step==='type',
+      stepIsDatetime:s.step==='datetime', stepIsPatientdata:s.step==='patientdata', stepIsSummary:s.step==='summary', stepIsConfirmed:s.step==='confirmed', stepIsMyturnos:s.step==='myturnos',
+      showFlowLayout, showProgress:showFlowLayout, progressSteps, stepNow:curIdx+1, stepNowLabel:STEP_LABELS[curIdx], progressPct:(((curIdx+1)/7)*100).toFixed(1),
+      misTurnosCount: misTurnosCount||null, misTurnosCountLabel: misTurnosCount+' turnos próximos', misTurnosCurrent: s.step==='myturnos'?'page':undefined,
+      mainCls: railCta ? 'has-bar' : '',
+      railRows, railDatetime, railWhenCls: railDatetime?'is-set':'', railWhenSub: draftProfessional ? draftProfessional.name+' · '+draftDuration+' min' : '', railCta, mobileSummary,
+      showMobileBar: railCta,
+
+      search:s.search, onSearchChange:this.onSearchChange, clearSearch:this.clearSearch, specAvailable, specSoon, noSpecialtyResults: specAll.length===0,
+
+      currentSpecialtyName: currentSpecialty?.name||'', hasProfessionalsForSpecialty: professionalsList.length>0, noProfessionalsForSpecialty: professionalsList.length===0,
+      professionalsList, firstAv, selectFirstAvailable:this.selectFirstAvailable,
+      coverages, consultTypes,
+
+      days:daysOut, monthLabel, prevDisabled: s.dayOffset<=0, goPrevDays:this.goPrevDays, goNextDays:this.goNextDays,
+      morningSlots, afternoonSlots, hasSlots:(morningSlots.length+afternoonSlots.length)>0,
+      selectedTime:s.draft.time, endTime, reprogramBanner, openWaitlist:this.openWaitlist,
+
+      waitlistOpen:s.waitlistOpen, waitlistDone:s.waitlistDone, waitlistForm:s.waitlistForm, setWaitlistNombre:this.setWaitlistNombre, setWaitlistWhatsapp:this.setWaitlistWhatsapp,
+      waitlistPrefs, submitWaitlist:this.submitWaitlist, closeWaitlist:this.closeWaitlist, waitlistSpecialty: (currentSpecialty?.name||'la especialidad').toLowerCase(),
+      waitlistInvalid: !s.waitlistForm.nombre.trim() || !s.waitlistForm.whatsapp.trim(),
+
+      patientInfo:s.patientInfo, setNombre:this.setNombre, setApellido:this.setApellido, setDni:this.setDni, setWhatsapp:this.setWhatsapp, setEmail:this.setEmail, toggleAccept:this.toggleAccept,
+      emailInvalid, missingHint, continueDisabled: !patientDataValid, onSubmitPatientData:this.onSubmitPatientData,
+      patientFullName: (pi.nombre+' '+pi.apellido).trim(),
+
+      draftSpecialtyName: currentSpecialty?.name||'', draftProfessionalName: draftProfessional?.name||'', draftDuration,
+      draftCoverage: s.draft.coverage||'', draftTypeName: draftConsultType?.name||'', summaryDateLabel: s.draft.dateISO? this.fmtDateLong(s.draft.dateISO):'',
+      summaryMonShort: sd ? MONTHS_SHORT[sd.getMonth()] : '', summaryDayNum: sd ? sd.getDate() : '',
+      onConfirm:this.onConfirm, addToCalendar:this.addToCalendar, comoLlegar:this.comoLlegar, goMisTurnos:this.goMisTurnos, goHome:this.goHome,
+      goToProfessionalStep:this.goToProfessionalStep, goToCoverageStep:this.goToCoverageStep, goToDatetimeStep:this.goToDatetimeStep, goToPatientStep:this.goToPatientStep,
+      bookingCode, confirmedWhatsapp: pi.whatsapp.trim() ? ' al '+pi.whatsapp.trim() : '',
+
+      myAppointments,
+      continueLabel: s.draft.reprogramApptId ? 'Confirmar nuevo horario' : 'Continuar', onContinue:this.onContinue,
+
+      cancelModal:s.cancelModal, cancelReasons, cancelSummary, closeCancelModal:this.closeCancelModal,
+      confirmCancel: ()=>{ const wasAdmin = s.cancelModal?.context==='admin'; this.confirmCancel(); if(wasAdmin) this.closeDrawer(); },
+
+      sidebarGroups, agendaDateLabel, agendaIsToday: agendaISO===todayISO, goToday:this.goToday, prevDay:this.prevDay, nextDay:this.nextDay,
+      agendaStats:{total:statTotal, pending:statPending, done:statDone, free:statFree, doneLabel: statDone===1?'atendido':'atendidos', freeLabel: statFree ? statFree+' horarios libres' : 'Sin horarios libres para reservar'}, openNewTurno:this.openNewTurno,
+      filterProf:s.admin.filterProf, onFilterProfChange:this.onFilterProfChange, professionalsAll:PROFESSIONALS,
+      columns, columnsTemplate, gridHeight, hourLabels, nowIndicator,
+
+      adminSectionIsAgenda, adminSectionIsProfesionales, adminSectionIsProfDetail, adminSectionIsEspera,
+      professionalsRows, profDetail, profDetailTabs,
+      profDetailTabIsInfo: s.profDetailTab==='informacion', profDetailTabIsAvailability: s.profDetailTab==='disponibilidad', profDetailTabIsTypes: s.profDetailTab==='tipos',
+      backToProfesionales:this.backToProfesionales, consultTypesReadonly, openExceptionModal:this.openExceptionModal,
+
+      waitlistRows, waitlistNoun: waitlistRows.length===1?'paciente esperando':'pacientes esperando', waitlistMatchCount: waitlistRows.filter(w=>w.match).length,
+
+      createTurnoOpen:s.createTurnoOpen, closeCreateTurno:this.closeCreateTurno,
+      setPatientModeSearch:this.setPatientModeSearch, setPatientModeNew:this.setPatientModeNew,
+      ctPatientModeIsSearch, ctPatientQuery:s.ctPatientQuery, onCtPatientQueryChange:this.onCtPatientQueryChange, ctPatientMatches,
+      ctNewPatient:s.ctNewPatient, setCtNewNombre:this.setCtNewNombre, setCtNewApellido:this.setCtNewApellido, setCtNewDni:this.setCtNewDni, setCtNewWhatsapp:this.setCtNewWhatsapp, setCtNewEmail:this.setCtNewEmail,
+      ctSpecialtyId:s.ctSpecialtyId, onCtSpecialtyChange:this.onCtSpecialtyChange, ctSpecialtyOptions:SPECIALTIES,
+      ctProfessionalId:s.ctProfessionalId, onCtProfessionalChange:this.onCtProfessionalChange, ctProfessionalOptions,
+      ctCoverage:s.ctCoverage, onCtCoverageChange:this.onCtCoverageChange, ctTypeId:s.ctTypeId, onCtTypeChange:this.onCtTypeChange,
+      ctDays, ctSlots, ctConfirmDisabled, confirmCreateTurno:this.confirmCreateTurno,
+      ctNoSlotsLabel: ctActiveISO ? 'No hay horarios libres este día.' : 'Elegí un día para ver los horarios libres.',
+      ctConfirmLabel: (s.ctTime && ctActiveISO) ? 'Crear turno · '+relShort(ctActiveISO)+' '+s.ctTime : 'Crear turno',
+
+      blockModalOpen:s.blockModalOpen, blockDraft, closeBlockModal:this.closeBlockModal, onBlockFromChange:this.onBlockFromChange, onBlockToChange:this.onBlockToChange, blockReasons, confirmBlock:this.confirmBlock,
+
+      exceptionModalOpen:s.exceptionModalOpen, exceptionDraft:s.exceptionDraft, closeExceptionModal:this.closeExceptionModal, onExceptionDateChange:this.onExceptionDateChange,
+      setExceptionModeClosed:this.setExceptionModeClosed, setExceptionModeSpecial:this.setExceptionModeSpecial, exceptionModeIsSpecial,
+      exceptionClosedCls: exceptionModeIsSpecial?'':'is-selected', exceptionSpecialCls: exceptionModeIsSpecial?'is-selected':'',
+      onExceptionFromChange:this.onExceptionFromChange, onExceptionToChange:this.onExceptionToChange, onExceptionReasonChange:this.onExceptionReasonChange, confirmException:this.confirmException,
+
+      agendaMenu, closeAgendaMenu:this.closeAgendaMenu, mockCreateTurno:this.mockCreateTurno, mockBlockSlot:this.mockBlockSlot,
+      drawerOpen: !!selectedAppt, selectedAppt, closeDrawer:this.closeDrawer,
+      adminConfirm:this.adminConfirm, adminMarkAttended:this.adminMarkAttended, adminMarkAbsent:this.adminMarkAbsent,
+      openCancelAdminForSelected: ()=> this.openCancelAdmin(s.admin.selectedApptId),
+      startReprogram:this.startReprogram, reprogramming:s.admin.reprogramming, cancelReprogramSub:this.cancelReprogramSub,
+      reDays, reSlots, confirmReprogram:this.confirmReprogram, reConfirmDisabled: !reHasNew,
+      reNewLabel: reHasNew ? shortDay(s.admin.reSelectedDateISO)+' · '+s.admin.reSelectedTime : 'Elegí día y horario', reNewCls: reHasNew?'':'is-empty',
+    };
+  }
+}
+
+</script>
+</body>
+</html>

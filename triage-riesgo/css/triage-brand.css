@@ -189,3 +189,150 @@ body.tr-selector .tri-note {
     padding-left: var(--sp-4);
   }
 }
+
+/* Vertical Salud layer: the selector stays calm, with amber reserved for
+   triage priority and teal used for navigation/actions. */
+:root {
+  --health-primary: #102a43;
+  --health-accent: #0f8b8d;
+  --health-accent-hover: #087477;
+  --health-bg: #f7f9fc;
+  --health-surface: #ffffff;
+  --health-surface-alt: #f1f5f9;
+  --health-text: #172033;
+  --health-text-muted: #657184;
+  --health-border: #dce4ec;
+  --health-info: #3478f6;
+  --health-success: #268267;
+  --health-warning: #b7791f;
+  --health-danger: #b54747;
+  --health-mint: #dff3ef;
+  --health-sky: #eaf4fa;
+  --health-shadow-sm: 0 2px 8px rgba(15, 42, 67, 0.05);
+  --health-shadow-lg: 0 12px 32px rgba(15, 42, 67, 0.12);
+}
+
+body.tr-selector {
+  background: var(--health-bg);
+  color: var(--health-text);
+  font-family: Inter, var(--font-body);
+}
+
+body.tr-selector::before,
+body.tr-selector::after {
+  content: none;
+}
+
+body.tr-selector .selector-head {
+  border-left: 4px solid var(--health-warning);
+  padding-left: var(--sp-6);
+}
+
+body.tr-selector .selector-mark {
+  color: var(--health-primary);
+}
+
+body.tr-selector .selector-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--health-warning);
+  box-shadow: none;
+}
+
+body.tr-selector .selector-head h1 {
+  color: var(--health-primary);
+  letter-spacing: -0.035em;
+}
+
+body.tr-selector .selector-head p,
+body.tr-selector .selector-foot,
+body.tr-selector .tri-note {
+  color: var(--health-text-muted);
+}
+
+body.tr-selector .selector-back {
+  color: var(--health-accent-hover);
+  text-decoration-thickness: 1px;
+}
+
+body.tr-selector .demo-card {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  background: var(--health-surface);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-selector .demo-card::before {
+  content: none;
+}
+
+body.tr-selector .demo-card:hover {
+  border-color: var(--health-accent);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.tr-selector .demo-icon {
+  border-radius: 10px;
+  background: var(--health-mint);
+  color: var(--health-accent);
+}
+
+body.tr-selector .demo-card h2 {
+  color: var(--health-primary);
+}
+
+body.tr-selector .demo-card p {
+  color: var(--health-text-muted);
+}
+
+body.tr-selector .demo-cta,
+body.tr-selector .selector-tip {
+  color: var(--health-accent-hover);
+}
+
+body.tr-selector .tri-pipe {
+  border-left-color: var(--health-border);
+}
+
+body.tr-selector .tri-pipe li {
+  border-color: var(--health-border);
+  border-radius: 8px;
+  color: var(--health-primary);
+  background: var(--health-surface);
+}
+
+body.tr-selector .tri-pipe li:nth-child(2) {
+  background: var(--health-primary);
+  border-color: var(--health-primary);
+  color: #fff;
+}
+
+body.tr-selector .tri-pipe li:nth-child(4) {
+  background: #fff8e6;
+  border-color: #e4c982;
+  color: #76520d;
+}
+
+body.tr-selector .tri-pipe li:nth-child(5) {
+  background: var(--health-mint);
+  border-color: #acd8d0;
+  color: var(--health-success);
+}
+
+body.tr-selector .tri-pipe li:not(:last-child)::after {
+  color: var(--health-accent);
+}
+
+body.tr-selector .tri-note {
+  border-left: 4px solid var(--health-warning);
+  border-radius: 0 8px 8px 0;
+  background: #fff8e6;
+  color: #76520d;
+}
+
+@media (max-width: 640px) {
+  body.tr-selector .selector-head {
+    padding-left: var(--sp-4);
+  }
+}

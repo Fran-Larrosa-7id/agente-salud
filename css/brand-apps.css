@@ -584,3 +584,585 @@ body.onboarding-selector .demo-cta {
     padding-left: var(--sp-4);
   }
 }
+
+/* -------------------------------------------------------------------------
+   Vertical Salud layer
+   Calm product surfaces, navy/teal actions and semantic status colors.
+   This layer intentionally overrides the previous institutional treatment
+   without changing any page structure or interaction logic.
+   ------------------------------------------------------------------------- */
+:root {
+  --health-primary: #102a43;
+  --health-primary-strong: #081f33;
+  --health-accent: #0f8b8d;
+  --health-accent-hover: #087477;
+  --health-bg: #f7f9fc;
+  --health-surface: #ffffff;
+  --health-surface-alt: #f1f5f9;
+  --health-text: #172033;
+  --health-text-muted: #657184;
+  --health-text-subtle: #8b96a8;
+  --health-border: #dce4ec;
+  --health-info: #3478f6;
+  --health-success: #268267;
+  --health-warning: #b7791f;
+  --health-danger: #b54747;
+  --health-mint: #dff3ef;
+  --health-sky: #eaf4fa;
+  --health-shadow-sm: 0 2px 8px rgba(15, 42, 67, 0.05);
+  --health-shadow-lg: 0 12px 32px rgba(15, 42, 67, 0.12);
+  --health-motion-fast: 180ms;
+  --health-motion-base: 240ms;
+}
+
+body.paciente,
+body.institucion,
+body.onboarding-selector {
+  background: var(--health-bg);
+  color: var(--health-text);
+  font-family: Inter, var(--font-body);
+}
+
+body.paciente::before,
+body.paciente::after,
+body.institucion::before,
+body.institucion::after,
+body.onboarding-selector::before,
+body.onboarding-selector::after {
+  content: none;
+}
+
+body.paciente .btn,
+body.institucion .btn {
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 700;
+  transition: background var(--health-motion-fast) ease, border-color var(--health-motion-fast) ease, color var(--health-motion-fast) ease, transform var(--health-motion-fast) ease;
+}
+
+body.paciente .btn-accent,
+body.institucion .btn-accent {
+  background: var(--health-primary);
+  border-color: var(--health-primary);
+  color: #fff;
+}
+
+body.paciente .btn-accent:hover,
+body.institucion .btn-accent:hover {
+  background: var(--health-primary-strong);
+  border-color: var(--health-primary-strong);
+}
+
+body.paciente .btn-secondary,
+body.institucion .btn-secondary {
+  background: var(--health-accent);
+  border-color: var(--health-accent);
+  color: #fff;
+}
+
+body.paciente .btn-secondary:hover,
+body.institucion .btn-secondary:hover {
+  background: var(--health-accent-hover);
+  border-color: var(--health-accent-hover);
+}
+
+body.paciente .btn-ghost,
+body.institucion .btn-ghost {
+  background: var(--health-surface);
+  border-color: var(--health-border);
+  color: var(--health-primary);
+}
+
+body.paciente .btn-ghost:hover,
+body.institucion .btn-ghost:hover {
+  background: var(--health-surface-alt);
+  border-color: var(--health-accent);
+  color: var(--health-primary);
+}
+
+body.paciente .input,
+body.paciente .select,
+body.paciente .textarea,
+body.institucion .input,
+body.institucion .select,
+body.institucion .select-sm {
+  border: 1px solid var(--health-border);
+  border-radius: 8px;
+  color: var(--health-text);
+  background: var(--health-surface);
+}
+
+body.paciente .input:focus,
+body.paciente .select:focus,
+body.paciente .textarea:focus,
+body.institucion .input:focus,
+body.institucion .select:focus,
+body.institucion .select-sm:focus {
+  border-color: var(--health-accent);
+  box-shadow: 0 0 0 3px rgba(15, 139, 141, 0.16);
+  outline: none;
+}
+
+body.paciente .badge,
+body.institucion .badge {
+  border-radius: 999px;
+}
+
+/* Patient flow */
+body.paciente .phone-frame {
+  background: var(--health-surface);
+  border-inline: 1px solid var(--health-border);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.paciente .top-context {
+  background: var(--health-primary);
+  border-bottom: 3px solid var(--health-accent);
+}
+
+body.paciente .top-context .eyebrow {
+  color: var(--health-mint);
+}
+
+body.paciente .top-context strong {
+  color: #fff;
+}
+
+body.paciente .screen-body {
+  background: var(--health-surface);
+}
+
+body.paciente .screen-title,
+body.paciente .success-wrap h1 {
+  color: var(--health-primary);
+}
+
+body.paciente .screen-sub,
+body.paciente .success-wrap p {
+  color: var(--health-text-muted);
+}
+
+body.paciente .sticky-cta {
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--health-border);
+}
+
+body.paciente .welcome-card,
+body.paciente .phase-card,
+body.paciente .med-card,
+body.paciente .review-item,
+body.paciente .appointment-card {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.paciente .welcome-card {
+  background: var(--health-surface);
+}
+
+body.paciente .welcome-hero-icon {
+  border-radius: 50%;
+  background: var(--health-mint);
+  color: var(--health-accent);
+  box-shadow: none;
+}
+
+body.paciente .duration-chip {
+  background: var(--health-sky);
+  color: var(--health-primary);
+  border-radius: 999px;
+}
+
+body.paciente .overview-progress-value,
+body.paciente .form-section-label,
+body.paciente .tpl-tag,
+body.paciente .add-link {
+  color: var(--health-accent);
+}
+
+body.paciente .progress-fill {
+  background: var(--health-accent);
+}
+
+body.paciente .uploader {
+  border: 1px dashed var(--health-border);
+  border-radius: 10px;
+  background: var(--health-surface-alt);
+}
+
+body.paciente .uploader:hover,
+body.paciente .uploader:focus {
+  border-color: var(--health-accent);
+  background: var(--health-mint);
+}
+
+body.paciente .review-item:hover {
+  border-color: var(--health-accent);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.paciente .success-badge {
+  border-radius: 50%;
+  background: var(--health-mint);
+  color: var(--health-success);
+  box-shadow: none;
+}
+
+body.paciente .toast {
+  border-left: 4px solid var(--health-accent);
+  border-radius: 10px;
+  background: var(--health-primary);
+}
+
+/* Institutional dashboard */
+body.institucion .app-shell {
+  background: var(--health-bg);
+}
+
+body.institucion .topbar {
+  background: var(--health-surface);
+  border-bottom: 1px solid var(--health-border);
+}
+
+body.institucion .brand {
+  color: var(--health-primary);
+}
+
+body.institucion .brand .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--health-accent);
+  box-shadow: none;
+}
+
+body.institucion .topbar-date {
+  color: var(--health-text-muted);
+}
+
+body.institucion .topbar-exit {
+  border-radius: 8px;
+  border-color: var(--health-border);
+  color: var(--health-primary);
+}
+
+body.institucion .topbar-exit:hover {
+  border-color: var(--health-accent);
+  color: var(--health-accent-hover);
+}
+
+body.institucion .main {
+  background: var(--health-bg);
+}
+
+body.institucion .main::before {
+  content: none;
+}
+
+body.institucion .page-head h1,
+body.institucion .panel-head h2,
+body.institucion .drawer-name,
+body.institucion .patient-name,
+body.institucion .turno-name,
+body.institucion .turno-time {
+  color: var(--health-primary);
+}
+
+body.institucion .page-head p,
+body.institucion .stat-cell-label,
+body.institucion .stat-cell-foot {
+  color: var(--health-text-muted);
+}
+
+body.institucion .page-eyebrow,
+body.institucion .drawer-section-title {
+  color: var(--health-accent);
+}
+
+body.institucion .stat-grid {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.institucion .stat-cell {
+  border-right-color: var(--health-border);
+  border-top-color: transparent;
+}
+
+body.institucion .stat-cell:hover {
+  background: var(--health-surface-alt);
+}
+
+body.institucion .stat-cell.is-active {
+  background: var(--health-mint);
+  border-top-color: var(--health-accent);
+}
+
+body.institucion .stat-cell.is-active .stat-cell-label,
+body.institucion .stat-cell.is-active .stat-cell-foot {
+  color: var(--health-text-muted);
+}
+
+body.institucion .stat-cell.is-active .stat-cell-value {
+  color: var(--health-primary);
+}
+
+body.institucion .stat-cell.is-urgent.is-active {
+  border-top-color: var(--health-warning);
+}
+
+body.institucion .stat-cell-value {
+  color: var(--health-primary);
+}
+
+body.institucion .stat-cell-value.accent {
+  color: var(--health-accent);
+}
+
+body.institucion .stat-cell-value.warn {
+  color: var(--health-warning);
+}
+
+body.institucion .stat-cell-value.danger {
+  color: var(--health-danger);
+}
+
+body.institucion .panel {
+  border: 1px solid var(--health-border);
+  border-top: 3px solid var(--health-primary);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.institucion .panel-head,
+body.institucion .filter-bar,
+body.institucion .drawer-head,
+body.institucion .drawer-actions {
+  border-color: var(--health-border);
+}
+
+body.institucion .filter-chip {
+  color: var(--health-text-muted);
+}
+
+body.institucion .filter-chip:hover,
+body.institucion .filter-chip.is-active {
+  color: var(--health-primary);
+  border-bottom-color: var(--health-accent);
+}
+
+body.institucion .patient-table thead th {
+  color: var(--health-text-muted);
+  background: var(--health-surface-alt);
+  border-bottom-color: var(--health-border);
+}
+
+body.institucion .patient-table tbody tr:hover {
+  background: var(--health-sky);
+}
+
+body.institucion .patient-table tbody tr.row-revision {
+  background: #fff1f1;
+  box-shadow: inset 4px 0 0 var(--health-danger);
+}
+
+body.institucion .patient-table tbody tr.row-revision:hover {
+  background: #ffe8e8;
+}
+
+body.institucion .activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--health-accent);
+}
+
+body.institucion .drawer {
+  border-left: 4px solid var(--health-accent);
+  border-radius: 12px 0 0 12px;
+}
+
+body.institucion .drawer-close {
+  border-radius: 8px;
+  background: var(--health-surface-alt);
+  color: var(--health-primary);
+}
+
+body.institucion .drawer-close:hover {
+  background: var(--health-mint);
+}
+
+body.institucion .checklist-item:hover {
+  background: var(--health-sky);
+}
+
+body.institucion .ai-fab {
+  border-radius: 50%;
+  background: var(--health-primary);
+  color: #fff;
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.institucion .ai-fab:hover {
+  background: var(--health-accent);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.institucion .ai-bubble,
+body.institucion .ai-typing {
+  border-radius: 12px;
+}
+
+body.institucion .ai-bubble.ai,
+body.institucion .ai-typing {
+  background: var(--health-sky);
+  color: var(--health-primary);
+}
+
+body.institucion .ai-bubble.user {
+  background: var(--health-primary);
+  color: #fff;
+  border-right: 0;
+}
+
+body.institucion .ai-suggestion-chip {
+  border-radius: 999px;
+  border-color: var(--health-border);
+  color: var(--health-primary);
+}
+
+body.institucion .ai-suggestion-chip:hover {
+  border-color: var(--health-accent);
+  background: var(--health-mint);
+}
+
+body.institucion .cfg-check input {
+  accent-color: var(--health-accent);
+}
+
+body.institucion .cfg-link {
+  color: var(--health-accent-hover);
+}
+
+/* Onboarding selector */
+body.onboarding-selector {
+  min-height: 100vh;
+  background: var(--health-bg);
+}
+
+body.onboarding-selector .selector {
+  max-width: 980px;
+}
+
+body.onboarding-selector .selector-head {
+  text-align: left;
+  border-left: 4px solid var(--health-accent);
+  padding-left: var(--sp-6);
+}
+
+body.onboarding-selector .selector-mark {
+  color: var(--health-primary);
+}
+
+body.onboarding-selector .selector-mark .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--health-accent);
+  box-shadow: none;
+}
+
+body.onboarding-selector .selector-head h1 {
+  color: var(--health-primary);
+  letter-spacing: -0.035em;
+}
+
+body.onboarding-selector .selector-head p,
+body.onboarding-selector .selector-foot {
+  color: var(--health-text-muted);
+}
+
+body.onboarding-selector .selector-back {
+  color: var(--health-accent-hover);
+  text-decoration-thickness: 1px;
+}
+
+body.onboarding-selector .demo-card {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+  background: var(--health-surface);
+}
+
+body.onboarding-selector .demo-card::before {
+  content: none;
+}
+
+body.onboarding-selector .demo-card:hover {
+  border-color: var(--health-accent);
+  box-shadow: var(--health-shadow-lg);
+}
+
+body.onboarding-selector .demo-icon {
+  border-radius: 10px;
+  background: var(--health-mint);
+  color: var(--health-accent);
+}
+
+body.onboarding-selector .demo-card h2 {
+  color: var(--health-primary);
+}
+
+body.onboarding-selector .demo-card p {
+  color: var(--health-text-muted);
+}
+
+body.onboarding-selector .demo-cta {
+  color: var(--health-accent-hover);
+}
+
+@media (max-width: 720px) {
+  body.institucion .main {
+    padding: var(--sp-5);
+  }
+
+  body.onboarding-selector .selector-head {
+    padding-left: var(--sp-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.paciente .btn,
+  body.institucion .btn {
+    transition: none;
+  }
+
+  body.paciente .screen.is-active.dir-forward,
+  body.paciente .screen.is-active.dir-back,
+  body.institucion .ai-bubble,
+  body.institucion .ai-typing {
+    animation: none;
+  }
+
+  body.institucion .ai-fab {
+    transition: none;
+  }
+}
+
+/* Asistente IA: acceso como herramienta del panel (botón rotulado), no como orbe flotante */
+body.institucion .ai-fab {
+  width: auto;
+  height: 48px;
+  padding: 0 18px 0 16px;
+  gap: 8px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  font: 600 14.5px/1 Inter, system-ui, sans-serif;
+  box-shadow: 0 8px 24px rgba(15, 42, 67, 0.18);
+}
+body.institucion .ai-fab:hover { transform: translateY(-1px); }
+body.institucion .ai-fab:active { transform: scale(0.98); }
+@media (max-width: 640px) { body.institucion .ai-fab-label { display: none; } body.institucion .ai-fab { width: 52px; padding: 0; justify-content: center; } }

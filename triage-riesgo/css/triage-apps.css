@@ -532,3 +532,444 @@ body.tr-evaluation-page .tr-result-links .btn {
     flex-direction: column;
   }
 }
+
+/* -------------------------------------------------------------------------
+   Vertical Salud layer
+   Triage uses amber for priority, red for real risk and navy/teal for the
+   surrounding workflow. It should feel safe and operational, not alarmist.
+   ------------------------------------------------------------------------- */
+:root {
+  --health-primary: #102a43;
+  --health-primary-strong: #081f33;
+  --health-accent: #0f8b8d;
+  --health-accent-hover: #087477;
+  --health-bg: #f7f9fc;
+  --health-surface: #ffffff;
+  --health-surface-alt: #f1f5f9;
+  --health-text: #172033;
+  --health-text-muted: #657184;
+  --health-border: #dce4ec;
+  --health-info: #3478f6;
+  --health-success: #268267;
+  --health-warning: #b7791f;
+  --health-danger: #b54747;
+  --health-mint: #dff3ef;
+  --health-sky: #eaf4fa;
+  --health-shadow-sm: 0 2px 8px rgba(15, 42, 67, 0.05);
+  --health-shadow-lg: 0 12px 32px rgba(15, 42, 67, 0.12);
+}
+
+body.tr-panel-page,
+body.tr-evaluation-page {
+  --triage-rojo: var(--health-danger);
+  --triage-naranja: #c56a20;
+  --triage-amarillo: var(--health-warning);
+  --triage-verde: var(--health-success);
+  --triage-azul: var(--health-info);
+  --triage-rojo-tint: #fff1f1;
+  --triage-naranja-tint: #fff3e8;
+  --triage-amarillo-tint: #fff8e6;
+  --triage-verde-tint: #e8f3ed;
+  --triage-azul-tint: #eaf2ff;
+  background: var(--health-bg);
+  color: var(--health-text);
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body.tr-panel-page::before,
+body.tr-panel-page::after,
+body.tr-evaluation-page::before,
+body.tr-evaluation-page::after {
+  content: none;
+}
+
+body.tr-panel-page .tr-topbar,
+body.tr-evaluation-page .tr-topbar {
+  min-height: 68px;
+  padding: 0 32px;
+  background: var(--health-surface);
+  border: 0;
+  border-bottom: 1px solid var(--health-border);
+  color: var(--health-primary);
+}
+
+body.tr-panel-page .tr-mark,
+body.tr-evaluation-page .tr-mark {
+  color: var(--health-primary);
+}
+
+body.tr-panel-page .tr-mark .dot,
+body.tr-evaluation-page .tr-mark .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--health-warning);
+  box-shadow: none;
+}
+
+body.tr-panel-page .tr-back,
+body.tr-evaluation-page .tr-back {
+  color: var(--health-accent-hover);
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+body.tr-panel-page .tr-back:hover,
+body.tr-evaluation-page .tr-back:hover,
+body.tr-panel-page .tr-back:focus-visible,
+body.tr-evaluation-page .tr-back:focus-visible {
+  color: var(--health-primary);
+  background: var(--health-sky);
+  border-color: var(--health-border);
+}
+
+/* Controls */
+body.tr-panel-page .btn,
+body.tr-evaluation-page .btn {
+  border-radius: 10px;
+  font-family: inherit;
+  font-weight: 700;
+}
+
+body.tr-panel-page .btn-accent,
+body.tr-evaluation-page .btn-accent {
+  background: var(--health-primary);
+  border-color: var(--health-primary);
+  color: #fff;
+}
+
+body.tr-panel-page .btn-accent:hover,
+body.tr-evaluation-page .btn-accent:hover {
+  background: var(--health-primary-strong);
+  border-color: var(--health-primary-strong);
+}
+
+body.tr-panel-page .btn-secondary,
+body.tr-evaluation-page .btn-secondary {
+  background: var(--health-accent);
+  border-color: var(--health-accent);
+  color: #fff;
+}
+
+body.tr-panel-page .btn-secondary:hover,
+body.tr-evaluation-page .btn-secondary:hover {
+  background: var(--health-accent-hover);
+  border-color: var(--health-accent-hover);
+}
+
+body.tr-panel-page .btn-ghost,
+body.tr-evaluation-page .btn-ghost {
+  background: var(--health-surface);
+  border-color: var(--health-border);
+  color: var(--health-primary);
+}
+
+body.tr-panel-page .btn-ghost:hover,
+body.tr-evaluation-page .btn-ghost:hover {
+  background: var(--health-surface-alt);
+  border-color: var(--health-accent);
+}
+
+/* Panel */
+body.tr-panel-page .tr-panel {
+  max-width: 1320px;
+  padding: 44px 32px 80px;
+}
+
+body.tr-panel-page .tr-panel-head {
+  padding-left: 18px;
+  border-left: 4px solid var(--health-warning);
+  margin-bottom: 28px;
+}
+
+body.tr-panel-page .tr-panel-title,
+body.tr-panel-page .tr-table-head b,
+body.tr-panel-page .tr-nombre,
+body.tr-panel-page .tr-espera {
+  color: var(--health-primary);
+}
+
+body.tr-panel-page .tr-panel-sub {
+  color: var(--health-text-muted);
+}
+
+body.tr-panel-page > .tr-disclaimer {
+  padding: 12px 32px 12px 40px;
+  border: 0;
+  border-left: 4px solid var(--health-warning);
+  border-radius: 0;
+  background: #fff8e6;
+  color: #76520d;
+  text-align: left;
+  line-height: 1.55;
+}
+
+body.tr-panel-page .tr-contact {
+  border: 1px solid var(--health-border);
+  border-left: 4px solid var(--health-warning);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-panel-page .tr-contact summary {
+  color: var(--health-primary);
+}
+
+body.tr-panel-page .tr-levels {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-panel-page .tr-level {
+  border-right-color: var(--health-border);
+  background: var(--health-surface);
+}
+
+body.tr-panel-page .tr-level:hover,
+body.tr-panel-page .tr-level.is-active {
+  background: var(--health-mint);
+}
+
+body.tr-panel-page .tr-level-count,
+body.tr-panel-page .tr-level-name {
+  color: var(--health-primary);
+}
+
+body.tr-panel-page #board {
+  border: 1px solid var(--health-border);
+  border-top: 3px solid var(--health-primary);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-panel-page .tr-table-head,
+body.tr-panel-page .tr-table thead th {
+  background: var(--health-surface-alt);
+}
+
+body.tr-panel-page .tr-table thead th {
+  color: var(--health-text-muted);
+}
+
+body.tr-panel-page .tr-table tbody td {
+  border-bottom-color: var(--health-border);
+}
+
+body.tr-panel-page .tr-table tbody tr.is-over-row {
+  background: var(--triage-rojo-tint);
+}
+
+body.tr-panel-page .tr-prio {
+  border-radius: 8px;
+}
+
+body.tr-panel-page .tr-next {
+  border-radius: 999px;
+  color: var(--health-success);
+  background: var(--health-mint);
+}
+
+body.tr-panel-page .tr-sla-bar {
+  border-radius: 999px;
+}
+
+body.tr-panel-page .tr-link {
+  color: var(--health-accent-hover);
+}
+
+body.tr-panel-page .empty-state {
+  border-radius: 12px;
+  background: var(--health-surface);
+}
+
+/* Patient evaluation */
+body.tr-evaluation-page > .tr-disclaimer {
+  padding: 10px 24px;
+  border: 0;
+  border-bottom: 1px solid #ead6a6;
+  border-radius: 0;
+  background: #fff8e6;
+  color: #76520d;
+  font-weight: 600;
+}
+
+body.tr-evaluation-page .tr-shell {
+  max-width: 650px;
+  min-height: calc(100vh - 126px);
+  margin: 28px auto 0;
+  padding: 28px 38px 56px;
+  border: 1px solid var(--health-border);
+  border-left: 4px solid var(--health-accent);
+  border-radius: 12px;
+  background: var(--health-surface);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-evaluation-page .tr-stepbar {
+  border-bottom-color: var(--health-border);
+}
+
+body.tr-evaluation-page .tr-step-count {
+  color: var(--health-accent-hover);
+}
+
+body.tr-evaluation-page .tr-stepbar-back {
+  color: var(--health-primary);
+  border-bottom: 2px solid var(--health-accent);
+}
+
+body.tr-evaluation-page .tr-stepbar-back:hover {
+  color: var(--health-accent-hover);
+}
+
+body.tr-evaluation-page .tr-progress span {
+  border-radius: 999px;
+  background: #e3e9ef;
+}
+
+body.tr-evaluation-page .tr-progress span.is-done {
+  background: var(--health-accent);
+}
+
+body.tr-evaluation-page .tr-title,
+body.tr-evaluation-page .field-label,
+body.tr-evaluation-page .tr-pregunta-texto {
+  color: var(--health-primary);
+}
+
+body.tr-evaluation-page .tr-sub,
+body.tr-evaluation-page .tr-slider-labels {
+  color: var(--health-text-muted);
+}
+
+body.tr-evaluation-page .input {
+  min-height: 44px;
+  border: 1px solid var(--health-border);
+  border-radius: 8px;
+  color: var(--health-text);
+}
+
+body.tr-evaluation-page .input:focus {
+  border-color: var(--health-accent);
+  box-shadow: 0 0 0 3px rgba(15, 139, 141, 0.16);
+}
+
+body.tr-evaluation-page .tr-emergency {
+  border-left: 4px solid var(--health-danger);
+  border-radius: 8px;
+  background: #fff1f1;
+  color: var(--health-danger);
+}
+
+body.tr-evaluation-page .tr-motivo-list {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-evaluation-page .tr-motivo-btn {
+  border-bottom-color: var(--health-border);
+  color: var(--health-primary);
+}
+
+body.tr-evaluation-page .tr-motivo-btn:hover,
+body.tr-evaluation-page .tr-motivo-btn:focus-visible {
+  background: var(--health-sky);
+  color: var(--health-primary);
+}
+
+body.tr-evaluation-page .tr-motivo-btn svg {
+  color: var(--health-accent);
+}
+
+body.tr-evaluation-page .tr-pregunta {
+  border-bottom-color: var(--health-border);
+}
+
+body.tr-evaluation-page .tr-yn-btn {
+  min-height: 44px;
+  border: 1px solid var(--health-border);
+  border-radius: 10px;
+  color: var(--health-primary);
+}
+
+body.tr-evaluation-page .tr-yn-btn:hover {
+  border-color: var(--health-accent);
+  background: var(--health-sky);
+}
+
+body.tr-evaluation-page .tr-yn-btn.is-selected {
+  border-color: var(--health-accent);
+  background: var(--health-accent);
+  color: #fff;
+}
+
+body.tr-evaluation-page .tr-slider-value {
+  color: var(--health-primary);
+}
+
+body.tr-evaluation-page .tr-slider-value small {
+  color: var(--health-warning);
+}
+
+body.tr-evaluation-page .tr-slider {
+  accent-color: var(--health-warning);
+}
+
+body.tr-evaluation-page .tr-result-banner {
+  border-radius: 12px;
+  border-left: 6px solid var(--health-warning);
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-evaluation-page .tr-summary-list {
+  border: 1px solid var(--health-border);
+  border-radius: 12px;
+}
+
+body.tr-evaluation-page .tr-summary-list div {
+  border-bottom-color: var(--health-border);
+}
+
+body.tr-evaluation-page .tr-summary-list dd {
+  color: var(--health-primary);
+}
+
+body.tr-evaluation-page .tr-result-banner + .tr-summary-list + .tr-disclaimer {
+  border-left: 4px solid var(--health-warning);
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #76520d;
+}
+
+body.tr-evaluation-page .tr-bg-amarillo {
+  color: #fff;
+}
+
+body.tr-evaluation-page .tr-queue-box {
+  border: 1px solid var(--health-primary);
+  border-radius: 12px;
+  box-shadow: var(--health-shadow-sm);
+}
+
+body.tr-evaluation-page .tr-queue-box-head {
+  background: var(--health-primary);
+}
+
+body.tr-evaluation-page .tr-queue-pos {
+  color: var(--health-accent);
+}
+
+@media (max-width: 720px) {
+  body.tr-panel-page .tr-topbar,
+  body.tr-evaluation-page .tr-topbar {
+    padding: 0 18px;
+  }
+
+  body.tr-evaluation-page .tr-shell {
+    margin: 18px 12px 0;
+    padding: 22px 20px 42px;
+  }
+}

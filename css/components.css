@@ -308,3 +308,15 @@
 }
 .step-nav-back:hover { background: var(--gray-100); }
 .step-nav-count { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-soft); }
+
+/* Topbar de demo: una sola línea en mobile (se oculta el prefijo de marca, queda el producto) */
+@media (max-width: 640px) {
+  .mk-pre { display: none; }
+  .wa-topbar, .ll-topbar, .tr-topbar { flex-wrap: nowrap; gap: 12px; }
+  .wa-mark, .ll-mark, .tr-mark { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wa-back, .ll-back, .tr-back { white-space: nowrap; }
+  .ll-role { display: none; }
+}
+
+/* Overlay sólido: sin desenfoque (sin efecto vidrio) */
+.scrim { -webkit-backdrop-filter: none; backdrop-filter: none; }

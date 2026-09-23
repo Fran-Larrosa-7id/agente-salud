@@ -15,6 +15,7 @@ Son conceptos independientes: no forman parte de Horus ni de Osiris.
 
 | Producto | Problema que resuelve | Usuarios | Estado | Demo |
 | --- | --- | --- | --- | --- |
+| Turnos Online | Encontrar y reservar turnos por especialidad o profesional | Paciente / Institución | Fuerte | `turnos-online/turnos-online.html` |
 | Onboarding de pacientes | Preparar datos y documentación antes de la atención | Paciente / Recepción | Fuerte | `onboarding.html` |
 | Turnos por WhatsApp | Gestión conversacional de turnos sobre la agenda real | Paciente / Institución | Fuerte | `whatsapp-turnos/index.html` |
 | Llamador de pacientes | Ordenar la sala de espera | Recepción / Profesional / Paciente | Fuerte | `llamador-pacientes/index.html` |
@@ -56,7 +57,21 @@ y abrir `http://localhost:8000`. Sirve cualquier servidor estático (`npx serve 
 - «Reiniciar configuración» vuelve a Consulta general.
 
 ### Portal del paciente (`app-mobile-pacientes/index.html`)
-Navegar Inicio, Turnos, Estudios, Avisos y Perfil.
+Navegar Inicio, Turnos, Estudios, Avisos y Perfil. El acceso demo es local; el próximo turno y «Mis turnos» permiten revisar, cancelar (el diálogo muestra la política), agregar al calendario (`.ics`) y abrir la reprogramación en Turnos Online. La reserva conserva el email del acceso demo para asociarla al portal. Para probar los cambios de cobertura, abrir en otra pestaña Turnos Online → Panel → Coberturas, marcar un convenio para revisión y preparar el aviso al paciente.
+
+### Turnos Online (`turnos-online/turnos-online.html`)
+- Reservar por especialidad o profesional; al ingresar desde el portal puede precompletar los datos del acceso demo.
+- Panel → Coberturas: actualizar el estado y fecha de un convenio, identificar turnos futuros afectados, y simular aviso, contacto, cambio de cobertura, pase a particular o resolución. Un cambio no cancela turnos por sí solo.
+- Panel → Configuración (Políticas institucionales): límites de cancelación/reprogramación, si un turno con cobertura a validar se confirma igual, documentación por tipo de atención (consultas / estudios y prácticas) y la tabla de canales de aviso. Para documentación necesaria, la demo comprueba que se seleccionó un archivo; no transmite ni conserva su contenido.
+- La reserva y el portal comparten el estado local; abrir ambas páginas en pestañas del mismo navegador para comprobar la sincronización.
+
+#### Escenarios de demo
+- **A · Conoce la especialidad:** Por especialidad → Cardiología → «Primer turno disponible» → Swiss Medical (Vigente, última validación) → confirmar.
+- **B · Conoce al profesional:** Por profesional → buscar «romero» (o «cardio») → la especialidad se completa sola → cobertura → tipo → horario.
+- **C · Documentación opcional:** con una consulta, DNI y credencial aparecen como opcionales y se puede confirmar sin cargarlos («Podés completarlo más adelante»). Con «Estudio o práctica», la orden médica es necesaria y bloquea hasta seleccionar un archivo.
+- **D · Cobertura vigente:** elegir Swiss Medical, OSDE o IOMA: «Vigente · Última validación».
+- **E · Cobertura a validar:** elegir Galeno u «Otra obra social»: aviso «Tu cobertura necesita ser verificada antes de la atención» y turno «Confirmado · cobertura pendiente» (o sin confirmar si se desactiva la política). En el panel, abrir el turno en la agenda → «Registrar cobertura validada»; el Portal pasa a «Cobertura validada».
+- **F · Convenio suspendido después de reservar:** Panel → Coberturas → OSDE → «Convenio suspendido» desde hoy → «Aplicar cambio y detectar turnos» → «Notificar paciente» en el turno de María González → en el Portal (acceso demo) aparece la alerta y el aviso → María actualiza la cobertura o sigue como particular, o recepción usa «Cambiar cobertura» / «Pasar a particular».
 
 ### Asistente IA (`institucion.html?ia=1`)
 Probar «¿Quién requiere revisión?» o «Mostrame pacientes de la Dra. Martínez». Rechaza preguntas clínicas.
@@ -75,6 +90,8 @@ Probar «¿Quién requiere revisión?» o «Mostrame pacientes de la Dra. Martí
 | `wa-flujos`, `wa-actividad-extra` | Automatizaciones y actividad | «Reiniciar demo» en el panel de WhatsApp |
 | `triage_riesgo_state_v1` | Cola de guardia | «Reiniciar demo» en el panel de triage |
 | `triage_contacto_v1` | Contacto de emergencia | «Restaurar valor demo» en el panel de triage |
+| `vertical-salud-turnos-online-v2` | Turnos, coberturas, políticas y actividad compartidos | No hay reset global; la demo de turnos reinicia su semilla cada día |
+| `vertical-salud-portal-session-v1` | Sesión mock del Portal del Paciente | «Cerrar sesión» en Perfil; es solo un acceso local de demostración |
 
 Ningún reinicio usa `localStorage.clear()`: cada demo restaura solo sus claves. No se renombraron las claves a un prefijo común para no romper la sincronización existente.
 
@@ -84,6 +101,7 @@ Ningún reinicio usa `localStorage.clear()`: cada demo restaura solo sus claves.
 - **Llamador**: la sincronización usa `localStorage` y solo funciona entre pestañas del mismo navegador; no hay servidor en tiempo real. El sonido es un beep simulado.
 - **Onboarding**: los datos no persisten en ningún backend y las cargas de archivos son simuladas. No reemplaza una historia clínica.
 - **Portal**: no se integra con Horus ni Osiris.
+- **Turnos Online / Portal**: comparten datos solo en `localStorage` del mismo navegador y origen; el acceso no autentica identidad ni reemplaza un backend. La disponibilidad y el estado de cobertura son orientativos, no garantizan prestaciones ni importes. Los documentos no salen del dispositivo ni se conservan.
 - **IA**: no usa un modelo real; responde con reglas sobre datos de ejemplo.
 - **Triage**: las reglas son ilustrativas y no representan protocolos clínicos validados. Siempre debe existir revisión profesional.
 

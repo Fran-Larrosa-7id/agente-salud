@@ -93,13 +93,17 @@
         </sc-if>
         <p class="to-kicker">Turnos online</p>
         <h1 class="to-h1">Reservá tu turno</h1>
-        <p class="to-lead">Elegí la especialidad y te mostramos los profesionales y horarios disponibles en la sede. Te lleva menos de dos minutos.</p>
+        <p class="to-lead">Podés empezar por la especialidad o buscar directamente a un profesional. Explorá horarios sin crear una cuenta.</p>
+        <div class="to-tabs to-booking-tabs" role="tablist" aria-label="Cómo querés buscar">
+          <button type="button" role="tab" aria-selected="{{ bookingBySpecialty }}" class="to-tab" onClick="{{ chooseBookingBySpecialty }}">Por especialidad</button>
+          <button type="button" role="tab" aria-selected="{{ bookingByProfessional }}" class="to-tab" onClick="{{ chooseBookingByProfessional }}">Por profesional</button>
+        </div>
         <div class="to-search">
           <span class="to-ic i-search" aria-hidden="true"></span>
-          <label class="to-sr" for="to-q">Buscar especialidad</label>
-          <input id="to-q" class="to-input" type="search" value="{{ search }}" onChange="{{ onSearchChange }}" placeholder="Buscar especialidad" autocomplete="off"/>
+          <label class="to-sr" for="to-q">{{ searchLabel }}</label>
+          <input id="to-q" class="to-input" type="search" value="{{ search }}" onInput="{{ onSearchChange }}" placeholder="{{ searchPlaceholder }}" autocomplete="off"/>
         </div>
-        <sc-if value="{{ specAvailable.length }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ showSpecList }}" hint-placeholder-val="{{ true }}">
           <h2 class="to-sec-t"><span>Especialidades con turnos</span></h2>
           <div class="to-list">
             <sc-for list="{{ specAvailable }}" as="sp" hint-placeholder-count="3">
@@ -114,17 +118,30 @@
             </sc-for>
           </div>
         </sc-if>
-        <sc-if value="{{ specSoon.length }}">
+        <sc-if value="{{ showProList }}" hint-placeholder-val="{{ true }}">
+          <h2 class="to-sec-t"><span>Profesionales disponibles</span></h2>
+          <div class="to-list">
+            <sc-for list="{{ professionalResults }}" as="pro" hint-placeholder-count="3">
+              <button type="button" class="to-row" onClick="{{ pro.onSelect }}">
+                <span class="to-avatar" aria-hidden="true">{{ pro.initials }}</span>
+                <span class="to-row-main"><span class="to-row-t" style="display:block">{{ pro.name }}</span><span class="to-row-s" style="display:block">{{ pro.specialtyName }}</span></span>
+                <span class="to-row-aside">Próximo turno<b class="to-num">{{ pro.nextSlotLabel }}</b></span>
+                <span class="to-ic i-chevron-r to-row-go" aria-hidden="true"></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showSpecSoon }}">
           <h2 class="to-sec-t"><span>Próximamente en esta sede</span></h2>
           <div class="to-soon">
             <sc-for list="{{ specSoon }}" as="ss" hint-placeholder-count="3"><span>{{ ss.name }}</span></sc-for>
           </div>
         </sc-if>
-        <sc-if value="{{ noSpecialtyResults }}">
+        <sc-if value="{{ noHomeResults }}">
           <div class="to-empty" role="status">
             <p class="to-empty-t">No encontramos “{{ search }}”</p>
-            <p class="to-empty-s">Probá con otro nombre o revisá la lista completa de especialidades.</p>
-            <div class="to-empty-a"><button type="button" class="to-btn to-btn--secondary" onClick="{{ clearSearch }}">Ver todas las especialidades</button></div>
+            <p class="to-empty-s">Probá con otro {{ searchEntity }} o cambiá la forma de búsqueda.</p>
+            <div class="to-empty-a"><button type="button" class="to-btn to-btn--secondary" onClick="{{ clearSearch }}">Limpiar búsqueda</button></div>
           </div>
         </sc-if>
       </div>
@@ -218,13 +235,23 @@
       <p class="to-sub">Elegí tu cobertura. Si no la ves en la lista, elegí “Otra obra social”.</p>
       <div class="to-choices" role="radiogroup" aria-label="Cobertura">
         <sc-for list="{{ coverages }}" as="cov" hint-placeholder-count="6">
-          <button type="button" role="radio" aria-checked="{{ cov.selected }}" class="to-choice {{ cov.cls }}" onClick="{{ cov.onSelect }}">
+          <button type="button" role="radio" aria-checked="{{ cov.selected }}" aria-disabled="{{ cov.disabled }}" class="to-choice {{ cov.cls }} {{ cov.statusClass }}" disabled="{{ cov.disabled }}" onClick="{{ cov.onSelect }}">
             <span class="to-radio" aria-hidden="true"></span>
             <span>{{ cov.name }}<small>{{ cov.hint }}</small></span>
           </button>
         </sc-for>
       </div>
-      <p class="to-note"><span class="to-ic to-ic-sm i-tag" aria-hidden="true"></span>Traé tu credencial el día del turno. Si te atendés como particular, el valor de la consulta se abona en la sede.</p>
+      <sc-if value="{{ selectedCoverageInfo }}">
+        <div class="to-coverage-info" role="status">
+          <span class="to-coverage-status {{ selectedCoverageInfo.statusClass }}">{{ selectedCoverageInfo.statusLabel }}</span>
+          <div>
+            <p>{{ selectedCoverageInfo.validationLabel }}</p>
+            <sc-if value="{{ selectedCoverageInfo.pendingNote }}"><p class="to-coverage-pending">{{ selectedCoverageInfo.pendingNote }}</p></sc-if>
+          </div>
+        </div>
+        <button type="button" class="to-btn to-btn--primary to-cov-next" onClick="{{ continueFromCoverage }}">Continuar<span class="to-ic to-ic-sm i-arrow-r" aria-hidden="true"></span></button>
+      </sc-if>
+      <p class="to-note"><span class="to-ic to-ic-sm i-tag" aria-hidden="true"></span>El estado informado refleja el registro disponible ahora. La vigencia, coseguros y condiciones pueden requerir una nueva validación el día de la atención. Consultá coseguros con la institución.</p>
     </div>
   </sc-if>
 
@@ -321,6 +348,23 @@
           </div>
           <div class="to-field" style="max-width:270px"><label class="to-label" for="pd-d">DNI <small>(opcional)</small></label><input id="pd-d" class="to-input to-num" value="{{ patientInfo.dni }}" onChange="{{ setDni }}" inputMode="numeric" placeholder="30.123.456"/></div>
         </fieldset>
+        <sc-if value="{{ !hasDocumentRequirements }}">
+          <p class="to-help to-doc-optional">La institución no solicitó documentación para esta reserva. Si hiciera falta, recepción te indicará cómo presentarla.</p>
+        </sc-if>
+        <sc-if value="{{ hasDocumentRequirements }}">
+          <fieldset class="to-fieldset to-doc-fields">
+            <legend class="to-legend">Documentación para la admisión</legend>
+            <p class="to-help">Los requisitos los define la institución según el tipo de atención. Esta demo solo comprueba que se seleccionó un archivo; el contenido no se envía ni se guarda.</p>
+            <sc-for list="{{ documentUploadRows }}" as="doc" hint-placeholder-count="2">
+              <div class="to-field to-doc-field {{ doc.cls }}">
+                <label class="to-label" for="{{ doc.inputId }}">{{ doc.label }} <span class="to-doc-tag">{{ doc.policyLabel }}</span></label>
+                <input id="{{ doc.inputId }}" class="to-input" type="file" accept="image/*,.pdf" onChange="{{ doc.onChange }}" aria-describedby="{{ doc.hintId }}"/>
+                <span class="to-help" id="{{ doc.hintId }}" role="status">{{ doc.statusLabel }}</span>
+              </div>
+            </sc-for>
+            <p class="to-help to-doc-later">{{ documentsLaterNote }}</p>
+          </fieldset>
+        </sc-if>
         <fieldset class="to-fieldset">
           <legend class="to-legend">Cómo te contactamos</legend>
           <div class="to-field"><label class="to-label" for="pd-w">WhatsApp</label><input id="pd-w" class="to-input to-num" value="{{ patientInfo.whatsapp }}" onChange="{{ setWhatsapp }}" type="tel" inputMode="tel" autocomplete="tel" placeholder="11 5555 5555" aria-describedby="pd-w-h" required/><span class="to-help" id="pd-w-h">Por acá te llegan la confirmación y el recordatorio.</span></div>
@@ -349,14 +393,15 @@
         </div>
         <dl class="to-dl">
           <div class="to-dl-row"><div><dt>Profesional</dt><dd>{{ draftProfessionalName }}<small>{{ draftSpecialtyName }}</small></dd></div><button type="button" class="to-rail-edit" onClick="{{ goToProfessionalStep }}" aria-label="Cambiar profesional">Cambiar</button></div>
-          <div class="to-dl-row"><div><dt>Consulta y cobertura</dt><dd>{{ draftTypeName }}<small>{{ draftCoverage }}</small></dd></div><button type="button" class="to-rail-edit" onClick="{{ goToCoverageStep }}" aria-label="Cambiar cobertura y consulta">Cambiar</button></div>
+          <div class="to-dl-row"><div><dt>Consulta y cobertura</dt><dd>{{ draftTypeName }}<small>{{ draftCoverageLabel }}</small></dd></div><button type="button" class="to-rail-edit" onClick="{{ goToCoverageStep }}" aria-label="Cambiar cobertura y consulta">Cambiar</button></div>
           <div class="to-dl-row"><div><dt>Paciente</dt><dd>{{ patientFullName }}<small class="to-num">WhatsApp {{ patientInfo.whatsapp }} · {{ patientInfo.email }}</small></dd></div><button type="button" class="to-rail-edit" onClick="{{ goToPatientStep }}" aria-label="Cambiar datos del paciente">Cambiar</button></div>
           <div class="to-dl-row"><div><dt>Lugar</dt><dd>Centro Médico San Martín<small>Av. Rivadavia 4820, CABA · Sede Caballito</small></dd></div></div>
         </dl>
       </div>
+      <sc-if value="{{ summaryCoverageNote }}"><p class="to-note to-note--review"><span class="to-ic to-ic-sm i-tag" aria-hidden="true"></span>{{ summaryCoverageNote }}</p></sc-if>
       <div class="to-form-foot" style="margin-top:22px">
         <button type="button" class="to-btn to-btn--primary" onClick="{{ onConfirm }}" style="min-height:50px;font-size:15.5px">Confirmar turno</button>
-        <span class="to-help">Al confirmar te enviamos el comprobante por WhatsApp. Podés cancelar sin costo hasta 24 hs antes.</span>
+        <span class="to-help">Al confirmar te enviamos el comprobante por WhatsApp. {{ bookingPolicyCopy }}</span>
       </div>
     </div>
   </sc-if>
@@ -391,8 +436,8 @@
         <div class="to-done-head">
           <span class="to-done-ic" aria-hidden="true"><span class="to-ic to-ic-lg i-check"></span></span>
           <div>
-            <h1 class="to-h1" style="font-size:30px" tabIndex="-1" data-autofocus="true">Listo, tu turno está reservado</h1>
-            <p class="to-sub" style="margin:0">Te enviamos el comprobante por WhatsApp{{ confirmedWhatsapp }}.</p>
+            <h1 class="to-h1" style="font-size:30px" tabIndex="-1" data-autofocus="true">{{ confirmedTitle }}</h1>
+            <p class="to-sub" style="margin:0">{{ confirmedSub }}</p>
             <span class="to-code">Código de reserva <b>{{ bookingCode }}</b></span>
           </div>
         </div>
@@ -404,16 +449,17 @@
           <dl class="to-dl">
             <div class="to-dl-row"><div><dt>Profesional</dt><dd>{{ draftProfessionalName }}<small>{{ draftSpecialtyName }} · {{ draftTypeName }}</small></dd></div></div>
             <div class="to-dl-row"><div><dt>Lugar</dt><dd>Centro Médico San Martín<small>Av. Rivadavia 4820, CABA · Sede Caballito</small></dd></div></div>
-            <div class="to-dl-row"><div><dt>Cobertura</dt><dd>{{ draftCoverage }}</dd></div></div>
+            <div class="to-dl-row"><div><dt>Cobertura</dt><dd>{{ confirmedCoverage }}<small><span class="to-coverage-status {{ confirmedCoverageCls }}">{{ confirmedCoverageState }}</span></small></dd></div></div>
           </dl>
         </div>
+        <sc-if value="{{ confirmedCoverageNote }}"><p class="to-note to-note--review" role="note"><span class="to-ic to-ic-sm i-tag" aria-hidden="true"></span>{{ confirmedCoverageNote }}</p></sc-if>
       </div>
       <div>
         <h2 class="to-grp-t" style="font-size:16px;margin-bottom:16px">Qué sigue</h2>
         <ol class="to-next">
           <li><b>Recordatorio el día anterior</b><span>Te escribimos por WhatsApp para que confirmes, reprogrames o canceles con un toque.</span></li>
-          <li><b>Llegá 10 minutos antes</b><span>Traé tu DNI y la credencial de tu cobertura. Recepción está en planta baja.</span></li>
-          <li><b>¿Surgió algo?</b><span>Podés reprogramar o cancelar desde “Mis turnos” hasta 24 hs antes.</span></li>
+          <li><b>Documentación</b><span>{{ confirmedDocsText }}</span></li>
+          <li><b>¿Surgió algo?</b><span>{{ bookingPolicyCopy }}</span></li>
         </ol>
         <div class="to-actions">
           <button type="button" class="to-btn to-btn--secondary" onClick="{{ addToCalendar }}"><span class="to-ic i-calendar" aria-hidden="true"></span>Agregar al calendario</button>
@@ -450,15 +496,19 @@
                 <div class="to-appt-t to-num">{{ a.dateLong }} · {{ a.time }} hs</div>
                 <div class="to-row-t" style="margin-top:4px">{{ a.professionalName }}</div>
                 <div class="to-row-s">{{ a.specialtyName }} · {{ a.typeName }} · Sede Caballito</div>
+                <div class="to-row-s">Cobertura registrada: {{ a.coverageLine }}</div>
+                <sc-if value="{{ a.coveragePendingNote }}"><div class="to-coverage-alert-mini">{{ a.coveragePendingNote }}</div></sc-if>
                 <sc-if value="{{ a.hasActions }}">
                   <div class="to-appt-a">
                     <sc-if value="{{ a.canConfirm }}"><button type="button" class="to-btn to-btn--primary to-btn--sm" onClick="{{ a.onConfirmClick }}">Confirmar asistencia</button></sc-if>
-                    <sc-if value="{{ a.canAct }}"><button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ a.onReprogramClick }}">Reprogramar</button></sc-if>
-                    <sc-if value="{{ a.canAct }}"><button type="button" class="to-btn to-btn--danger-ghost to-btn--sm" onClick="{{ a.onCancelClick }}">Cancelar turno</button></sc-if>
+                  <sc-if value="{{ a.canReprogram }}"><button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ a.onReprogramClick }}">Reprogramar</button></sc-if>
+                  <sc-if value="{{ a.canCancel }}"><button type="button" class="to-btn to-btn--danger-ghost to-btn--sm" onClick="{{ a.onCancelClick }}">Cancelar turno</button></sc-if>
+                  <sc-if value="{{ a.policyMessage }}"><span class="to-help">{{ a.policyMessage }}</span></sc-if>
                   </div>
                 </sc-if>
               </div>
-              <span class="to-status st-{{ a.status }}">{{ a.statusMeta.label }}</span>
+              <span class="to-status st-{{ a.status }}">{{ a.statusLabel }}</span>
+              <sc-if value="{{ a.coverageReview }}"><div class="to-coverage-alert-mini">Revisar cobertura antes del turno</div></sc-if>
             </article>
           </sc-for>
         </div>
@@ -732,6 +782,103 @@
     </sc-if>
     <sc-if value="{{ !waitlistRows.length }}"><div class="to-empty"><p class="to-empty-t">No hay pacientes en lista de espera</p><p class="to-empty-s">Cuando un paciente no encuentra horario, puede anotarse desde la reserva online.</p></div></sc-if>
   </sc-if>
+
+  <sc-if value="{{ adminSectionIsCoverages }}">
+    <div class="to-top">
+      <div><h1>Coberturas y convenios</h1><div class="to-top-s">Estado registrado, cambios y turnos que requieren seguimiento.</div></div>
+          <span class="to-coverage-status is-review">{{ coverageReviewCount }} turnos requieren revisión</span>
+    </div>
+    <div class="to-coverage-layout">
+      <section class="to-panel" aria-labelledby="cov-list-title">
+        <div class="to-panel-h"><h3 id="cov-list-title">Coberturas</h3></div>
+        <div class="to-coverage-list">
+          <sc-for list="{{ coverageRows }}" as="cr" hint-placeholder-count="4">
+            <button type="button" class="to-coverage-row {{ cr.selectedCls }}" aria-pressed="{{ cr.selected }}" onClick="{{ cr.onSelect }}">
+              <span><b>{{ cr.name }}</b><small>{{ cr.plan }}</small></span>
+              <span class="to-coverage-status {{ cr.statusClass }}">{{ cr.statusLabel }}</span>
+              <span class="to-coverage-count">{{ cr.countLabel }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+      <section class="to-panel" aria-labelledby="cov-detail-title">
+        <div class="to-panel-h"><h3 id="cov-detail-title">{{ selectedCoverage.name }}</h3><span class="to-coverage-status {{ selectedCoverage.statusClass }}">{{ selectedCoverage.statusLabel }}</span></div>
+        <p class="to-help">Última actualización: {{ selectedCoverage.lastUpdatedLabel }} · {{ selectedCoverage.plan }}</p>
+        <div class="to-cov-form">
+          <div class="to-field"><label class="to-label" for="cov-status">Nuevo estado del convenio</label>
+            <select id="cov-status" class="to-select" value="{{ coverageDraftStatus }}" onChange="{{ onCoverageStatusChange }}"><sc-for list="{{ coverageStatusOptions }}" as="op" hint-placeholder-count="4"><option value="{{ op.value }}">{{ op.label }}</option></sc-for></select>
+          </div>
+          <div class="to-field"><label class="to-label" for="cov-date">Vigente desde</label><input id="cov-date" class="to-input to-num" type="date" value="{{ coverageDraftDate }}" onChange="{{ onCoverageDateChange }}"/></div>
+          <div class="to-field"><label class="to-label" for="cov-reason">Motivo interno</label><input id="cov-reason" class="to-input" value="{{ coverageDraftReason }}" onChange="{{ onCoverageReasonChange }}" placeholder="Ej.: actualización de convenio"/></div>
+          <button type="button" class="to-btn to-btn--primary" onClick="{{ saveCoverageChange }}">Aplicar cambio y detectar turnos</button>
+        </div>
+        <div class="to-history">
+          <h4>Historial del convenio</h4>
+          <sc-for list="{{ selectedCoverage.historyRows }}" as="hr" hint-placeholder-count="3"><div class="to-history-row"><time>{{ hr.date }}</time><span>{{ hr.text }}</span></div></sc-for>
+        </div>
+      </section>
+    </div>
+    <section class="to-panel to-affected-panel" aria-labelledby="affected-title">
+      <div class="to-panel-h"><h3 id="affected-title">Turnos futuros que requieren revisión</h3><span class="to-num">{{ affectedAppointments.length }}</span></div>
+      <p class="to-help">Los turnos siguen registrados. Recepción puede avisar y acordar una resolución con cada paciente.</p>
+      <sc-if value="{{ affectedAppointments.length }}" hint-placeholder-val="{{ true }}">
+        <div class="to-affected-list">
+          <sc-for list="{{ affectedAppointments }}" as="aa" hint-placeholder-count="2">
+            <article class="to-affected-row">
+              <div class="to-affected-person"><b>{{ aa.patientName }}</b><small>{{ aa.dateLabel }} · {{ aa.time }} · {{ aa.professionalName }}</small><small>{{ aa.coverage }} · {{ aa.contact }}</small></div>
+              <div class="to-affected-state"><span class="to-coverage-status is-review">Requiere revisión</span><small>{{ aa.notificationLabel }}</small><sc-if value="{{ aa.contactLabel }}"><small>{{ aa.contactLabel }}</small></sc-if></div>
+              <sc-if value="{{ aa.notEditing }}">
+                <div class="to-affected-actions">
+                  <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ aa.onNotify }}">{{ aa.notifyLabel }}</button>
+                  <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ aa.onContact }}">Contactar</button>
+                  <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ aa.onEdit }}">Cambiar cobertura</button>
+                  <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ aa.onPrivate }}">Pasar a particular</button>
+                  <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ aa.onReprogram }}">Reprogramar</button>
+                  <button type="button" class="to-btn to-btn--danger-ghost to-btn--sm" onClick="{{ aa.onCancel }}">Cancelar</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ aa.isEditing }}">
+                <div class="to-affected-actions to-cov-edit">
+                  <label class="to-label" for="{{ aa.editSelectId }}">Nueva cobertura</label>
+                  <select id="{{ aa.editSelectId }}" class="to-select to-select--sm" value="{{ coverageEditValue }}" onChange="{{ onCoverageEditChange }}" data-autofocus="true"><sc-for list="{{ aa.editOptions }}" as="op" hint-placeholder-count="3"><option value="{{ op.value }}">{{ op.label }}</option></sc-for></select>
+                  <button type="button" class="to-btn to-btn--primary to-btn--sm" onClick="{{ saveCoverageEdit }}">Guardar</button>
+                  <button type="button" class="to-btn to-btn--secondary to-btn--sm" onClick="{{ cancelCoverageEdit }}">Descartar</button>
+                </div>
+              </sc-if>
+            </article>
+          </sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ !affectedAppointments.length }}"><div class="to-empty"><p class="to-empty-t">No hay turnos afectados para esta cobertura</p><p class="to-empty-s">Al suspender un convenio, se listan los turnos futuros desde la fecha informada.</p></div></sc-if>
+    </section>
+  </sc-if>
+
+  <sc-if value="{{ adminSectionIsConfig }}">
+    <div class="to-top"><div><h1>Políticas institucionales</h1><div class="to-top-s">Reglas mock que modifican las acciones disponibles para el paciente.</div></div></div>
+    <section class="to-panel to-policy-panel" aria-labelledby="policy-title">
+      <div class="to-panel-h"><h3 id="policy-title">Turnos</h3><span class="to-help">Se guarda en este navegador</span></div>
+      <label class="to-policy-row"><span><b>Permitir cancelación online</b><small>Si está desactivado, el paciente debe comunicarse con recepción.</small></span><input type="checkbox" role="switch" checked="{{ allowCancel }}" onChange="{{ onAllowCancelChange }}"/></label>
+      <div class="to-policy-row"><label for="cancel-limit"><b>Límite de cancelación</b><small>Anticipación mínima antes del horario del turno.</small></label><select id="cancel-limit" class="to-select to-select--sm" value="{{ cancelLimitHours }}" onChange="{{ onCancelLimitChange }}"><option value="0">Sin límite</option><option value="12">12 horas</option><option value="24">24 horas</option><option value="48">48 horas</option><option value="72">72 horas</option></select></div>
+      <label class="to-policy-row"><span><b>Permitir reprogramación online</b><small>El nuevo horario vuelve a validar disponibilidad.</small></span><input type="checkbox" role="switch" checked="{{ allowReschedule }}" onChange="{{ onAllowRescheduleChange }}"/></label>
+      <label class="to-policy-row"><span><b>Confirmar turnos con cobertura a validar</b><small>Si está activo, el turno queda “Confirmado · cobertura pendiente”. Si no, queda sin confirmar hasta que recepción valide la cobertura.</small></span><input type="checkbox" role="switch" checked="{{ confirmPendingCoverage }}" onChange="{{ onConfirmPendingCoverageChange }}"/></label>
+    </section>
+    <section class="to-panel to-policy-panel" aria-labelledby="docs-policy-title">
+      <div class="to-panel-h"><h3 id="docs-policy-title">Documentación por tipo de atención</h3></div>
+      <p class="to-help">La reserva muestra al paciente lo que se pide para la atención elegida. La demo solo comprueba la selección del archivo; no transmite ni conserva su contenido.</p>
+      <sc-for list="{{ documentPolicyGroups }}" as="dg" hint-placeholder-count="2">
+        <div class="to-doc-group" role="group" aria-labelledby="{{ dg.titleId }}">
+          <h4 id="{{ dg.titleId }}">{{ dg.label }}<small>{{ dg.sub }}</small></h4>
+          <sc-for list="{{ dg.rows }}" as="dp" hint-placeholder-count="3"><div class="to-policy-row"><label for="{{ dp.selectId }}"><b>{{ dp.label }}</b><small>{{ dp.help }}</small></label><select id="{{ dp.selectId }}" class="to-select to-select--sm" value="{{ dp.value }}" onChange="{{ dp.onChange }}"><option value="none">No se solicita</option><option value="optional">Opcional</option><option value="recommended">Recomendado</option><option value="required">Necesario</option></select></div></sc-for>
+        </div>
+      </sc-for>
+    </section>
+    <section class="to-panel to-policy-panel" aria-labelledby="notif-policy-title">
+      <div class="to-panel-h"><h3 id="notif-policy-title">Avisos al paciente</h3><span class="to-help">Canales simulados</span></div>
+      <dl class="to-channels">
+        <sc-for list="{{ notificationChannels }}" as="nc" hint-placeholder-count="6"><div><dt>{{ nc.event }}</dt><dd>{{ nc.channels }}</dd></div></sc-for>
+      </dl>
+    </section>
+  </sc-if>
   </main>
 
   <sc-if value="{{ drawerOpen }}">
@@ -758,7 +905,7 @@
               <dt>Profesional</dt><dd>{{ selectedAppt.professionalName }}</dd>
               <dt>Especialidad</dt><dd>{{ selectedAppt.specialtyName }}</dd>
               <dt>Consulta</dt><dd>{{ selectedAppt.typeName }}</dd>
-              <dt>Cobertura</dt><dd>{{ selectedAppt.coverage }}</dd>
+              <dt>Cobertura</dt><dd>{{ selectedAppt.coverage }} <span class="to-coverage-status {{ selectedAppt.coverageState.cls }}">{{ selectedAppt.coverageState.label }}</span><sc-if value="{{ selectedAppt.coverageDetail }}"><small class="to-kv-sub">{{ selectedAppt.coverageDetail }}</small></sc-if></dd>
               <dt>Reservado por</dt><dd><span class="to-ic {{ selectedAppt.originIcon }}" aria-hidden="true"></span>{{ selectedAppt.origin }}</dd>
             </dl>
           </div>
@@ -771,6 +918,9 @@
           </div>
         </div>
         <div class="to-dw-f">
+          <sc-if value="{{ selectedAppt.canValidateCoverage }}">
+            <button type="button" class="to-btn to-btn--secondary to-btn--block" onClick="{{ validateCoverageForSelected }}"><span class="to-ic to-ic-sm i-check" aria-hidden="true"></span>Registrar cobertura validada</button>
+          </sc-if>
           <sc-if value="{{ selectedAppt.canConfirm }}">
             <div class="to-dw-row">
               <button type="button" class="to-btn to-btn--primary" onClick="{{ adminConfirm }}">Confirmar turno</button>
@@ -1024,6 +1174,7 @@
       <div class="to-modal-b">
         <h3 id="cn-t">¿Cancelar este turno?</h3>
         <p id="cn-d">{{ cancelSummary }} {{ cancelFreeNote }}</p>
+        <sc-if value="{{ cancelPolicyNote }}"><p class="to-help" style="margin:-4px 0 14px">{{ cancelPolicyNote }}</p></sc-if>
         <div class="to-label" id="cn-r" style="margin-bottom:8px">Motivo <small>(opcional)</small></div>
         <div class="to-opts" role="radiogroup" aria-labelledby="cn-r">
           <sc-for list="{{ cancelReasons }}" as="r" hint-placeholder-count="4">
@@ -1068,7 +1219,24 @@ const CONSULT_TYPES = [
   {id:'primera',name:'Primera consulta',duration:30},
   {id:'control',name:'Control',duration:20},
   {id:'prolongada',name:'Consulta prolongada',duration:40},
+  {id:'estudio',name:'Estudio o práctica',duration:20},
 ];
+/* la documentación se pide por tipo de atención: las consultas comparten reglas y los estudios/prácticas tienen las suyas */
+const DOC_PROFILES = [
+  {id:'consulta',label:'Consultas',sub:'Primera consulta, control y consulta prolongada'},
+  {id:'practica',label:'Estudios y prácticas',sub:'Electrocardiograma, ecografía u otra práctica indicada'},
+];
+const DOC_POLICY_DEFAULTS = {
+  consulta:{dni:'optional',credential:'optional',order:'none'},
+  practica:{dni:'optional',credential:'recommended',order:'required'},
+};
+function docProfileFor(typeId){ return typeId==='estudio' ? 'practica' : 'consulta'; }
+/* acepta la forma anterior (un solo juego de reglas plano) y la lleva a perfiles */
+function normalizeDocPolicies(p){
+  if(!p || typeof p!=='object') return JSON.parse(JSON.stringify(DOC_POLICY_DEFAULTS));
+  if(p.consulta || p.practica) return {consulta:{...DOC_POLICY_DEFAULTS.consulta,...(p.consulta||{})}, practica:{...DOC_POLICY_DEFAULTS.practica,...(p.practica||{})}};
+  return {consulta:{...DOC_POLICY_DEFAULTS.consulta,...p,order:p.order==='optional'?'none':(p.order||'none')}, practica:{...DOC_POLICY_DEFAULTS.practica}};
+}
 const WEEKLY_AVAIL = {0:[],1:[['08:00','12:00'],['14:00','18:00']],2:[],3:[['08:00','13:00']],4:[['10:00','18:00']],5:[['08:00','12:00']],6:[]};
 const DOW_SHORT = ['dom','lun','mar','mié','jue','vie','sáb'];
 const DOW_LONG = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
@@ -1093,6 +1261,33 @@ function seedHash(str){let h=0;for(let i=0;i<str.length;i++){h=(h*31+str.charCod
 function cloneWeekly(){ return JSON.parse(JSON.stringify(WEEKLY_AVAIL)); }
 const WEEK_ORDER = [1,2,3,4,5,6,0];
 const TURNOS_STORAGE_KEY = 'vertical-salud-turnos-online-v2';
+const COVERAGE_STATUS_LABELS = {
+  vigente:'Vigente', requiere_validacion:'Requiere validación', observaciones:'Con observaciones',
+  suspendido:'Convenio suspendido', particular:'Particular',
+};
+/* Estado de cobertura de un turno: sale del convenio registrado y de lo que hizo recepción.
+   El Portal (app-mobile-pacientes/js/app.js) aplica el mismo criterio. */
+function apptCoverageState(a, records){
+  const cov = a.coverage || 'Particular';
+  if(cov==='Particular') return {key:'particular',label:'Particular',cls:'is-neutral'};
+  if(a.coverageReview==='requires-review') return {key:'revision',label:'Requiere revisión',cls:'is-review'};
+  if(a.coverageValidatedAt) return {key:'validada',label:'Cobertura validada',cls:'is-ok'};
+  const status = ((records||[]).find(r=>r.name===cov)||{}).status || 'requiere_validacion';
+  if(status==='vigente') return {key:'vigente',label:'Vigente',cls:'is-ok'};
+  if(status==='suspendido') return {key:'suspendido',label:'Convenio suspendido',cls:'is-error'};
+  return {key:'pendiente',label:'Cobertura pendiente de validación',cls:status==='observaciones'?'is-warning':'is-review'};
+}
+function apptStatusLabel(a, records){
+  const base = (STATUS_META[a.status]||STATUS_META.confirmado).label;
+  return (a.status==='confirmado' && apptCoverageState(a,records).key==='pendiente') ? base+' · cobertura pendiente' : base;
+}
+/* 23/09 · 11:52, sin a. m./p. m. para que no se corte en dos líneas */
+function fmtStampShort(stamp){
+  if(!stamp) return 'Sin registro';
+  const d=new Date(stamp); const p=n=>String(n).padStart(2,'0');
+  return p(d.getDate())+'/'+p(d.getMonth()+1)+' · '+p(d.getHours())+':'+p(d.getMinutes());
+}
+function fmtISOShort(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
 const ROW_H = 44; const TOP_PAD = 12; /*__TO_V2__*/
 const OFFER_MS = 6000; /* demora simulada hasta que el paciente de la lista de espera responde por WhatsApp */
 const MIN_ADVANCE_MIN = 120; /* regla "Anticipación mínima: 2 horas" */
@@ -1114,6 +1309,9 @@ function readTurnosPersistedState(){
     if(Array.isArray(parsed.waitlistEntries)) saved.waitlistEntries = parsed.waitlistEntries;
     if(Array.isArray(parsed.activity)) saved.activity = parsed.activity;
     if(parsed.profAvailability && typeof parsed.profAvailability==='object') saved.profAvailability = parsed.profAvailability;
+    if(Array.isArray(parsed.coverageRecords)) saved.coverageRecords = parsed.coverageRecords;
+    if(parsed.appointmentPolicies && typeof parsed.appointmentPolicies==='object') saved.appointmentPolicies = parsed.appointmentPolicies;
+    if(parsed.documentPolicies && typeof parsed.documentPolicies==='object') saved.documentPolicies = normalizeDocPolicies(parsed.documentPolicies);
     return Object.keys(saved).length ? saved : null;
   }catch(_e){ return null; }
 }
@@ -1129,6 +1327,9 @@ function persistTurnosState(state){
       waitlistEntries:state.waitlistEntries,
       activity:state.activity,
       profAvailability:state.profAvailability,
+      coverageRecords:state.coverageRecords,
+      appointmentPolicies:state.appointmentPolicies,
+      documentPolicies:state.documentPolicies,
     }));
   }catch(_e){ /* localStorage puede estar bloqueado en modo privado */ }
 }
@@ -1139,13 +1340,25 @@ function seedMineAppointment(){
   const t = ['10:00','11:30','12:00','15:00','15:30','16:00','16:30','17:00'].find(x=>timeToMin(x) >= nowMin+45);
   return {id:'a7',patientName:'Ana Suárez',professionalId:'gomez',dateISO:isoOf(t ? now : addDays(now,1)),time:t||'10:00',coverage:'OSDE',typeId:'primera',status:'confirmado',origin:'Web',whatsapp:'11 4567 8901',email:'ana.suarez@correo.com',dni:'35.112.908',mine:true};
 }
+function seedCoverageReviewAppointment(){
+  return {id:'a8',patientName:'María González',professionalId:'romero',dateISO:isoOf(addDays(new Date(),9)),time:'10:30',coverage:'OSDE',coveragePlan:'310',typeId:'primera',status:'confirmado',origin:'Portal del paciente',whatsapp:'11 6204 1188',email:'maria.gonzalez@demo.com',dni:'32.104.887',mine:true};
+}
+function seedCoverageRecords(){
+  const now = new Date().toISOString();
+  return [
+    {id:'ioma',name:'IOMA',plan:'Afiliación registrada',status:'vigente',effectiveFrom:'',reason:'',updatedAt:now,history:[{at:now,text:'Convenio activo'}]},
+    {id:'osde',name:'OSDE',plan:'310',status:'vigente',effectiveFrom:'',reason:'',updatedAt:now,history:[{at:now,text:'Convenio activo'}]},
+    {id:'swiss',name:'Swiss Medical',plan:'SMG20',status:'vigente',effectiveFrom:'',reason:'',updatedAt:now,history:[{at:now,text:'Convenio activo'}]},
+    {id:'galeno',name:'Galeno',plan:'Plan registrado',status:'requiere_validacion',effectiveFrom:'',reason:'',updatedAt:now,history:[{at:now,text:'Requiere validación de vigencia'}]},
+  ];
+}
 
 class Component extends DCLogic {
   state = {
     view:PANE==='admin'?'admin':'patient', toast:null, toastKind:null, flash:null, tick:0,
-    step:'home', search:'',
+    step:'home', search:'', bookingMode:'specialty',
     draft:{specialtyId:null,professionalId:null,isFirstAvailable:false,coverage:null,typeId:null,dateISO:null,time:null,reprogramApptId:null},
-    patientInfo:{nombre:'',apellido:'',dni:'',whatsapp:'',email:'',accept:false},
+    patientInfo:{nombre:'',apellido:'',dni:'',whatsapp:'',email:'',accept:false,documents:{}},
     dayOffset:0,
     waitlistOpen:false, waitlistDone:false, waitlistForm:{nombre:'Ana Suárez',whatsapp:'11 4567 8901',pref:'cualquiera'},
     activity:[],
@@ -1154,6 +1367,11 @@ class Component extends DCLogic {
     admin:{dateOffset:0,filterProf:'all',selectedApptId:null,reprogramming:false,reprogramDayOffset:0,reSelectedDateISO:null,reSelectedTime:null},
     agendaMenu:null,
     adminSection:'agenda', selectedProfDetailId:null, profDetailTab:'disponibilidad',
+    selectedCoverageId:'osde', coverageDraftStatus:'suspendido', coverageDraftDate:isoOf(addDays(new Date(),6)), coverageDraftReason:'Actualización de convenio',
+    coverageRecords:seedCoverageRecords(),
+    appointmentPolicies:{allowCancel:true,cancelLimitHours:24,allowReschedule:true,confirmPendingCoverage:true},
+    documentPolicies:normalizeDocPolicies(null),
+    coverageEditApptId:null, coverageEditValue:'',
     profAvailability:{gomez:cloneWeekly(),perez:cloneWeekly(),fernandez:cloneWeekly(),romero:cloneWeekly()},
     exceptions:[
       {id:'ex1',profId:'gomez',dateISO:isoOf(addDays(new Date(),2)),mode:'closed',from:null,to:null,reason:''},
@@ -1179,6 +1397,7 @@ class Component extends DCLogic {
       {id:'a5',patientName:'Santiago López',professionalId:'romero',dateISO:isoOf(new Date()),time:'14:00',coverage:'Galeno',typeId:'primera',status:'ausente',origin:'Recepción',whatsapp:'11 7788 1122',email:'santiago.lopez@mail.com',dni:'27.998.410'},
       {id:'a6',patientName:'Sofía López',professionalId:'gomez',dateISO:isoOf(addDays(new Date(),1)),time:'08:30',coverage:'IOMA',typeId:'control',status:'pendiente',origin:'Web',whatsapp:'11 3322 9981',email:'sofia.lopez@mail.com',dni:'33.445.109'},
       seedMineAppointment(),
+      seedCoverageReviewAppointment(),
     ],
   };
   _nextId = 100;
@@ -1187,6 +1406,18 @@ class Component extends DCLogic {
   componentDidMount(){
     const saved = readTurnosPersistedState();
     if(saved) this.setState(saved);
+    this.ensureCoverageScenario();
+    try{
+      const portal=JSON.parse(localStorage.getItem('vertical-salud-portal-session-v1')||'null');
+      if(portal?.authenticated){
+        this.setState(s=>({patientInfo:{...s.patientInfo,nombre:portal.nombre||s.patientInfo.nombre,apellido:portal.apellido||s.patientInfo.apellido,dni:portal.dni||s.patientInfo.dni,email:portal.email||s.patientInfo.email}}));
+      }
+      const params=new URLSearchParams(location.search);
+      const reprogramId=params.get('reprogram');
+      const specialtyId=params.get('especialidad');
+      if(reprogramId) window.setTimeout(()=>this.openReprogram(reprogramId),0);
+      else if(SPECIALTIES.some(x=>x.id===specialtyId)) window.setTimeout(()=>this.selectSpecialty(specialtyId),0);
+    }catch(_e){}
     if(PANE){ document.documentElement.classList.add('is-pane-'+PANE); }
     else { try{ if(/recepcion|admin/.test(location.hash+location.search)) this.setState({view:'admin'}); }catch(_e){} }
     this.syncNextId();
@@ -1393,6 +1624,10 @@ class Component extends DCLogic {
     const maxId = ids.length ? Math.max(...ids) : 0;
     if(maxId >= this._nextId) this._nextId = maxId + 1;
   }
+  ensureCoverageScenario(){
+    const hasScenario = (this.state.appointments||[]).some(a=>a.id==='a8' || a.email==='maria.gonzalez@demo.com');
+    if(!hasScenario) this.setState(s=>({appointments:[...s.appointments,seedCoverageReviewAppointment()]}));
+  }
 
   getSpecialty(id){ return SPECIALTIES.find(s=>s.id===id); }
   getProfessional(id){ return PROFESSIONALS.find(p=>p.id===id); }
@@ -1478,8 +1713,15 @@ class Component extends DCLogic {
   stopProp = (e)=>{ if(e&&e.stopPropagation) e.stopPropagation(); };
 
   onSearchChange = (e)=> this.setState({search:e.target.value});
+  chooseBookingMode = (mode)=> this.setState({bookingMode:mode,search:''});
+  chooseBookingBySpecialty = ()=> this.chooseBookingMode('specialty');
+  chooseBookingByProfessional = ()=> this.chooseBookingMode('professional');
   clearSearch = ()=> this.setState({search:''});
   selectSpecialty = (id)=> this.setState(s=>({step:'professional', draft:{...s.draft,specialtyId:id,professionalId:null,isFirstAvailable:false}}));
+  selectProfessionalFromHome = (id)=>{
+    const p = this.getProfessional(id); if(!p) return;
+    this.setState(s=>({step:'coverage',dayOffset:0,draft:{...s.draft,specialtyId:p.specialtyId,professionalId:p.id,isFirstAvailable:false,dateISO:null,time:null}}));
+  };
   selectProfessional = (id)=> this.setState(s=>({step:'coverage', draft:{...s.draft,professionalId:id,isFirstAvailable:false,...(s.draft.professionalId!==id?{dateISO:null,time:null}:{})}}));
   selectFirstAvailable = ()=>{
     const specId = this.state.draft.specialtyId;
@@ -1488,7 +1730,13 @@ class Component extends DCLogic {
     if(found){ this.setState(s=>({step:'coverage', draft:{...s.draft,professionalId:found.profId,isFirstAvailable:true,dateISO:found.iso,time:found.time}})); }
   };
 
-  selectCoverage = (cov)=> this.setState(s=>({step:'type', draft:{...s.draft,coverage:cov}}));
+  selectCoverage = (cov)=>{
+    const record = (this.state.coverageRecords||[]).find(r=>r.name===cov);
+    if(record?.status==='suspendido'){ this.showToast('Este convenio está suspendido. Elegí otra cobertura o particular.'); return; }
+    /* se queda en el paso: el paciente lee el estado registrado antes de seguir */
+    this.setState(s=>({draft:{...s.draft,coverage:cov}}));
+  };
+  continueFromCoverage = ()=>{ if(this.state.draft.coverage) this.setState({step:'type'}); };
   selectType = (id)=> this.setState(s=>({step:'datetime', draft:{...s.draft,typeId:id}, dayOffset: s.draft.dateISO ? Math.max(0, Math.floor(Math.round((new Date(s.draft.dateISO+'T00:00:00') - new Date(isoOf(new Date())+'T00:00:00'))/864e5)/5)*5) : 0}));
   goToTypeStep = ()=> this.setState({step:'type'});
   goToPatientStep = ()=> this.setState({step:'patientdata'});
@@ -1562,6 +1810,10 @@ class Component extends DCLogic {
   setDni = (e)=> this.setPatientField('dni', e.target.value);
   setWhatsapp = (e)=> this.setPatientField('whatsapp', e.target.value);
   setEmail = (e)=> this.setPatientField('email', e.target.value);
+  onDocumentSelected = (key)=>(e)=>{
+    const selected=!!(e.target.files&&e.target.files.length);
+    this.setState(s=>({patientInfo:{...s.patientInfo,documents:{...(s.patientInfo.documents||{}),[key]:selected}}}));
+  };
   toggleAccept = ()=> this.setState(s=>({patientInfo:{...s.patientInfo,accept:!s.patientInfo.accept}}));
 
   onContinue = ()=>{
@@ -1584,19 +1836,34 @@ class Component extends DCLogic {
     this.setState({step:'patientdata'});
   };
   onContinuePatientDataClick = ()=> this.setState({step:'summary'});
-  onSubmitPatientData = (e)=>{ if(e&&e.preventDefault) e.preventDefault(); const p=this.state.patientInfo; const ok = p.nombre.trim()&&p.apellido.trim()&&p.whatsapp.trim()&&/^\S+@\S+\.\S{2,}$/.test(p.email.trim())&&p.accept; if(ok) this.setState({step:'summary'}); };
+  onSubmitPatientData = (e)=>{
+    if(e&&e.preventDefault) e.preventDefault();
+    const p=this.state.patientInfo;
+    const rules=normalizeDocPolicies(this.state.documentPolicies)[docProfileFor(this.state.draft.typeId)];
+    const requiredDocs=Object.entries(rules).filter(([,policy])=>policy==='required').map(([key])=>key);
+    const documentsOk=requiredDocs.every(key=>p.documents&&p.documents[key]);
+    const ok=p.nombre.trim()&&p.apellido.trim()&&p.whatsapp.trim()&&/^\S+@\S+\.\S{2,}$/.test(p.email.trim())&&p.accept&&documentsOk;
+    if(ok) this.setState({step:'summary'});
+    else if(!documentsOk) this.showToast('Falta un documento que necesitamos para confirmar la atención.');
+  };
   onModify = ()=> this.setState({step:'professional'});
   onConfirm = ()=>{
     const {draft, patientInfo} = this.state;
     const id = 'p'+(this._nextId++);
+    const record = (this.state.coverageRecords||[]).find(r=>r.name===draft.coverage);
+    /* cobertura a validar: según la política, el turno se confirma igual ("cobertura pendiente") o espera a recepción */
+    const coveragePending = apptCoverageState({coverage:draft.coverage}, this.state.coverageRecords).key==='pendiente';
+    const confirmPending = this.state.appointmentPolicies?.confirmPendingCoverage!==false;
     const appt = {
       id, patientName:(patientInfo.nombre+' '+patientInfo.apellido).trim()||'Paciente',
       professionalId:draft.professionalId, dateISO:draft.dateISO, time:draft.time,
-      coverage:draft.coverage, typeId:draft.typeId, status:'confirmado', origin:'Web',
+      coverage:draft.coverage, coveragePlan:(record&&draft.coverage!=='Particular')?record.plan:'',
+      typeId:draft.typeId, status:(coveragePending&&!confirmPending)?'pendiente':'confirmado', origin:'Web',
       whatsapp:patientInfo.whatsapp, email:patientInfo.email, dni:patientInfo.dni||'—', mine:true,
+      documentsProvided:Object.keys(patientInfo.documents||{}).filter(key=>patientInfo.documents[key]),
     };
     const prof = this.getProfessional(appt.professionalId)?.name||'';
-    const ev = this.mkEvent({src:'patient', text:'Nuevo turno online: '+appt.patientName+', '+this.slotLabel(appt.dateISO,appt.time)+' con '+prof+'.', short:'Nuevo turno online · '+appt.patientName+' · '+this.slotLabel(appt.dateISO,appt.time),
+    const ev = this.mkEvent({src:'patient', text:'Nuevo turno online: '+appt.patientName+', '+this.slotLabel(appt.dateISO,appt.time)+' con '+prof+'.'+(coveragePending?' Cobertura '+appt.coverage+' pendiente de validación.':''), short:'Nuevo turno online · '+appt.patientName+' · '+this.slotLabel(appt.dateISO,appt.time)+(coveragePending?' · cobertura pendiente':''),
       focusISO:appt.dateISO, profId:appt.professionalId, flashIds:[id]});
     this.setState(s=>({appointments:[...s.appointments,appt], activity:this.pushEvent(s.activity, ev), step:'confirmed', myApptFocusId:id}));
   };
@@ -1614,9 +1881,17 @@ class Component extends DCLogic {
   };
   openReprogram = (id)=>{
     const a = this.state.appointments.find(x=>x.id===id);
+    if(!this.state.appointmentPolicies.allowReschedule){ this.showToast('La reprogramación online está deshabilitada. Contactá a la institución.'); return; }
+    if(!a) return;
     this.setState(s=>({step:'datetime', dayOffset:0, draft:{...s.draft,specialtyId:this.getProfessional(a.professionalId).specialtyId,professionalId:a.professionalId,coverage:a.coverage,typeId:a.typeId,dateISO:null,time:null,reprogramApptId:id}}));
   };
-  openCancelPatient = (id)=> this.setState({cancelModal:{apptId:id,context:'patient'},cancelReason:null});
+  openCancelPatient = (id)=>{
+    const a=this.state.appointments.find(x=>x.id===id); if(!a) return;
+    if(!this.state.appointmentPolicies.allowCancel){ this.showToast('La cancelación online está deshabilitada. Contactá a la institución.'); return; }
+    const hours=(new Date(a.dateISO+'T'+a.time+':00')-Date.now())/3600000;
+    if(hours<this.state.appointmentPolicies.cancelLimitHours){ this.showToast('El plazo de cancelación online ya venció. Contactá a la institución.'); return; }
+    this.setState({cancelModal:{apptId:id,context:'patient'},cancelReason:null});
+  };
   setCancelReason = (r)=> this.setState({cancelReason:r});
   closeCancelModal = ()=> this.setState({cancelModal:null});
   confirmCancel = ()=>{
@@ -1645,9 +1920,89 @@ class Component extends DCLogic {
   };
 
   onSidebarClick = (key)=>{
-    if(['agenda','profesionales','espera'].includes(key)){ this.setState({adminSection:key}); return; }
+    if(['agenda','profesionales','espera','coberturas','config'].includes(key)){ this.setState({adminSection:key}); return; }
     this.notImplementedToast();
   };
+  selectCoverageRecord = (id)=>{
+    const r=(this.state.coverageRecords||[]).find(x=>x.id===id); if(!r) return;
+    this.setState({selectedCoverageId:id,coverageDraftStatus:r.status,coverageDraftDate:r.effectiveFrom||isoOf(addDays(new Date(),6)),coverageDraftReason:r.reason||''});
+  };
+  onCoverageStatusChange = (e)=> this.setState({coverageDraftStatus:e.target.value});
+  onCoverageDateChange = (e)=> this.setState({coverageDraftDate:e.target.value});
+  onCoverageReasonChange = (e)=> this.setState({coverageDraftReason:e.target.value});
+  saveCoverageChange = ()=>{
+    const s=this.state;
+    const record=(s.coverageRecords||[]).find(r=>r.id===s.selectedCoverageId);
+    if(!record||!s.coverageDraftStatus) return;
+    const at=new Date().toISOString();
+    const statusLabel=COVERAGE_STATUS_LABELS[s.coverageDraftStatus]||s.coverageDraftStatus;
+    const historyEntry={at,text:statusLabel+(s.coverageDraftDate?' desde '+fmtISOShort(s.coverageDraftDate):'')+(s.coverageDraftReason?' · '+s.coverageDraftReason:'')};
+    const coverageRecords=s.coverageRecords.map(r=>r.id===record.id?{...r,status:s.coverageDraftStatus,effectiveFrom:s.coverageDraftDate,reason:s.coverageDraftReason,updatedAt:at,history:[historyEntry,...(r.history||[])]}:r);
+    const needsReview=s.coverageDraftStatus!=='vigente';
+    let affectedCount=0;
+    const appointments=s.appointments.map(a=>{
+      const affected=needsReview&&a.coverage===record.name&&a.status!=='cancelado'&&a.status!=='atendido'&&a.status!=='ausente'&&a.dateISO>=(s.coverageDraftDate||isoOf(new Date()));
+      if(affected) affectedCount++;
+      return affected?{...a,coverageReview:'requires-review',coverageValidatedAt:null,coverageReviewReason:'Cambio en el convenio de '+record.name,coverageReviewAt:at}:a;
+    });
+    const ev=this.mkEvent({src:'admin',text:'Se actualizó el convenio de '+record.name+' a '+statusLabel+'. '+affectedCount+' turno'+(affectedCount===1?' futuro requiere':'s futuros requieren')+' revisión.',short:record.name+' · '+statusLabel});
+    this.setState(st=>({coverageRecords,appointments,activity:this.pushEvent(st.activity,ev)}));
+    this.showToast(needsReview?affectedCount+' turno'+(affectedCount===1?' marcado':'s marcados')+' para revisar':'Estado del convenio actualizado');
+  };
+  notifyCoveragePatient = (id)=>{
+    const a=this.state.appointments.find(x=>x.id===id); if(!a) return;
+    const prof=this.getProfessional(a.professionalId)?.name||'el profesional';
+    const date=this.fmtDateLong(a.dateISO);
+    const patientMsg='Hola '+a.patientName.split(' ')[0]+'. Hubo un cambio en el convenio de tu cobertura para tu turno del '+date+' con '+prof+'. Tu turno sigue registrado; necesitamos revisar la modalidad antes de la fecha. Podés entrar al Portal del Paciente o comunicarte con recepción.';
+    const ev=this.mkEvent({src:'admin',text:'Aviso de cambio de cobertura enviado a '+a.patientName+' para '+date+'.',short:'Aviso de cobertura enviado a '+a.patientName,toPatient:true,patientMsg});
+    this.setState(s=>({appointments:s.appointments.map(x=>x.id===id?{...x,coverageNotifiedAt:Date.now()}:x),activity:this.pushEvent(s.activity,ev)}));
+    this.showToast('Aviso preparado para '+a.patientName,'wa');
+  };
+  resolveCoverageAsPrivate = (id)=>{
+    const a=this.state.appointments.find(x=>x.id===id); if(!a) return;
+    const ev=this.mkEvent({src:'admin',text:'Recepción registró modalidad particular para '+a.patientName+' en el turno '+this.slotLabel(a.dateISO,a.time)+'.',short:a.patientName+' · modalidad particular',toPatient:!!a.email,patientMsg:'Recepción actualizó la modalidad registrada para tu turno. Comunicate con la institución si necesitás revisar condiciones.'});
+    this.setState(s=>({appointments:s.appointments.map(x=>x.id===id?{...x,coverage:'Particular',coveragePlan:'',coverageReview:null,coverageValidatedAt:null,coverageResolution:'particular',coverageResolvedAt:Date.now()}:x),activity:this.pushEvent(s.activity,ev),coverageEditApptId:null}));
+    this.showToast('Modalidad particular registrada');
+  };
+  /* recepción registra otra cobertura para un turno afectado */
+  startCoverageEdit = (id)=>{
+    const a=this.state.appointments.find(x=>x.id===id); if(!a) return;
+    const first=(this.state.coverageRecords||[]).find(r=>r.status!=='suspendido'&&r.name!==a.coverage);
+    this.setState({coverageEditApptId:id,coverageEditValue:first?first.name:'Particular'});
+  };
+  onCoverageEditChange = (e)=> this.setState({coverageEditValue:e.target.value});
+  cancelCoverageEdit = ()=> this.setState({coverageEditApptId:null});
+  saveCoverageEdit = ()=>{
+    const s=this.state; const a=s.appointments.find(x=>x.id===s.coverageEditApptId); const cov=s.coverageEditValue;
+    if(!a||!cov) return;
+    if(cov==='Particular'){ this.resolveCoverageAsPrivate(a.id); return; }
+    const record=(s.coverageRecords||[]).find(r=>r.name===cov);
+    const state=apptCoverageState({coverage:cov},s.coverageRecords);
+    const ev=this.mkEvent({src:'admin',text:'Recepción cambió la cobertura de '+a.patientName+' a '+cov+' ('+state.label.toLowerCase()+') para el turno '+this.slotLabel(a.dateISO,a.time)+'.',short:a.patientName+' · cobertura '+cov,
+      toPatient:!!a.email,patientMsg:'Recepción registró '+cov+' como cobertura para tu turno. Estado registrado: '+state.label.toLowerCase()+'. La vigencia y los coseguros pueden requerir validación el día de la atención.'});
+    this.setState(st=>({appointments:st.appointments.map(x=>x.id===a.id?{...x,coverage:cov,coveragePlan:record?.plan||'',coverageReview:null,coverageValidatedAt:null,coverageResolution:'changed',coverageResolvedAt:Date.now()}:x),activity:this.pushEvent(st.activity,ev),coverageEditApptId:null}));
+    this.showToast('Cobertura actualizada: '+cov);
+  };
+  /* recepción verificó la cobertura de un turno con "cobertura pendiente" */
+  validateCoverageForSelected = ()=>{
+    const s=this.state; const a=s.appointments.find(x=>x.id===s.admin.selectedApptId); if(!a) return;
+    const ev=this.mkEvent({src:'admin',text:'Recepción validó la cobertura '+a.coverage+' de '+a.patientName+' para '+this.slotLabel(a.dateISO,a.time)+'.',short:a.patientName+' · cobertura validada',
+      toPatient:!!a.email,patientMsg:'Validamos tu cobertura '+a.coverage+' para el turno. Los coseguros y condiciones pueden requerir revisión el día de la atención.'});
+    this.setState(st=>({appointments:st.appointments.map(x=>x.id===a.id?{...x,coverageValidatedAt:Date.now(),status:x.status==='pendiente'?'confirmado':x.status}:x),activity:this.pushEvent(st.activity,ev)}));
+    this.showToast('Cobertura validada para '+a.patientName);
+  };
+  contactCoveragePatient = (id)=>{
+    const a=this.state.appointments.find(x=>x.id===id); if(!a) return;
+    this.setState(s=>({appointments:s.appointments.map(x=>x.id===id?{...x,coverageContactRequestedAt:Date.now()}:x)}));
+    this.showToast('Contacto pendiente para '+a.patientName+' · '+(a.whatsapp||'sin WhatsApp'));
+  };
+  setPolicy = (key,value)=> this.setState(s=>({appointmentPolicies:{...s.appointmentPolicies,[key]:value}}));
+  onAllowCancelChange = (e)=> this.setPolicy('allowCancel',e.target.checked);
+  onCancelLimitChange = (e)=> this.setPolicy('cancelLimitHours',Number(e.target.value));
+  onAllowRescheduleChange = (e)=> this.setPolicy('allowReschedule',e.target.checked);
+  onConfirmPendingCoverageChange = (e)=> this.setPolicy('confirmPendingCoverage',e.target.checked);
+  setDocumentPolicy = (profile,key,value)=> this.setState(s=>{ const all=normalizeDocPolicies(s.documentPolicies); return {documentPolicies:{...all,[profile]:{...all[profile],[key]:value}}}; });
+  onDocumentPolicyChange = (profile,key)=>(e)=> this.setDocumentPolicy(profile,key,e.target.value);
   openProfessionalDetail = (id)=> this.setState({adminSection:'profesionalDetail', selectedProfDetailId:id, profDetailTab:'disponibilidad'});
   backToProfesionales = ()=> this.setState({adminSection:'profesionales'});
   selectProfDetailTab = (tab)=> this.setState({profDetailTab:tab});
@@ -1821,8 +2176,10 @@ class Component extends DCLogic {
     const specName = (id)=> this.getSpecialty(id)?.name||'';
 
     /* ---------- home ---------- */
-    const q = s.search.trim().toLowerCase();
-    const specAll = SPECIALTIES.filter(sp=>sp.name.toLowerCase().includes(q)).map(sp=>{
+    /* sin acentos ni mayúsculas: "clinica" encuentra "Clínica" */
+    const fold = (t)=> String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+    const q = fold(s.search.trim());
+    const specAll = SPECIALTIES.filter(sp=>fold(sp.name).includes(q)).map(sp=>{
       const profs = PROFESSIONALS.filter(p=>p.specialtyId===sp.id);
       const found = profs.length ? this.firstAvailableSlot(profs.map(p=>p.id)) : null;
       return {...sp, count:profs.length, profLabel: profs.length===1 ? '1 profesional' : profs.length+' profesionales',
@@ -1830,6 +2187,22 @@ class Component extends DCLogic {
     });
     const specAvailable = specAll.filter(sp=>sp.count>0);
     const specSoon = specAll.filter(sp=>sp.count===0);
+    const professionalResults = PROFESSIONALS.filter(p=>{
+      const specialty = this.getSpecialty(p.specialtyId)?.name||'';
+      return fold(p.name+' '+specialty).includes(q);
+    }).map(p=>{
+      const found = this.firstAvailableSlot([p.id]);
+      return {...p, specialtyName:this.getSpecialty(p.specialtyId)?.name||'',
+        nextSlotLabel:found?relShort(found.iso)+' · '+found.time:'Sin turnos próximos',
+        onSelect:()=>this.selectProfessionalFromHome(p.id)};
+    }).filter(p=>p.nextSlotLabel!=='Sin turnos próximos');
+    const bookingBySpecialty = s.bookingMode==='specialty';
+    const bookingByProfessional = s.bookingMode==='professional';
+    const noHomeResults = bookingBySpecialty ? specAll.length===0 : professionalResults.length===0;
+    /* el motor de plantillas no evalúa &&: las condiciones compuestas se resuelven acá */
+    const showSpecList = bookingBySpecialty && specAvailable.length>0;
+    const showProList = bookingByProfessional && professionalResults.length>0;
+    const showSpecSoon = bookingBySpecialty && specSoon.length>0;
 
     /* ---------- flow ---------- */
     const currentSpecialty = this.getSpecialty(s.draft.specialtyId);
@@ -1846,9 +2219,43 @@ class Component extends DCLogic {
     const draftConsultType = this.getConsultType(s.draft.typeId);
     const draftDuration = draftConsultType?.duration || 30;
 
-    const COVER_HINT = {'Particular':'Sin cobertura','IOMA':'Obra social','OSDE':'Prepaga','Swiss Medical':'Prepaga','Galeno':'Prepaga','Otra obra social':'La validamos en recepción'};
-    const coverages = COVERAGES.map(name=>({name, hint:COVER_HINT[name]||'', selected:s.draft.coverage===name, cls:s.draft.coverage===name?'is-selected':'', onSelect:()=>this.selectCoverage(name)}));
-    const TYPE_DESC = {primera:'Primera vez con este profesional o por un tema nuevo.', control:'Seguimiento de un tratamiento o lectura de estudios.', prolongada:'Evaluación completa o varios temas en la misma consulta.'};
+    const COVER_HINT = {'Particular':'Sin cobertura','IOMA':'Obra social','OSDE':'Prepaga','Swiss Medical':'Prepaga','Galeno':'Prepaga','Otra obra social':'A validar con la institución'};
+    const coverageRecords = s.coverageRecords||[];
+    const confirmPendingCoverage = s.appointmentPolicies?.confirmPendingCoverage!==false;
+    const coverageStatusFor = (name)=>{
+      if(name==='Particular') return {key:'particular',label:'Particular',className:'is-neutral',hint:'Sin cobertura registrada'};
+      const record = coverageRecords.find(r=>r.name===name);
+      const status = record?.status || 'requiere_validacion';
+      const label = COVERAGE_STATUS_LABELS[status]||'Requiere validación';
+      const className = status==='vigente'?'is-ok':(status==='suspendido'?'is-error':(status==='observaciones'?'is-warning':'is-review'));
+      return {key:status,label,className,hint:COVER_HINT[name]||'Estado registrado',pending:status==='requiere_validacion'||status==='observaciones'};
+    };
+    const pendingCoverageNote = confirmPendingCoverage
+      ? 'Podés reservar igual: el turno queda confirmado con la cobertura pendiente y recepción la valida antes de la atención.'
+      : 'Podés reservar igual: el turno queda sin confirmar hasta que recepción valide la cobertura.';
+    const coverages = COVERAGES.map(name=>{
+      const info=coverageStatusFor(name);
+      return {name,hint:info.label+' · '+info.hint,selected:s.draft.coverage===name,cls:s.draft.coverage===name?'is-selected':'',statusClass:info.className,statusLabel:info.label,
+        disabled:info.key==='suspendido',onSelect:()=>this.selectCoverage(name)};
+    });
+    const selectedCoverageName=s.draft.coverage;
+    const selectedCoverageRecord=coverageRecords.find(r=>r.name===selectedCoverageName);
+    const selectedCoverageStatus=selectedCoverageName?coverageStatusFor(selectedCoverageName):null;
+    const selectedCoverageInfo=selectedCoverageName?(()=>{
+      if(selectedCoverageStatus.key==='particular') return {statusClass:selectedCoverageStatus.className,statusLabel:'Particular · sin cobertura registrada',validationLabel:'Consultá el valor de la atención con la institución.',pendingNote:null};
+      const updated=selectedCoverageRecord?.updatedAt?new Date(selectedCoverageRecord.updatedAt):new Date();
+      const updatedTime=new Intl.DateTimeFormat('es-AR',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(updated);
+      const updatedDate=isoOf(updated)===todayISO?'hoy · '+updatedTime:new Intl.DateTimeFormat('es-AR',{day:'2-digit',month:'2-digit'}).format(updated)+' · '+updatedTime;
+      return {statusClass:selectedCoverageStatus.className,statusLabel:selectedCoverageStatus.label,
+        validationLabel:(selectedCoverageRecord?(selectedCoverageStatus.key==='vigente'?'Última validación: ':'Última revisión: ')+updatedDate:'Sin registro en la institución')+(selectedCoverageRecord?.plan?' · '+(/^plan /i.test(selectedCoverageRecord.plan)?selectedCoverageRecord.plan:'Plan '+selectedCoverageRecord.plan):''),
+        pendingNote:selectedCoverageStatus.pending?'Tu cobertura necesita ser verificada antes de la atención. '+pendingCoverageNote:null};
+    })():null;
+    const draftCoverageLabel = selectedCoverageName ? selectedCoverageName+' · '+(selectedCoverageStatus.key==='particular'?'sin cobertura':selectedCoverageStatus.label) : '';
+    const draftCoveragePending = !!(selectedCoverageStatus && selectedCoverageStatus.pending);
+    const bookingPolicyCopy=s.appointmentPolicies?.allowCancel
+      ? (s.appointmentPolicies.allowReschedule?'Podés gestionar cambios desde Mis turnos hasta '+s.appointmentPolicies.cancelLimitHours+' h antes.':'La cancelación online está disponible hasta '+s.appointmentPolicies.cancelLimitHours+' h antes; para reprogramar, contactá a la institución.')
+      : (s.appointmentPolicies.allowReschedule?'Para cancelar, contactá a la institución. Podés reprogramar desde Mis turnos.':'Para cancelar o reprogramar, contactá a la institución.');
+    const TYPE_DESC = {primera:'Primera vez con este profesional o por un tema nuevo.', control:'Seguimiento de un tratamiento o lectura de estudios.', prolongada:'Evaluación completa o varios temas en la misma consulta.', estudio:'Electrocardiograma, ecografía u otra práctica indicada por un profesional.'};
     const consultTypes = CONSULT_TYPES.map(c=>({...c, desc:TYPE_DESC[c.id]||'', durationLabel:c.duration+' min', selected:s.draft.typeId===c.id, cls:s.draft.typeId===c.id?'is-selected':'', onSelect:()=>this.selectType(c.id)}));
 
     const days = Array.from({length:5},(_,i)=>{
@@ -1882,9 +2289,28 @@ class Component extends DCLogic {
     const hasDateTime = !!(s.draft.dateISO && s.draft.time);
     const emailInvalid = !!s.patientInfo.email.trim() && !/^\S+@\S+\.\S{2,}$/.test(s.patientInfo.email.trim());
     const pi = s.patientInfo;
-    const missing = [!pi.nombre.trim()&&'nombre', !pi.apellido.trim()&&'apellido', !pi.whatsapp.trim()&&'WhatsApp', !pi.email.trim()&&'email'].filter(Boolean);
-    const patientDataValid = missing.length===0 && !emailInvalid && pi.accept;
-    const missingHint = patientDataValid ? null : (missing.length ? 'Falta completar: '+missing.join(', ')+'.' : (emailInvalid ? null : 'Aceptá recibir información del turno para continuar.'));
+    const documentNames={dni:'DNI',credential:'Credencial de cobertura',order:'Orden médica'};
+    const DOC_POLICY_COPY={
+      optional:{tag:'Opcional',help:'Podés cargarlo ahora para agilizar la admisión.'},
+      recommended:{tag:'Recomendado',help:'Ayuda a validar tu cobertura antes del turno. Podés cargarlo ahora o más adelante.'},
+      required:{tag:'Necesario para esta atención',help:'Necesitamos este documento para confirmar la atención.'},
+    };
+    const docRules=normalizeDocPolicies(s.documentPolicies)[docProfileFor(s.draft.typeId)];
+    const documentUploadRows=Object.entries(docRules).filter(([,policy])=>DOC_POLICY_COPY[policy]).map(([key,policy])=>({
+      key,label:documentNames[key]||'Documentación',inputId:'booking-doc-'+key,hintId:'booking-doc-hint-'+key,
+      policyLabel:DOC_POLICY_COPY[policy].tag,required:policy==='required',cls:policy==='required'?'is-required':'',
+      statusLabel:pi.documents&&pi.documents[key]?'Archivo seleccionado (solo demo local).':DOC_POLICY_COPY[policy].help,
+      onChange:this.onDocumentSelected(key),
+    }));
+    const hasRequiredDocuments=documentUploadRows.some(d=>d.required);
+    const documentsLaterNote=hasRequiredDocuments
+      ? 'Lo que no sea necesario podés completarlo más adelante desde el Portal del Paciente.'
+      : 'Podés completarlo más adelante desde el Portal del Paciente. Ninguno es necesario para reservar.';
+    const missingInputs=[!pi.nombre.trim()&&'nombre',!pi.apellido.trim()&&'apellido',!pi.whatsapp.trim()&&'WhatsApp',!pi.email.trim()&&'email'].filter(Boolean);
+    const missingDocuments=documentUploadRows.filter(doc=>doc.required&&!(pi.documents&&pi.documents[doc.key])).map(doc=>doc.label);
+    const missing=[...missingInputs,...missingDocuments];
+    const patientDataValid=missing.length===0&&!emailInvalid&&pi.accept;
+    const missingHint=patientDataValid?null:(missing.length?'Falta completar: '+missing.join(', ')+'.':(emailInvalid?null:'Aceptá recibir información del turno para continuar.'));
     const railCta = s.step==='datetime' && hasDateTime;
 
     const STEP_LABELS = ['Especialidad','Profesional','Cobertura','Consulta','Día y hora','Tus datos','Confirmar'];
@@ -1895,7 +2321,7 @@ class Component extends DCLogic {
     const railRows = [
       {k:'Especialidad', v:currentSpecialty?.name, onEdit:this.goHome, step:'home'},
       {k:'Profesional', v:draftProfessional?.name, onEdit:this.goToProfessionalStep, step:'professional'},
-      {k:'Cobertura', v:s.draft.coverage, onEdit:this.goToCoverageStep, step:'coverage'},
+      {k:'Cobertura', v:draftCoverageLabel, onEdit:this.goToCoverageStep, step:'coverage'},
       {k:'Consulta', v:draftConsultType ? draftConsultType.name+' · '+draftConsultType.duration+' min' : null, onEdit:this.goToTypeStep, step:'type'},
     ].map(r=>({k:r.k, v:r.v||'Sin elegir', cls:r.v?'':'is-empty', onEdit:(r.v && r.step!==s.step && !s.draft.reprogramApptId)?r.onEdit:null, editLabel:'Cambiar '+r.k.toLowerCase()}));
     const railDatetime = hasDateTime ? shortDay(s.draft.dateISO)+' · '+s.draft.time+' hs' : null;
@@ -1907,23 +2333,41 @@ class Component extends DCLogic {
     const myAppointments = appts.filter(a=>a.mine).slice().sort((x,y)=> (x.dateISO+x.time).localeCompare(y.dateISO+y.time)).map(a=>{
       const d = new Date(a.dateISO+'T00:00:00');
       const canAct = a.status!=='cancelado'&&a.status!=='atendido'&&a.status!=='ausente';
+      const hoursToAppointment=(new Date(a.dateISO+'T'+a.time+':00')-Date.now())/3600000;
+      const canCancel=canAct&&s.appointmentPolicies.allowCancel&&hoursToAppointment>=s.appointmentPolicies.cancelLimitHours;
+      const canReprogram=canAct&&s.appointmentPolicies.allowReschedule;
+      const covState=apptCoverageState(a,s.coverageRecords);
+      const policyMessage=canAct&&!canCancel&&!canReprogram
+        ? (s.appointmentPolicies.allowCancel?'El plazo online para cambios venció. Contactá a la institución.':'Gestioná cambios con la institución.')
+        : (canAct&&!canCancel?'La cancelación online requiere '+s.appointmentPolicies.cancelLimitHours+' h de anticipación.':'');
       return {
         ...a, professionalName:this.getProfessional(a.professionalId)?.name||'—', specialtyName:specName(this.getProfessional(a.professionalId)?.specialtyId)||'—',
         typeName:this.getConsultType(a.typeId)?.name||'', dateLong:this.fmtDateLong(a.dateISO),
         dowLabel:MONTHS_SHORT[d.getMonth()], dayNum:d.getDate(), cls:cx(a.status==='cancelado'&&'is-cancelado', a.id===s.myApptFocusId&&'is-focus'),
-        statusMeta:STATUS_META[a.status], canConfirm:a.status==='pendiente', canAct, hasActions: canAct,
+        statusMeta:STATUS_META[a.status], statusLabel:apptStatusLabel(a,s.coverageRecords), canConfirm:a.status==='pendiente', canReprogram,canCancel,policyMessage,hasActions: canAct,
+        coverageLine:(a.coverage||'Particular')+' · '+covState.label, coveragePendingNote: canAct&&covState.key==='pendiente' ? 'Tu cobertura necesita ser verificada antes de la atención.' : null,
         onConfirmClick:()=>this.confirmAppt(a.id), onReprogramClick:()=>this.openReprogram(a.id), onCancelClick:()=>this.openCancelPatient(a.id),
       };
     });
     const misTurnosCount = appts.filter(a=>a.mine && (a.status==='pendiente'||a.status==='confirmado') && a.dateISO>=todayISO).length;
     const focusNum = String(s.myApptFocusId||'').replace(/\D/g,'');
     const bookingCode = 'SM-'+String(4800+Number(focusNum||0)).padStart(5,'0');
+    /* confirmación: se lee del turno guardado, no del borrador */
+    const confirmedRaw = s.step==='confirmed' ? appts.find(a=>a.id===s.myApptFocusId) : null;
+    const confirmedCov = confirmedRaw ? apptCoverageState(confirmedRaw,s.coverageRecords) : null;
+    const confirmedIsRequest = !!(confirmedRaw && confirmedRaw.status==='pendiente');
+    const confirmedCoverageNote = confirmedCov && confirmedCov.key==='pendiente'
+      ? (confirmedIsRequest ? 'Tu cobertura necesita ser verificada antes de la atención. Recepción la valida y te confirma el turno por WhatsApp.' : 'Tu cobertura necesita ser verificada antes de la atención. El turno queda confirmado; recepción valida la cobertura antes de la fecha y te avisa si hace falta algo.')
+      : null;
+    const confirmedDocs = confirmedRaw ? (confirmedRaw.documentsProvided||[]) : [];
 
     /* ---------- admin ---------- */
+    const coverageReviewAppts=appts.filter(a=>a.coverageReview==='requires-review'&&a.status!=='cancelado'&&a.status!=='atendido'&&a.status!=='ausente'&&a.dateISO>=todayISO);
+    const coverageReviewCount=coverageReviewAppts.length;
     const navItem = (key,label,icon,badge)=>({key,label,icon,badge, ariaCurrent:(key===s.adminSection || (key==='profesionales' && s.adminSection==='profesionalDetail'))?'page':undefined, onClick:()=>this.onSidebarClick(key)});
     const sidebarGroups = [
       {title:'Operación', items:[navItem('agenda','Agenda','i-calendar'), navItem('turnos','Turnos','i-list'), navItem('espera','Lista de espera','i-hourglass', s.waitlistEntries.filter(w=>(w.status||'esperando')==='esperando').length||null)]},
-      {title:'Gestión', items:[navItem('pacientes','Pacientes','i-users'), navItem('profesionales','Profesionales','i-steth'), navItem('especialidades','Especialidades','i-tag')]},
+      {title:'Gestión', items:[navItem('pacientes','Pacientes','i-users'), navItem('profesionales','Profesionales','i-steth'), navItem('especialidades','Especialidades','i-tag'), navItem('coberturas','Coberturas','i-tag',coverageReviewCount||null)]},
       {title:'Sistema', items:[navItem('config','Configuración','i-settings')]},
     ];
     const agendaDate = addDays(new Date(), s.admin.dateOffset);
@@ -1952,9 +2396,9 @@ class Component extends DCLogic {
         const parts = a.patientName.split(' ');
         const fromWaitlist = a.origin==='Lista de espera';
         const typeName = fromWaitlist ? 'Lista de espera' : (this.getConsultType(a.typeId)?.name||'');
-        return {id:a.id, top, height, timeLabel:a.time, patientName:parts[0]+' '+(parts[1]||''), typeName, statusLabel:meta.label, showType: height>=40, fromWaitlist,
+        return {id:a.id, top, height, timeLabel:a.time, patientName:parts[0]+' '+(parts[1]||''), typeName, statusLabel:apptStatusLabel(a,s.coverageRecords), showType: height>=40, fromWaitlist,
           cls: cx('st-b-'+a.status, fromWaitlist && 'is-wl', a.id===s.admin.selectedApptId && 'is-selected', (s.flash||[]).includes(a.id) && 'is-fresh'),
-          ariaLabel: a.time+' a '+minToTime(timeToMin(a.time)+dur)+', '+a.patientName+', '+typeName+', '+meta.label,
+          ariaLabel: a.time+' a '+minToTime(timeToMin(a.time)+dur)+', '+a.patientName+', '+typeName+', '+apptStatusLabel(a,s.coverageRecords),
           onOpen:()=>this.openDrawer(a.id)};
       });
       const lockBlocks = s.blocks.filter(b=>b.profId===p.id && b.dateISO===agendaISO).map(b=>({
@@ -1976,7 +2420,49 @@ class Component extends DCLogic {
     const agendaMenu = s.agendaMenu ? {...s.agendaMenu, profName:this.getProfessional(s.agendaMenu.profId)?.name||''} : null;
 
     const adminSectionIsAgenda = s.adminSection==='agenda', adminSectionIsProfesionales = s.adminSection==='profesionales',
-      adminSectionIsProfDetail = s.adminSection==='profesionalDetail', adminSectionIsEspera = s.adminSection==='espera';
+      adminSectionIsProfDetail = s.adminSection==='profesionalDetail', adminSectionIsEspera = s.adminSection==='espera',
+      adminSectionIsCoverages=s.adminSection==='coberturas',adminSectionIsConfig=s.adminSection==='config';
+
+    const coverageClass=status=>status==='vigente'?'is-ok':(status==='suspendido'?'is-error':(status==='observaciones'?'is-warning':(status==='particular'?'is-neutral':'is-review')));
+    const fmtStamp=fmtStampShort;
+    const coverageRows=(s.coverageRecords||[]).map(r=>{
+      const future=appts.filter(a=>a.coverage===r.name&&a.dateISO>=todayISO&&a.status!=='cancelado'&&a.status!=='atendido'&&a.status!=='ausente');
+      const futureCount=future.length;
+      const pendingCount=future.filter(a=>apptCoverageState(a,s.coverageRecords).key==='pendiente').length;
+      return {...r,statusLabel:COVERAGE_STATUS_LABELS[r.status]||'Requiere validación',statusClass:coverageClass(r.status),futureCount,
+        countLabel:futureCount+(futureCount===1?' turno futuro':' turnos futuros')+(pendingCount?' · '+pendingCount+' con cobertura pendiente':''),
+        selected:r.id===s.selectedCoverageId,selectedCls:r.id===s.selectedCoverageId?'is-selected':'',onSelect:()=>this.selectCoverageRecord(r.id)};
+    });
+    const selectedCoverageRaw=(s.coverageRecords||[]).find(r=>r.id===s.selectedCoverageId)||(s.coverageRecords||[])[0]||{id:'',name:'Cobertura',plan:'Sin plan',status:'requiere_validacion',history:[]};
+    const selectedCoverage={...selectedCoverageRaw,statusLabel:COVERAGE_STATUS_LABELS[selectedCoverageRaw.status]||'Requiere validación',statusClass:coverageClass(selectedCoverageRaw.status),lastUpdatedLabel:fmtStamp(selectedCoverageRaw.updatedAt),
+      historyRows:(selectedCoverageRaw.history||[]).slice(0,6).map(h=>({date:fmtStamp(h.at),text:h.text}))};
+    const coverageStatusOptions=Object.entries(COVERAGE_STATUS_LABELS).filter(([v])=>v!=='particular').map(([value,label])=>({value,label}));
+    const affectedAppointments=coverageReviewAppts.filter(a=>a.coverage===selectedCoverageRaw.name).map(a=>({
+      ...a,dateLabel:this.fmtDateLong(a.dateISO),professionalName:this.getProfessional(a.professionalId)?.name||'—',contact:a.whatsapp||a.email||'Sin contacto',
+      notificationLabel:a.coverageNotifiedAt?'Aviso preparado · WhatsApp y Portal · '+fmtStamp(a.coverageNotifiedAt):'Sin notificar',notifyLabel:a.coverageNotifiedAt?'Preparar otro aviso':'Notificar paciente',
+      contactLabel:a.coverageContactRequestedAt?'Contacto pendiente · '+fmtStamp(a.coverageContactRequestedAt):null,
+      isEditing:s.coverageEditApptId===a.id,notEditing:s.coverageEditApptId!==a.id,editSelectId:'cov-edit-'+a.id,
+      editOptions:[...(s.coverageRecords||[]).filter(r=>r.status!=='suspendido'&&r.name!==a.coverage).map(r=>({value:r.name,label:r.name+' · '+(COVERAGE_STATUS_LABELS[r.status]||'Requiere validación')})),{value:'Particular',label:'Particular · sin cobertura'}],
+      onEdit:()=>this.startCoverageEdit(a.id),
+      onNotify:()=>this.notifyCoveragePatient(a.id),onContact:()=>this.contactCoveragePatient(a.id),onPrivate:()=>this.resolveCoverageAsPrivate(a.id),
+      onReprogram:()=>this.openDrawer(a.id),onCancel:()=>this.openCancelAdmin(a.id),
+    }));
+    const policyState=s.appointmentPolicies||{allowCancel:true,cancelLimitHours:24,allowReschedule:true};
+    const allDocPolicies=normalizeDocPolicies(s.documentPolicies);
+    const documentPolicyGroups=DOC_PROFILES.map(pr=>({...pr,titleId:'docs-'+pr.id,rows:[
+      {key:'dni',label:'DNI',help:'Identificación para admisión.'},
+      {key:'credential',label:'Credencial',help:'Permite revisar la cobertura registrada.'},
+      {key:'order',label:'Orden médica',help:pr.id==='practica'?'Indicación del profesional que solicita la práctica.':'Normalmente no se pide para una consulta.'},
+    ].map(d=>({...d,selectId:'doc-'+pr.id+'-'+d.key,value:allDocPolicies[pr.id][d.key],onChange:this.onDocumentPolicyChange(pr.id,d.key)}))}));
+    /* representación compacta de por dónde sale cada aviso (sin motor de mensajería) */
+    const notificationChannels=[
+      {event:'Turno confirmado',channels:'WhatsApp · Email · Portal'},
+      {event:'Recordatorio',channels:'WhatsApp'},
+      {event:'Turno reprogramado',channels:'WhatsApp · Portal'},
+      {event:'Turno cancelado',channels:'WhatsApp · Email · Portal'},
+      {event:'Cambio de cobertura',channels:'WhatsApp · Portal · lo prepara recepción'},
+      {event:'Documentación pendiente',channels:'Email · Portal'},
+    ];
 
     const WEEK_LETTERS = {1:'L',2:'M',3:'M',4:'J',5:'V',6:'S',0:'D'};
     const professionalsRows = PROFESSIONALS.map(p=>{
@@ -2066,14 +2552,17 @@ class Component extends DCLogic {
     const selApptRaw = s.admin.selectedApptId ? appts.find(a=>a.id===s.admin.selectedApptId) : null;
     const ORIGIN = {Web:['Turnos online','i-calendar'], WhatsApp:['WhatsApp','i-chat'], 'Recepción':['Recepción','i-users'], 'Lista de espera':['Lista de espera','i-hourglass']};
     const selectedAppt = selApptRaw ? (()=>{
+      const selCov = apptCoverageState(selApptRaw,s.coverageRecords);
       const dur = this.getConsultType(selApptRaw.typeId)?.duration||30;
       const d = new Date(selApptRaw.dateISO+'T00:00:00');
       const o = ORIGIN[selApptRaw.origin] || [selApptRaw.origin,'i-calendar'];
       return {...selApptRaw, professionalName:this.getProfessional(selApptRaw.professionalId)?.name, specialtyName:specName(this.getProfessional(selApptRaw.professionalId)?.specialtyId),
         dateLabel:this.fmtDateLong(selApptRaw.dateISO), shortDate:shortDay(selApptRaw.dateISO), mon:MONTHS_SHORT[d.getMonth()], dayNum:d.getDate(),
         typeName:this.getConsultType(selApptRaw.typeId)?.name, duration:dur, endTime:minToTime(timeToMin(selApptRaw.time)+dur),
-        statusMeta:STATUS_META[selApptRaw.status], canConfirm:selApptRaw.status==='pendiente', isAtendido:selApptRaw.status==='atendido', isAusente:selApptRaw.status==='ausente',
-        origin:o[0], originIcon:o[1]};
+        statusMeta:{...(STATUS_META[selApptRaw.status]||STATUS_META.confirmado),label:apptStatusLabel(selApptRaw,s.coverageRecords)}, canConfirm:selApptRaw.status==='pendiente', isAtendido:selApptRaw.status==='atendido', isAusente:selApptRaw.status==='ausente',
+        origin:o[0], originIcon:o[1], coverageState:selCov,
+        coverageDetail:[selApptRaw.coveragePlan?'Plan '+selApptRaw.coveragePlan:'', selApptRaw.coverageValidatedAt?'Validada '+fmtStampShort(selApptRaw.coverageValidatedAt):''].filter(Boolean).join(' · '),
+        canValidateCoverage:selCov.key==='pendiente'&&!['cancelado','atendido','ausente'].includes(selApptRaw.status)};
     })() : null;
 
     const reDaysRaw = Array.from({length:5},(_,i)=>{
@@ -2095,6 +2584,9 @@ class Component extends DCLogic {
     const cancelSummary = cancelAppt ? (s.cancelModal.context==='admin'
       ? `${cancelAppt.patientName}, ${this.fmtDateLong(cancelAppt.dateISO)} a las ${cancelAppt.time} con ${this.getProfessional(cancelAppt.professionalId)?.name}. Le avisamos por WhatsApp.`
       : `Tu turno del ${this.fmtDateLong(cancelAppt.dateISO)} a las ${cancelAppt.time} con ${this.getProfessional(cancelAppt.professionalId)?.name}.`) : '';
+    const cancelPolicyNote = (cancelAppt && s.cancelModal.context!=='admin')
+      ? (Number(s.appointmentPolicies.cancelLimitHours) ? 'Según la política de la institución, podés cancelar online hasta '+s.appointmentPolicies.cancelLimitHours+' h antes del turno.' : 'La institución permite cancelar online sin anticipación mínima.')
+      : null;
     const cancelFreeNote = cancelAppt ? (()=>{
       if(!this.isFutureSlot(cancelAppt.dateISO, cancelAppt.time)) return 'El horario queda libre.';
       if(s.cancelModal.context!=='admin') return 'El horario queda libre y se lo ofrecemos a quien esté en lista de espera.';
@@ -2119,11 +2611,22 @@ class Component extends DCLogic {
       railRows, railDatetime, railWhenCls: railDatetime?'is-set':'', railWhenSub: draftProfessional ? draftProfessional.name+' · '+draftDuration+' min' : '', railCta, mobileSummary,
       showMobileBar: railCta,
 
-      search:s.search, onSearchChange:this.onSearchChange, clearSearch:this.clearSearch, specAvailable, specSoon, noSpecialtyResults: specAll.length===0,
+      search:s.search, onSearchChange:this.onSearchChange, clearSearch:this.clearSearch, specAvailable, specSoon, professionalResults, showSpecList, showProList, showSpecSoon,
+      bookingBySpecialty,bookingByProfessional,chooseBookingBySpecialty:this.chooseBookingBySpecialty,chooseBookingByProfessional:this.chooseBookingByProfessional,
+      searchLabel:bookingBySpecialty?'Buscar especialidad':'Buscar profesional',searchPlaceholder:bookingBySpecialty?'Buscar especialidad':'Nombre del profesional o especialidad',
+      searchEntity:bookingBySpecialty?'nombre':'profesional',noHomeResults,
 
       currentSpecialtyName: currentSpecialty?.name||'', hasProfessionalsForSpecialty: professionalsList.length>0, noProfessionalsForSpecialty: professionalsList.length===0,
       professionalsList, firstAv, selectFirstAvailable:this.selectFirstAvailable,
-      coverages, consultTypes,
+      coverages,selectedCoverageInfo, consultTypes,bookingPolicyCopy, continueFromCoverage:this.continueFromCoverage,
+      draftCoverageLabel, summaryCoverageNote: selectedCoverageInfo?.pendingNote||null,
+      confirmedTitle: confirmedIsRequest ? 'Recibimos tu solicitud de turno' : 'Listo, tu turno está reservado',
+      confirmedSub: confirmedIsRequest ? 'Recepción valida tu cobertura y te confirma el turno por WhatsApp'+(pi.whatsapp.trim()?' al '+pi.whatsapp.trim():'')+'.' : 'Te enviamos el comprobante por WhatsApp'+(pi.whatsapp.trim()?' al '+pi.whatsapp.trim():'')+'.',
+      confirmedCoverage: confirmedRaw ? (confirmedRaw.coverage||'Particular') : '', confirmedCoverageState: confirmedCov ? confirmedCov.label : '', confirmedCoverageCls: confirmedCov ? confirmedCov.cls : '',
+      confirmedCoverageNote,
+      confirmedDocsText: confirmedDocs.length
+        ? 'Recibimos '+confirmedDocs.map(k=>({dni:'DNI',credential:'credencial',order:'orden médica'}[k]||k)).join(', ')+' (solo en este dispositivo). Lo que falte podés completarlo más adelante desde el Portal del Paciente.'
+        : 'Podés completarlo más adelante desde el Portal del Paciente. La institución puede pedir documentación adicional según la atención.',
 
       days:daysOut, monthLabel, prevDisabled: s.dayOffset<=0, goPrevDays:this.goPrevDays, goNextDays:this.goNextDays,
       morningSlots, afternoonSlots, hasSlots:(morningSlots.length+afternoonSlots.length)>0,
@@ -2134,6 +2637,7 @@ class Component extends DCLogic {
       waitlistInvalid: !s.waitlistForm.nombre.trim() || !s.waitlistForm.whatsapp.trim(),
 
       patientInfo:s.patientInfo, setNombre:this.setNombre, setApellido:this.setApellido, setDni:this.setDni, setWhatsapp:this.setWhatsapp, setEmail:this.setEmail, toggleAccept:this.toggleAccept,
+      documentUploadRows,hasDocumentRequirements:documentUploadRows.length>0,documentsLaterNote,
       emailInvalid, missingHint, continueDisabled: !patientDataValid, onSubmitPatientData:this.onSubmitPatientData,
       patientFullName: (pi.nombre+' '+pi.apellido).trim(),
 
@@ -2147,7 +2651,7 @@ class Component extends DCLogic {
       myAppointments,
       continueLabel: s.draft.reprogramApptId ? 'Confirmar nuevo horario' : 'Continuar', onContinue:this.onContinue,
 
-      cancelModal:s.cancelModal, cancelReasons, cancelSummary, closeCancelModal:this.closeCancelModal,
+      cancelModal:s.cancelModal, cancelReasons, cancelSummary, cancelPolicyNote, closeCancelModal:this.closeCancelModal,
       confirmCancel: ()=>{ const wasAdmin = s.cancelModal?.context==='admin'; this.confirmCancel(); if(wasAdmin) this.closeDrawer(); },
 
       sidebarGroups, agendaDateLabel, agendaIsToday: agendaISO===todayISO, goToday:this.goToday, prevDay:this.prevDay, nextDay:this.nextDay,
@@ -2155,10 +2659,22 @@ class Component extends DCLogic {
       filterProf:s.admin.filterProf, onFilterProfChange:this.onFilterProfChange, professionalsAll:PROFESSIONALS,
       columns, columnsTemplate, gridHeight, hourLabels, nowIndicator,
 
-      adminSectionIsAgenda, adminSectionIsProfesionales, adminSectionIsProfDetail, adminSectionIsEspera,
+      adminSectionIsAgenda, adminSectionIsProfesionales, adminSectionIsProfDetail, adminSectionIsEspera,adminSectionIsCoverages,adminSectionIsConfig,
       professionalsRows, profDetail, profDetailTabs,
       profDetailTabIsInfo: s.profDetailTab==='informacion', profDetailTabIsAvailability: s.profDetailTab==='disponibilidad', profDetailTabIsTypes: s.profDetailTab==='tipos',
       backToProfesionales:this.backToProfesionales, consultTypesReadonly, openExceptionModal:this.openExceptionModal,
+
+      coverageRows,selectedCoverage,coverageReviewCount,affectedAppointments,coverageStatusOptions,
+      coverageDraftStatus:s.coverageDraftStatus,coverageDraftDate:s.coverageDraftDate,coverageDraftReason:s.coverageDraftReason,
+      onCoverageStatusChange:this.onCoverageStatusChange,onCoverageDateChange:this.onCoverageDateChange,onCoverageReasonChange:this.onCoverageReasonChange,
+      saveCoverageChange:this.saveCoverageChange,notifyCoveragePatient:this.notifyCoveragePatient,resolveCoverageAsPrivate:this.resolveCoverageAsPrivate,
+      contactCoveragePatient:this.contactCoveragePatient,selectCoverageRecord:this.selectCoverageRecord,
+      coverageEditValue:s.coverageEditValue,onCoverageEditChange:this.onCoverageEditChange,saveCoverageEdit:this.saveCoverageEdit,cancelCoverageEdit:this.cancelCoverageEdit,
+      validateCoverageForSelected:this.validateCoverageForSelected,
+      allowCancel:policyState.allowCancel,cancelLimitHours:policyState.cancelLimitHours,allowReschedule:policyState.allowReschedule,
+      confirmPendingCoverage:policyState.confirmPendingCoverage!==false,onConfirmPendingCoverageChange:this.onConfirmPendingCoverageChange,
+      onAllowCancelChange:this.onAllowCancelChange,onCancelLimitChange:this.onCancelLimitChange,onAllowRescheduleChange:this.onAllowRescheduleChange,
+      documentPolicyGroups,notificationChannels,
 
       waitlistRows, waitlistWaitingCount, waitlistNoun: waitlistWaitingCount===1?'paciente esperando':'pacientes esperando', waitlistMatchCount: waitlistRows.filter(w=>w.match).length,
       waitlistRecovered, waitlistRecoveredNoun: waitlistRecovered===1?'turno recuperado hoy':'turnos recuperados hoy',

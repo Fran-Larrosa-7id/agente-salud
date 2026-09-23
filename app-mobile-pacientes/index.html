@@ -2,12 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#102a43">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/portal-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Portal Salud">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23102A43'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%230F8B8D' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
 <title>7Ideas · Portal del paciente · Vertical Salud</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/tokens.css">
 <link rel="stylesheet" href="../css/base.css">
 <link rel="stylesheet" href="../css/components.css">
@@ -24,15 +26,19 @@
       <div class="app-header-greeting">Hola, María</div>
       <div class="app-header-sub">Lunes 15 de septiembre</div>
     </div>
-    <button class="app-bell" id="bellBtn" type="button" aria-label="Ver notificaciones">
-      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/></svg>
-      <span class="app-bell-badge" id="bellBadge" hidden>0</span>
-    </button>
+    <div class="app-header-actions">
+      <button class="app-account-btn" id="accountBtn" type="button">Cambiar acceso</button>
+      <button class="app-bell" id="bellBtn" type="button" aria-label="Ver notificaciones">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/></svg>
+        <span class="app-bell-badge" id="bellBadge" hidden>0</span>
+      </button>
+    </div>
   </header>
 
   <!-- ---------- Inicio ---------- -->
   <section class="app-screen is-active" id="screen-inicio">
     <div class="app-screen-body">
+      <div class="app-auth-state" id="portalAuthState" aria-live="polite"></div>
       <div class="app-section-title">Tu próximo turno</div>
       <div class="app-turno-card" id="proximoTurnoCard"></div>
 
@@ -66,8 +72,10 @@
       <div class="app-screen-title">Mis turnos</div>
       <div class="app-section-title">Próximos</div>
       <div id="turnosProximos"></div>
-      <div class="app-section-title">Historial</div>
-      <div id="turnosHistorial"></div>
+      <div class="app-section-title">Anteriores</div>
+      <div id="turnosAnteriores"></div>
+      <div class="app-section-title">Cancelados</div>
+      <div id="turnosCancelados"></div>
     </div>
     <button class="app-fab" id="fabPedirTurno" type="button" aria-label="Pedir turno">
       <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
@@ -102,10 +110,14 @@
         </div>
       </div>
 
+      <div class="app-section-title">Mi cobertura</div>
+      <section class="app-coverage-card" id="portalCoverageCard" aria-live="polite"></section>
+
       <div class="app-section-title">Mis documentos</div>
       <div id="documentosList"></div>
 
-      <button class="btn btn-danger-ghost btn-block" style="margin-top: var(--sp-8)" type="button">Cerrar sesión</button>
+      <button class="btn btn-secondary btn-block" id="installPortalBtn" type="button" hidden>Instalar Portal del Paciente</button>
+      <button class="btn btn-danger-ghost btn-block" id="signOutBtn" style="margin-top: var(--sp-4)" type="button">Cerrar sesión</button>
     </div>
   </section>
 
@@ -143,8 +155,9 @@
     </button>
   </div>
   <div class="app-drawer-body">
-    <p style="color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: var(--sp-4)">Elegí una especialidad para ver los próximos horarios disponibles.</p>
+    <p style="color: var(--ink-soft); font-size: var(--fs-sm); margin-bottom: var(--sp-4)">Podés explorar disponibilidad sin ingresar. La reserva continúa en Turnos Online.</p>
     <div id="especialidadesList"></div>
+    <a class="btn btn-accent btn-block app-booking-link" href="../turnos-online/turnos-online.html">Buscar por profesional o especialidad</a>
   </div>
 </div>
 
@@ -158,6 +171,40 @@
   </div>
   <div class="app-drawer-body" id="estudioDrawerBody"></div>
 </div>
+
+<dialog class="portal-dialog" id="authDialog" aria-labelledby="authTitle" aria-describedby="authHelp">
+  <form class="portal-dialog-form" id="authForm">
+    <button class="portal-dialog-close" id="closeAuthDialog" type="button" aria-label="Cerrar">×</button>
+    <p class="app-header-org">Acceso al portal</p>
+    <h2 id="authTitle">Ingresá para gestionar tus turnos</h2>
+    <p id="authHelp">Explorá disponibilidad sin cuenta. Para ver, cancelar o reprogramar turnos, ingresá o creá tu acceso.</p>
+    <label for="authIdentity">Email o DNI</label>
+    <input class="input" id="authIdentity" autocomplete="username" value="maria.gonzalez@demo.com" required>
+    <div id="createAccessFields" hidden><label for="authName">Nombre completo</label><input class="input" id="authName" autocomplete="name" placeholder="Tu nombre y apellido"></div>
+    <label for="authPassword">Contraseña</label>
+    <input class="input" id="authPassword" type="password" autocomplete="current-password" value="demo1234" required>
+    <div class="portal-dialog-actions">
+      <button class="btn btn-accent" id="authSubmitBtn" type="submit">Ingresar</button>
+      <button class="btn btn-secondary" id="demoLoginBtn" type="button">Entrar como María · demo</button>
+      <button class="btn btn-ghost" id="createAccessBtn" type="button">Crear acceso</button>
+      <button class="btn btn-ghost" id="continueGuestBtn" type="button">Seguir explorando turnos</button>
+    </div>
+    <p class="portal-dialog-note">Acceso de demostración local. No valida identidad ni usa un servicio de autenticación real.</p>
+  </form>
+</dialog>
+
+<dialog class="portal-dialog" id="cancelDialog" aria-labelledby="cancelTitle" aria-describedby="cancelDetails cancelPolicy">
+  <form class="portal-dialog-form" id="cancelForm">
+    <p class="app-header-org">Mis turnos</p>
+    <h2 id="cancelTitle">¿Querés cancelar este turno?</h2>
+    <p id="cancelDetails"></p>
+    <p class="app-policy-note" id="cancelPolicy"></p>
+    <div class="portal-dialog-actions">
+      <button class="btn btn-secondary" id="keepAppointmentBtn" type="button">Mantener turno</button>
+      <button class="btn btn-danger-ghost" id="confirmCancelBtn" type="submit">Sí, cancelar</button>
+    </div>
+  </form>
+</dialog>
 
 <div class="toast-stack" id="toastStack"></div>
 

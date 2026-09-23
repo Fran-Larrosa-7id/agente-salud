@@ -218,6 +218,7 @@ body.app-mobile { background: var(--surface-page); min-height: 100vh; }
 .app-drawer-title { font-weight: 800; font-size: var(--fs-md); color: var(--navy-900); }
 .app-drawer-close { background: none; border: none; cursor: pointer; color: var(--ink-soft); width: 32px; height: 32px; }
 .app-especialidad-btn {
+  display: block;
   width: 100%;
   text-align: left;
   background: var(--white);
@@ -229,6 +230,7 @@ body.app-mobile { background: var(--surface-page); min-height: 100vh; }
   font-weight: 600;
   font-size: var(--fs-sm);
   color: var(--navy-900);
+  text-decoration: none;
   transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-out);
 }
 .app-especialidad-btn:hover { border-color: var(--accent); }

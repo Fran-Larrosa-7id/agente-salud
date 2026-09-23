@@ -367,6 +367,9 @@ body.app-mobile .app-bell-badge {
   background: var(--health-danger);
   color: #fff;
 }
+body.app-mobile .app-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+body.app-mobile .app-account-btn { min-height: 36px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.42); border-radius: 999px; background: rgba(255, 255, 255, 0.08); color: #fff; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+body.app-mobile .app-account-btn:hover { border-color: #fff; background: rgba(255, 255, 255, 0.16); }
 
 /* Screens and cards */
 body.app-mobile .app-screen-body {
@@ -587,3 +590,87 @@ body.app-mobile .app-notif-mini-row {
 body.app-mobile .app-notif-mini-row + .app-notif-mini-row { border-top: 1px solid #E9EEF3; }
 body.app-mobile .app-notif-mini-row .app-notif-title { font-size: 0.9375rem; }
 body.app-mobile .app-notif-mini-row .app-notif-body { font-size: 0.875rem; line-height: 1.45; }
+
+/* Shared booking state, coverage review and patient access dialogs. */
+body.app-mobile .app-auth-state {
+  margin: 0 0 var(--sp-5);
+  padding: 12px 14px;
+  border: 1px solid var(--health-border);
+  border-left: 3px solid var(--health-accent);
+  background: var(--health-surface-alt);
+  color: var(--health-text-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+}
+body.app-mobile .app-session-dot { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--health-success); }
+body.app-mobile .app-inline-link { border: 0; padding: 0; background: none; color: var(--health-accent-hover); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+body.app-mobile .app-turno-coverage { margin: 0 0 var(--sp-3); color: var(--health-text-muted); font-size: var(--fs-xs); line-height: 1.45; }
+body.app-mobile .app-coverage-alert { display: grid; gap: 7px; margin-top: 12px; padding: 12px; border: 1px solid #ead9a9; border-left: 3px solid #b7791f; border-radius: 8px; background: #fff9e9; color: #59451c; font-size: var(--fs-xs); line-height: 1.45; }
+body.app-mobile .app-coverage-alert > b { color: #49380f; }
+body.app-mobile .app-coverage-alert:focus { outline: 3px solid rgba(15, 139, 141, 0.28); outline-offset: 3px; }
+body.app-mobile :focus-visible { outline: 3px solid rgba(15, 139, 141, 0.55); outline-offset: 2px; }
+body.app-mobile .app-coverage-alert small { color: var(--health-text-muted); }
+body.app-mobile .app-coverage-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 3px; }
+body.app-mobile .app-coverage-actions .select { min-width: 160px; max-width: 100%; flex: 1 1 180px; }
+body.app-mobile .app-policy-note,
+body.app-mobile .app-coverage-disclaimer { margin: 8px 0 0; color: var(--health-text-muted); font-size: 12px; line-height: 1.45; }
+body.app-mobile .app-appointment-detail { display: grid; gap: 4px; margin-top: 10px; color: var(--health-text-muted); font-size: 12px; line-height: 1.45; }
+body.app-mobile .app-list-card-actions { flex-wrap: wrap; }
+body.app-mobile .app-coverage-card { padding: 16px; border: 1px solid var(--health-border); border-left: 4px solid var(--health-accent); border-radius: 12px; background: var(--health-surface); box-shadow: var(--health-shadow-sm); }
+body.app-mobile .app-coverage-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+body.app-mobile .app-coverage-head b,
+body.app-mobile .app-coverage-head small { display: block; }
+body.app-mobile .app-coverage-head b { color: var(--health-primary); }
+body.app-mobile .app-coverage-head small { margin-top: 3px; color: var(--health-text-muted); font-size: 12px; }
+body.app-mobile .app-coverage-state { flex: 0 0 auto; padding: 4px 8px; border: 1px solid currentColor; border-radius: 999px; font-size: 11px; font-weight: 700; line-height: 1.3; }
+body.app-mobile .app-coverage-state.is-ok { color: var(--health-success); background: #eff8f4; }
+body.app-mobile .app-coverage-state.is-review { color: #805b15; background: #fff8e8; }
+body.app-mobile .app-coverage-state.is-error { color: var(--health-danger); background: #fff1f1; }
+body.app-mobile .app-coverage-updated { margin-top: 12px; color: var(--health-text-muted); font-size: 12px; }
+body.app-mobile .app-coverage-card > p { margin: 10px 0 6px; color: var(--health-text); font-size: var(--fs-xs); line-height: 1.5; }
+body.app-mobile .app-coverage-card > small { color: var(--health-text-muted); font-size: 11px; line-height: 1.4; }
+body.app-mobile .app-booking-link { display: block; margin-top: 12px; text-align: center; text-decoration: none; }
+body.app-mobile #installPortalBtn { margin-top: var(--sp-5); }
+
+body.app-mobile .portal-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: min(88vh, 720px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--health-border);
+  border-top: 4px solid var(--health-accent);
+  border-radius: 14px;
+  background: var(--health-surface);
+  color: var(--health-text);
+  box-shadow: 0 24px 72px rgba(15, 42, 67, 0.24);
+}
+body.app-mobile .portal-dialog::backdrop { background: rgba(10, 29, 47, 0.55); backdrop-filter: blur(2px); }
+body.app-mobile .portal-dialog-form { position: relative; display: grid; gap: 10px; padding: 24px; }
+body.app-mobile .portal-dialog-form h2 { max-width: 90%; margin: 0; color: var(--health-primary); font-size: 22px; line-height: 1.2; }
+body.app-mobile .portal-dialog-form > p { margin: 0 0 4px; color: var(--health-text-muted); font-size: var(--fs-xs); line-height: 1.5; }
+body.app-mobile .portal-dialog-form > label,
+body.app-mobile .portal-dialog-form #createAccessFields > label { margin-top: 4px; color: var(--health-primary); font-size: 12px; font-weight: 700; }
+body.app-mobile .portal-dialog-form .input { width: 100%; min-height: 44px; border: 1px solid var(--health-border); border-radius: 8px; padding: 10px 12px; color: var(--health-text); }
+body.app-mobile .portal-dialog-form .input:focus-visible { outline: 3px solid rgba(15, 139, 141, 0.25); border-color: var(--health-accent); }
+body.app-mobile .portal-dialog-close { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--health-border); border-radius: 50%; background: var(--health-surface-alt); color: var(--health-primary); font-size: 23px; line-height: 1; cursor: pointer; }
+body.app-mobile .portal-dialog-actions { display: grid; gap: 8px; margin-top: 5px; }
+body.app-mobile .portal-dialog-actions .btn { width: 100%; min-height: 42px; }
+body.app-mobile .portal-dialog-note { padding-top: 10px; border-top: 1px solid var(--health-border); font-size: 11px !important; }
+body.app-mobile .portal-dialog :focus-visible { outline-color: var(--health-accent); }
+body.app-mobile [hidden] { display: none !important; }
+
+@media (max-width: 380px) {
+  body.app-mobile .portal-dialog-form { padding: 20px 16px; }
+  body.app-mobile .portal-dialog-form h2 { font-size: 20px; }
+  body.app-mobile .app-coverage-head { flex-wrap: wrap; }
+}
+
+/* estado del turno y cobertura pendiente (mismo criterio que Turnos Online) */
+body.app-mobile .app-turno-status { margin: 0 0 4px; color: var(--health-primary); font-size: var(--fs-xs); font-weight: 700; }
+body.app-mobile .app-coverage-pending { margin: -4px 0 var(--sp-3); padding: 8px 10px; border-left: 3px solid #b7791f; border-radius: 6px; background: #fff9e9; color: #59451c; font-size: 12px; line-height: 1.45; }
+body.app-mobile .app-list-card .app-coverage-pending { margin: 8px 0 0; }
+body.app-mobile .app-turno-actions { flex-wrap: wrap; }
+body.app-mobile .app-turno-actions--quiet { margin-top: 6px; }
+body.app-mobile .portal-dialog .app-policy-note { margin: -4px 0 14px; }
+body.app-mobile a.btn { text-decoration: none; }

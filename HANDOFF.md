@@ -20,6 +20,9 @@ llamador-pacientes/        index, pantalla, panel, mobile, configuracion + js/ll
 app-mobile-pacientes/      Portal del paciente (index + js/app.js, data.js)
 triage-riesgo/             index, evaluacion, panel + js/triage-*.js, evaluacion.js
 turnos-online/             agenda de reserva y panel institucional (runtime DC de la demo)
+prescripcion-ordenes/      index (portada), demo (paralelo), profesional, consulta (Horus ilustrativo)
+                           js/rx-store.js (estado + semilla, compartido con el Portal), js/rx-sheet.js (hoja del documento), js/profesional.js
+                           css/rx-sheet.css (hoja, compartida con el Portal), css/rx.css (panel, portada, atención)
 css/                       tokens, base, components, institucion, paciente (+ css por carpeta)
 PRODUCT.md, DESIGN.md      contexto de producto y sistema de diseño ("The Lab Report")
 ```
@@ -36,6 +39,7 @@ PRODUCT.md, DESIGN.md      contexto de producto y sistema de diseño ("The Lab R
 | `triage_contacto_v1` | contacto de emergencia | panel escribe, evaluación lee |
 | `vertical-salud-turnos-online-v2` | turnos, coberturas, políticas y actividad | Turnos Online y Portal del Paciente comparten estado por `storage` |
 | `vertical-salud-portal-session-v1` | sesión demo (nombre, email/DNI, cobertura) | Portal; Turnos Online lee el perfil para precompletar el formulario |
+| `salud_prescripciones_v1` | documentos (receta/orden), contadores demo, canales de aviso | panel profesional y atención escriben; el Portal lee y marca «visto» (evento `storage`) |
 
 Las claves no llevan prefijo común (`salud:*`) para no romper lo ya sincronizado. Cada demo tiene su reinicio, que solo borra sus claves (nunca `localStorage.clear()`). Detalle de cada reinicio en `README.md`.
 
@@ -51,6 +55,7 @@ Las claves no llevan prefijo común (`salud:*`) para no romper lo ya sincronizad
 - **Cobertura a validar:** la política `appointmentPolicies.confirmPendingCoverage` decide si el turno queda «Confirmado · cobertura pendiente» o `pendiente` hasta que recepción valide.
 - **Documentación:** `documentPolicies` tiene perfiles `consulta` y `practica` (el tipo «Estudio o práctica» usa `practica`). Valores: `none`, `optional`, `recommended`, `required`; `normalizeDocPolicies()` convierte la forma plana anterior. La selección de archivos es solo local, no hay carga a servidor.
 - **Avisos:** la tabla de canales en Configuración es descriptiva; los avisos siguen siendo eventos de actividad en `localStorage`.
+- **Prescripción y órdenes:** prototipo conceptual, sin lógica clínica. El catálogo (`MED_CATALOG`) usa nombres ficticios y no trae dosis. Estados guardados: `borrador`, `emitida`, `anulada`; `vencida` se deriva con `statusOf()` según `expiresISO`. Anular nunca borra; «Duplicar como nueva» crea un borrador con `duplicatedFrom`. Solo se pueden descartar borradores. El paciente del Portal se identifica por DNI o email (`patientForSession()`), igual que los turnos. Los avisos (Portal, WhatsApp, email) no llevan contenido médico. `rx-sheet.js` es la única plantilla del documento: panel, atención, Portal y la descarga HTML usan la misma. `?embed=1` oculta la barra de demo del panel dentro de `demo.html`.
 - **PWA:** el Portal tiene manifest (PNG 192/512 + maskable), `apple-touch-icon` y service worker. Debe servirse por `localhost` o HTTPS; abrir con `file://` no instala ni activa modo offline. Al cambiar archivos cacheados, subir `CACHE_NAME` en `service-worker.js`.
 
 ## Datos mock
@@ -61,6 +66,7 @@ Las claves no llevan prefijo común (`salud:*`) para no romper lo ya sincronizad
 - Los llamados guardados antes de agregar `pacienteId` muestran un código de turno genérico hasta reiniciar el llamador.
 - El sonido del llamador (Web Audio) puede requerir un clic previo para sonar.
 - Profesionales con más de una especialidad: pendiente; cada profesional tiene una sola `specialtyId`.
+- Prescripción y órdenes: el `input type="date"` muestra el formato del sistema operativo; en navegadores en español se ve dd/mm/aaaa.
 - QA de la iteración de coberturas: escenarios C, E y F probados de punta a punta con Playwright (Turnos Online, panel y Portal), sin errores de consola.
 
 ## Dirección visual

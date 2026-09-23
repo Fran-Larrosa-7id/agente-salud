@@ -19,6 +19,7 @@ Son conceptos independientes: no forman parte de Horus ni de Osiris.
 | Onboarding de pacientes | Preparar datos y documentación antes de la atención | Paciente / Recepción | Fuerte | `onboarding.html` |
 | Turnos por WhatsApp | Gestión conversacional de turnos sobre la agenda real | Paciente / Institución | Fuerte | `whatsapp-turnos/index.html` |
 | Llamador de pacientes | Ordenar la sala de espera | Recepción / Profesional / Paciente | Fuerte | `llamador-pacientes/index.html` |
+| Prescripción y Órdenes Digitales | Emitir recetas y órdenes y que el paciente las encuentre en su Portal | Profesional / Paciente | Solución principal · mock navegable | `prescripcion-ordenes/index.html` |
 | Portal del paciente | Acceso digital único a servicios de la institución | Paciente | Complementario | `app-mobile-pacientes/index.html` |
 | Asistente IA | Consulta de información operativa en lenguaje natural | Personal administrativo | Capacidad transversal | `institucion.html?ia=1` |
 | Triage | Priorización basada en reglas de la institución | Paciente / Guardia | Exploratorio | `triage-riesgo/index.html` |
@@ -73,6 +74,21 @@ Navegar Inicio, Turnos, Estudios, Avisos y Perfil. El acceso demo es local; el p
 - **E · Cobertura a validar:** elegir Galeno u «Otra obra social»: aviso «Tu cobertura necesita ser verificada antes de la atención» y turno «Confirmado · cobertura pendiente» (o sin confirmar si se desactiva la política). En el panel, abrir el turno en la agenda → «Registrar cobertura validada»; el Portal pasa a «Cobertura validada».
 - **F · Convenio suspendido después de reservar:** Panel → Coberturas → OSDE → «Convenio suspendido» desde hoy → «Aplicar cambio y detectar turnos» → «Notificar paciente» en el turno de María González → en el Portal (acceso demo) aparece la alerta y el aviso → María actualiza la cobertura o sigue como particular, o recepción usa «Cambiar cobertura» / «Pasar a particular».
 
+### Prescripción y Órdenes Digitales (`prescripcion-ordenes/`)
+Prototipo conceptual. Una implementación productiva deberá adaptarse a los requisitos regulatorios, de identificación, firma, interoperabilidad y seguridad aplicables.
+
+- `index.html`: portada con el disclaimer, accesos, escenarios y «Acerca de esta demo» (con «Reiniciar demo»).
+- `demo.html`: panel profesional y Portal del Paciente en paralelo, sincronizados en el mismo navegador.
+- `profesional.html`: paciente actual (búsqueda por nombre o DNI), nueva prescripción, nueva orden, vista previa, emisión simulada, historial (Todas / Emitidas / Borradores / Anuladas), ver, descargar (HTML de demostración), compartir (solo un aviso, sin datos médicos), anular con confirmación y duplicar como borrador nuevo. «Avisos al paciente» define los canales (Portal siempre; WhatsApp y email conceptuales).
+- `consulta.html`: vista ilustrativa de una atención en Horus con «Nueva prescripción» y «Nueva orden»; abren el módulo con la paciente elegida y ofrecen volver a la atención.
+- Portal del Paciente → «Recetas y órdenes» (acceso rápido en Inicio, aviso de documento nuevo, notificaciones y detalle). Enlace directo: `app-mobile-pacientes/index.html#recetas` o `#recetas/<id>`.
+- WhatsApp → escenario «Documentación disponible» (`whatsapp-turnos/chat.html?escenario=documentacion`): el mensaje lleva al Portal y no incluye el contenido.
+
+#### Escenarios de demo
+- **1 · Prescripción:** María González → Nueva prescripción → buscar «Demo A» → dosis, frecuencia y duración → Revisar → Emitir → Ver documento → Portal → Recetas y órdenes → detalle → aviso en Notificaciones.
+- **2 · Orden:** seleccionar paciente → Nueva orden → Diagnóstico por imágenes → completar la solicitud → Emitir → Portal → ver la orden.
+- **Trazabilidad:** abrir un documento emitido → Anular (queda «Anulada» en el historial y en el Portal) o «Duplicar como nueva» (crea un borrador; el original no cambia).
+
 ### Asistente IA (`institucion.html?ia=1`)
 Probar «¿Quién requiere revisión?» o «Mostrame pacientes de la Dra. Martínez». Rechaza preguntas clínicas.
 
@@ -92,6 +108,7 @@ Probar «¿Quién requiere revisión?» o «Mostrame pacientes de la Dra. Martí
 | `triage_contacto_v1` | Contacto de emergencia | «Restaurar valor demo» en el panel de triage |
 | `vertical-salud-turnos-online-v2` | Turnos, coberturas, políticas y actividad compartidos | No hay reset global; la demo de turnos reinicia su semilla cada día |
 | `vertical-salud-portal-session-v1` | Sesión mock del Portal del Paciente | «Cerrar sesión» en Perfil; es solo un acceso local de demostración |
+| `salud_prescripciones_v1` | Prescripciones, órdenes, numeración demo y canales de aviso (panel profesional, atención y Portal) | «Reiniciar demo» en la portada, el panel profesional o la vista en paralelo de Prescripción y órdenes |
 
 Ningún reinicio usa `localStorage.clear()`: cada demo restaura solo sus claves. No se renombraron las claves a un prefijo común para no romper la sincronización existente.
 
@@ -102,6 +119,7 @@ Ningún reinicio usa `localStorage.clear()`: cada demo restaura solo sus claves.
 - **Onboarding**: los datos no persisten en ningún backend y las cargas de archivos son simuladas. No reemplaza una historia clínica.
 - **Portal**: no se integra con Horus ni Osiris.
 - **Turnos Online / Portal**: comparten datos solo en `localStorage` del mismo navegador y origen; el acceso no autentica identidad ni reemplaza un backend. La disponibilidad y el estado de cobertura son orientativos, no garantizan prestaciones ni importes. Los documentos no salen del dispositivo ni se conservan.
+- **Prescripción y Órdenes Digitales**: no emite recetas reales, no firma digitalmente, no valida identidad real, no consulta bases farmacológicas (el catálogo es de demostración, con nombres ficticios), no valida normativas, no integra farmacias ni obras sociales y no contiene lógica clínica (no sugiere medicamentos, dosis ni interacciones). El código del documento es un patrón visual de demostración, no un QR válido.
 - **IA**: no usa un modelo real; responde con reglas sobre datos de ejemplo.
 - **Triage**: las reglas son ilustrativas y no representan protocolos clínicos validados. Siempre debe existir revisión profesional.
 

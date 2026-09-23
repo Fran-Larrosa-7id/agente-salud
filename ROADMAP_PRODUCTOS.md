@@ -2,7 +2,7 @@
 
 Contexto: trabajo en paralelo a Horus y Osiris (no relacionado), para armar una base de mockups de soluciones ofrecibles a clientes de la Vertical Salud. El objetivo es explorar ideas y comunicar qué se puede ofrecer; no es desarrollo funcional. Punto de entrada: `index.html` (catálogo).
 
-Categorías: FUERTE · COMPLEMENTARIO · CAPACIDAD TRANSVERSAL · EXPLORATORIO · BACKLOG.
+Categorías: FUERTE · SOLUCIÓN PRINCIPAL · COMPLEMENTARIO · CAPACIDAD TRANSVERSAL · EXPLORATORIO · BACKLOG.
 
 ## Turnos Online — FUERTE
 Ruta: `turnos-online/turnos-online.html`.
@@ -37,10 +37,20 @@ Rutas: `llamador-pacientes/index.html`, `pantalla.html`, `panel.html`, `mobile.h
 - **Falta:** estado de llegada del paciente (programado → presente → en espera).
 - **No se pretende:** WebSockets, autenticación, integración con la agenda.
 
+## Prescripción y Órdenes Digitales — SOLUCIÓN PRINCIPAL / MOCK NAVEGABLE
+Rutas: `prescripcion-ordenes/index.html` (portada), `demo.html` (profesional y paciente en paralelo), `profesional.html`, `consulta.html` (atención ilustrativa en Horus). Paciente: Portal → «Recetas y órdenes».
+- **Qué demuestra:** el profesional emite una prescripción u orden (laboratorio, imágenes, kinesiología, interconsulta, otra), revisa la vista previa, emite con número y estado, y el paciente la ve en su Portal con un aviso. Historial con filtros; anular no borra; «Duplicar como nueva» crea un borrador independiente.
+- **Estados:** Borrador, Emitida, Anulada, Vencida (calculada por vigencia: 30 días recetas, 60 días órdenes). El paciente ve «Vigente» en lugar de «Emitida». Siempre ícono + palabra + color.
+- **Integraciones mock:** Portal (pantalla, aviso en Inicio, notificaciones, enlace `#recetas/<id>`), WhatsApp (escenario «Documentación disponible», sin contenido médico en el chat), Horus (botones desde la atención), Home (sección, journey y footer).
+- **Mockeado:** pacientes, profesionales, catálogo de medicamentos de demostración, numeración `RX-DEMO` / `OR-DEMO`, código de demostración, emisión y avisos. Estado en `salud_prescripciones_v1`.
+- **Límites:** no emite recetas reales, no firma digitalmente, no valida identidad, no consulta bases farmacológicas, no valida normativas, no integra farmacias ni obras sociales, no contiene lógica clínica.
+- **No se pretende:** telemedicina, facturación, autorizaciones, laboratorio o farmacia reales, firma remota, FHIR ni integración nacional, IA clínica.
+
 ## Portal del paciente — COMPLEMENTARIO
 Ruta: `app-mobile-pacientes/index.html`.
 - **Qué demuestra:** punto único de acceso a turnos, estudios, documentación, cobertura y notificaciones; lista turnos que se reservan en Turnos Online, permite cancelarlos según política y enlaza la reprogramación al flujo compartido.
 - **Mockeado:** sesión/acceso local, contenidos clínicos de ejemplo, datos de cobertura y avisos; no hay servicio de autenticación ni backend.
+- **Recetas y órdenes:** lista agrupada (Recetas / Órdenes), detalle con la misma hoja que ve el profesional, descargar y compartir; aviso de documento nuevo en Inicio y en Notificaciones.
 - **Turnos:** el próximo turno muestra estado, cobertura registrada y acciones (ver detalle, reprogramar, cancelar, agregar al calendario con un `.ics`, cómo llegar). El diálogo de cancelación informa la política de la institución.
 - **PWA:** manifest con íconos PNG 192/512 (incluido maskable), `apple-touch-icon` y service worker básico para instalación y caché estática cuando se sirve por `localhost` o HTTPS.
 - **Falta:** autenticación segura y una API institucional, fuera del alcance del mock.
@@ -64,4 +74,4 @@ Rutas: `triage-riesgo/index.html`, `evaluacion.html`, `panel.html`.
 Sin desarrollo: gestor de estudios, gestor de cirugías, historia clínica, integraciones reales, backend.
 
 ## Journey conceptual
-Turnos Online o Turnos por WhatsApp → Onboarding → (llegada) Llamador → Atención (sistema clínico) → Portal del paciente. Cada solución puede funcionar sola o integrarse con otros sistemas; no es un sistema monolítico.
+Turnos Online o Turnos por WhatsApp → Onboarding → (llegada) Llamador → Atención (sistema clínico) → Prescripción y órdenes → Portal del paciente. El Asistente IA sigue como capacidad transversal. Cada solución puede funcionar sola o integrarse con otros sistemas; no es un sistema monolítico.

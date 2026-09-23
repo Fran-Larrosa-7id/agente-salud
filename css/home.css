@@ -537,3 +537,9 @@ html:not(.js) .sync-tabs { display: none; }
   .demo-info dd { margin-bottom: 8px; }
   .tv { border-radius: 10px; }
 }
+
+/* Prescripción y Órdenes Digitales: misma composición que Onboarding, sin dominar el Home */
+.p-rx { background: var(--sky); }
+.p-rx .shot-panel { border-color: #cfdfeb; }
+.j-prods .j-sub { min-height: 40px; font-size: 16px; font-weight: 700; color: #fff; }
+.j-prods .j-sub::before { content: "↳"; margin-right: 8px; color: var(--on-dark-accent); font-weight: 600; }

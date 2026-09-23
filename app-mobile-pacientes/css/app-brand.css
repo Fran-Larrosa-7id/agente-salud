@@ -674,3 +674,46 @@ body.app-mobile .app-turno-actions { flex-wrap: wrap; }
 body.app-mobile .app-turno-actions--quiet { margin-top: 6px; }
 body.app-mobile .portal-dialog .app-policy-note { margin: -4px 0 14px; }
 body.app-mobile a.btn { text-decoration: none; }
+
+/* Recetas y órdenes (Prescripción y Órdenes Digitales). La hoja del documento viene de prescripcion-ordenes/css/rx-sheet.css */
+body.app-mobile .app-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+body.app-mobile .app-quick-btn { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 10px 12px; text-align: left; font-size: 13.5px; line-height: 1.25; }
+body.app-mobile .app-quick-btn svg { flex-shrink: 0; margin: 0; }
+body.app-mobile .app-rx-new:empty { display: none; }
+body.app-mobile .app-rx-new { margin-top: var(--sp-5); }
+body.app-mobile .app-rx-new-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 12px; align-items: start; padding: 14px; border: 1px solid #CFE0EE; border-left: 4px solid #2F5D8A; border-radius: 12px; background: var(--health-sky); animation: app-rx-in 280ms var(--ease-out) both; }
+body.app-mobile .app-rx-new-ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #fff; color: #2F5D8A; }
+body.app-mobile .app-rx-new-txt b { display: block; color: var(--health-primary); font-size: 0.9375rem; }
+body.app-mobile .app-rx-new-txt span { display: block; margin-top: 2px; color: var(--health-text-muted); font-size: 12.5px; line-height: 1.4; }
+body.app-mobile .app-rx-new-card .btn { grid-column: 2; justify-self: start; min-height: 40px; }
+@keyframes app-rx-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+body.app-mobile .app-rx-intro { margin: -6px 0 var(--sp-2); color: var(--health-text-muted); font-size: 13.5px; line-height: 1.5; }
+body.app-mobile #screen-estudios .app-rx-intro { margin: -6px 0 var(--sp-4); }
+body.app-mobile .app-rx-demo { margin-top: var(--sp-5); color: var(--health-text-subtle, #8B96A8); font-size: 12px; line-height: 1.45; }
+body.app-mobile .app-rx-card { padding: 0; overflow: hidden; }
+body.app-mobile .app-rx-open { position: relative; display: grid; gap: 3px; width: 100%; padding: 14px 44px 12px 16px; border: 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; transition: background-color 180ms ease; }
+body.app-mobile .app-rx-open:hover { background: #FBFCFE; }
+body.app-mobile .app-rx-open:active { background: var(--health-sky); }
+body.app-mobile .app-rx-open:focus-visible { outline-offset: -3px; }
+body.app-mobile .app-rx-kind { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #2F5D8A; }
+body.app-mobile .app-rx-dot { padding: 1px 7px; border-radius: 999px; background: #2F5D8A; color: #fff; font-size: 11px; font-weight: 700; }
+body.app-mobile .app-rx-card .app-list-card-title { font-size: 0.9375rem; }
+body.app-mobile .app-rx-detail { font-size: 13px; color: var(--health-text); }
+body.app-mobile .app-rx-meta { font-size: 12.5px; color: var(--health-text-muted); }
+body.app-mobile .app-rx-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: 12.5px; color: var(--health-text-muted); }
+body.app-mobile .app-rx-status .rx-state { border-radius: 6px; }
+body.app-mobile .app-rx-chev { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); color: var(--health-text-muted); }
+body.app-mobile .app-rx-card.is-inactive .app-list-card-title { color: var(--health-text-muted); }
+body.app-mobile .app-rx-actions { display: flex; gap: 4px; padding: 4px 8px 8px; border-top: 1px solid #E9EEF3; }
+body.app-mobile .app-rx-actions .btn { min-height: 44px; color: var(--health-accent-hover); background: transparent; border-color: transparent; }
+body.app-mobile .app-rx-actions .btn:hover { background: var(--health-mint); }
+body.app-mobile #drawerDoc .app-drawer-body { background: var(--health-bg); }
+body.app-mobile #drawerDoc .rx-sheet { padding: 18px 16px 14px; }
+body.app-mobile #drawerDoc .rx-sheet-meta { grid-template-columns: 1fr 1fr; }
+body.app-mobile #drawerDoc .rx-sheet-meta-p { grid-column: 1 / -1; }
+body.app-mobile .app-rx-drawer-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0)); border-top: 1px solid var(--health-border); background: #fff; }
+body.app-mobile .app-rx-drawer-actions:empty { display: none; }
+body.app-mobile .app-rx-drawer-actions .app-policy-note { grid-column: 1 / -1; margin: 0; }
+@media (prefers-reduced-motion: reduce) { body.app-mobile .app-rx-new-card { animation: none; } }
+body.app-mobile.is-embedded .app-back { display: none; }

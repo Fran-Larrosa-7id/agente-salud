@@ -148,6 +148,18 @@ const WA_ESCENARIOS = {
         ] },
     ],
   },
+  // Prescripción y Órdenes Digitales: el aviso NO lleva contenido médico, solo lleva al Portal
+  documentacion: {
+    nombre: 'Documentación disponible',
+    pasos: [
+      { de: 'sistema', texto: 'El Dr. Nicolás Romero emitió un documento para María en Prescripción y órdenes.', traza: [
+        { capa: 'motor', texto: 'Evento: documento emitido en Prescripción y órdenes' },
+        { capa: 'motor', texto: 'Canal WhatsApp habilitado → envía un aviso sin datos del documento' },
+      ] },
+      { de: 'bot', texto: 'Hola María. Tu documentación médica ya está disponible en el Portal del Paciente.\n\nPor tu privacidad, no enviamos el contenido por este chat.',
+        cta: { texto: 'Ver en el Portal', href: '../app-mobile-pacientes/index.html#recetas' } },
+    ],
+  },
   operador: {
     nombre: 'Hablar con un operador',
     pasos: [
@@ -186,6 +198,14 @@ const WA_AUTOMATIZACIONES = [
     descripcion: 'Si el paciente cancela, se le ofrecen los próximos horarios disponibles sin intervención humana.',
     disparador: 'Paciente responde "Cancelar" o "Reprogramar"',
     accion: 'Liberar el horario y ofrecer nuevas opciones',
+    activo: true,
+  },
+  {
+    id: 'documentacion',
+    nombre: 'Aviso de documentación disponible',
+    descripcion: 'Cuando un profesional emite una receta u orden, se avisa que está disponible en el Portal. El mensaje no incluye datos médicos.',
+    disparador: 'Documento emitido en Prescripción y órdenes',
+    accion: 'Enviar aviso con enlace al Portal del Paciente',
     activo: true,
   },
   {
@@ -287,6 +307,11 @@ Object.assign(WA_ESCENARIOS.ocupado, {
   flujo: 'solicitud',
   actividad: 'pidió turno de Clínica Médica (un horario se ocupó y se ofrecieron alternativas)',
   sinFlujo: [WA_ESCENARIOS.ocupado.pasos[0], { de: 'bot', texto: WA_OPERADOR }],
+});
+Object.assign(WA_ESCENARIOS.documentacion, {
+  flujo: 'documentacion',
+  actividad: 'recibió el aviso de documentación disponible en el Portal',
+  sinFlujo: [WA_ESCENARIOS.documentacion.pasos[0], { de: 'sistema', texto: 'No se envió el aviso por WhatsApp. El documento sigue disponible en el Portal del Paciente.' }],
 });
 Object.assign(WA_ESCENARIOS.operador, {
   flujo: null,

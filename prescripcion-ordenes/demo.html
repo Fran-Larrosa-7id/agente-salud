@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prescripción y órdenes · Profesional y paciente</title>
+<meta name="description" content="Demo de Prescripción y Órdenes Digitales: el panel del profesional y el Portal del Paciente, sincronizados en el mismo navegador.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23102A43'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%230F8B8D' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#102A43;--navy-deep:#081F33;--teal:#0F8B8D;--teal-ink:#0B6F71;--mint:#DFF3EF;
+  --bg:#EEF2F6;--ink:#172033;--ink-2:#566276;--line:#DCE4EC;
+  --ease:cubic-bezier(.23,1,.32,1);
+  --bar:52px;--phone-w:390px;--bezel:10px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* barra de la demo */
+.dm-bar{height:var(--bar);display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--navy-deep);color:rgba(255,255,255,.72);font-size:13px}
+.dm-bar a{color:rgba(255,255,255,.82);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:6px 8px;margin-left:-8px;white-space:nowrap}
+.dm-bar a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.dm-sep{width:1px;height:18px;background:rgba(255,255,255,.18);flex-shrink:0}
+.dm-tag{white-space:nowrap}
+.dm-tag b{color:#fff;font-weight:600}
+.dm-guide{flex:1;min-width:0;display:flex;justify-content:center}
+.dm-steps{list-style:none;margin:0;padding:0;display:flex;align-items:center;gap:18px;white-space:nowrap;counter-reset:g}
+.dm-steps li{display:flex;align-items:center;gap:8px;counter-increment:g}
+.dm-steps li::before{content:counter(g);width:20px;height:20px;border-radius:50%;background:rgba(92,200,192,.18);color:#8FE0D8;display:grid;place-items:center;font-size:11.5px;font-weight:700;flex-shrink:0}
+.dm-steps b{color:#fff;font-weight:600}
+.dm-seg{display:none;border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:2px}
+.dm-seg button{border:none;background:transparent;color:rgba(255,255,255,.72);font-size:12.5px;font-weight:600;padding:0 12px;min-height:32px;border-radius:6px;transition:background-color .16s ease,color .16s ease}
+.dm-seg button[aria-pressed="true"]{background:rgba(255,255,255,.14);color:#fff}
+.dm-seg button{position:relative}
+.dm-seg button.has-news::after{content:"";position:absolute;top:5px;right:4px;width:7px;height:7px;border-radius:50%;background:#5CC8C0;box-shadow:0 0 0 2px var(--navy-deep)}
+.dm-reset{margin-left:auto;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.18);background:transparent;color:rgba(255,255,255,.86);font-size:12.5px;font-weight:600;min-height:34px;padding:0 12px;border-radius:8px;white-space:nowrap;transition:background-color .16s ease,color .16s ease,transform .12s var(--ease)}
+.dm-reset:hover{background:rgba(255,255,255,.08);color:#fff}
+.dm-reset:active{transform:scale(.97)}
+.dm-reset svg{width:15px;height:15px}
+
+/* escenario: celular + recepción */
+.dm-stage{height:calc(100dvh - var(--bar));display:grid;grid-template-columns:calc(var(--phone-w) + var(--bezel)*2) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);column-gap:24px;row-gap:10px;padding:14px 20px 18px}
+.dm-cap{margin:0;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);min-width:0}
+.dm-cap b{color:var(--navy);font-weight:700}
+.dm-cap-p{justify-content:center}
+.dm-live{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--teal-ink);white-space:nowrap}
+.dm-live i{position:relative;width:7px;height:7px;border-radius:50%;background:var(--teal)}
+.dm-live i::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--teal);opacity:0;animation:ping 1.8s var(--ease) infinite}
+@keyframes ping{0%{opacity:.6;transform:scale(.5)}80%,100%{opacity:0;transform:scale(1.4)}}
+.dm-phone{justify-self:center;align-self:start;width:calc(var(--phone-w) + var(--bezel)*2);height:min(100%, 864px);padding:var(--bezel);border-radius:44px;background:var(--navy-deep);box-shadow:0 24px 48px rgba(8,31,51,.22),inset 0 0 0 1px rgba(255,255,255,.06)}
+.dm-phone iframe{display:block;width:100%;height:100%;border:0;border-radius:34px;background:#F7F9FC}
+.dm-desk{min-width:0;min-height:0;border-radius:14px;overflow:hidden;background:#F7F9FC;border:1px solid var(--line);box-shadow:0 16px 40px rgba(15,42,67,.12)}
+.dm-desk iframe{display:block;width:100%;height:100%;border:0}
+.dm-cap-p{grid-column:1;grid-row:1}.dm-phone{grid-column:1;grid-row:2}
+.dm-cap-a{grid-column:2;grid-row:1}.dm-desk{grid-column:2;grid-row:2}
+
+@media (max-width:1320px){ .dm-steps li:nth-child(3){display:none} }
+@media (max-width:1360px){ :root{--phone-w:360px} }
+/* sin lugar para las dos: una vista por vez, igual de sincronizadas */
+@media (max-width:1199px){
+  .dm-guide{display:none}
+  .dm-seg{display:inline-flex}
+  .dm-stage{grid-template-columns:minmax(0,1fr);padding:12px 16px 16px}
+  .dm-cap-p,.dm-cap-a,.dm-phone,.dm-desk{grid-column:1}
+  body[data-show="admin"] .dm-cap-p,body[data-show="admin"] .dm-phone,
+  body[data-show="patient"] .dm-cap-a,body[data-show="patient"] .dm-desk{display:none}
+}
+@media (max-width:560px){
+  .dm-bar{padding:0 12px;gap:10px}
+  .dm-tag,.dm-bar .dm-sep,.dm-back-l,.dm-reset span{display:none}
+  .dm-stage{padding:0;row-gap:0}
+  .dm-cap{display:none}
+  .dm-phone{width:100%;height:100%;padding:0;border-radius:0;box-shadow:none}
+  .dm-phone iframe{border-radius:0}
+  .dm-desk{border-radius:0;border:0;box-shadow:none}
+}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important} }
+</style>
+</head>
+<body data-show="admin">
+<header class="dm-bar">
+  <a href="index.html" aria-label="Volver a Prescripción y Órdenes Digitales"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span class="dm-back-l">Volver</span></a>
+  <span class="dm-sep" aria-hidden="true"></span>
+  <span class="dm-tag">Demo · <b>Prescripción y órdenes</b></span>
+  <div class="dm-guide">
+    <ol class="dm-steps" aria-label="Qué probar">
+      <li><span>Emití una <b>nueva prescripción</b> para María</span></li>
+      <li><span>Mirá el <b>aviso</b> en el celular</span></li>
+      <li><span>Abrí la receta en <b>Recetas y órdenes</b></span></li>
+    </ol>
+  </div>
+  <div class="dm-seg" role="group" aria-label="Vista">
+    <button type="button" data-show="admin" aria-pressed="true">Profesional</button>
+    <button type="button" data-show="patient" aria-pressed="false">Paciente</button>
+  </div>
+  <button type="button" class="dm-reset" id="dm-reset" aria-label="Reiniciar demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></svg><span>Reiniciar demo</span></button>
+</header>
+
+<main class="dm-stage">
+  <p class="dm-cap dm-cap-p"><b>Paciente</b> · Portal del Paciente de María</p>
+  <div class="dm-phone"><iframe src="../app-mobile-pacientes/index.html" title="Portal del Paciente de María González en el celular"></iframe></div>
+  <p class="dm-cap dm-cap-a"><b>Profesional</b> · Dr. Nicolás Romero, Clínica San Rafael <span class="dm-live"><i aria-hidden="true"></i>Sincronizado en este navegador</span></p>
+  <div class="dm-desk"><iframe src="profesional.html?embed=1&amp;paciente=maria" title="Panel profesional de Prescripción y órdenes"></iframe></div>
+</main>
+
+<script>
+(function () {
+  var KEY = 'salud_prescripciones_v1';
+  var body = document.body;
+  var seg = document.querySelectorAll('.dm-seg button');
+  function show(v) {
+    body.setAttribute('data-show', v);
+    seg.forEach(function (b) {
+      var on = b.getAttribute('data-show') === v;
+      b.setAttribute('aria-pressed', String(on));
+      if (on) b.classList.remove('has-news');
+    });
+  }
+  /* en modo pestañas: si el profesional emite o anula, avisamos en la vista del paciente */
+  function latest(v) {
+    try { return (JSON.parse(v).documents || []).reduce(function (m, d) { return Math.max(m, d.notifiedAt || 0, d.annulledAt || 0); }, 0); } catch (e) { return 0; }
+  }
+  var last = latest(localStorage.getItem(KEY));
+  window.addEventListener('storage', function (e) {
+    if (e.key !== KEY || !e.newValue) return;
+    var t = latest(e.newValue);
+    if (t > last && body.getAttribute('data-show') !== 'patient') document.querySelector('.dm-seg [data-show="patient"]').classList.add('has-news');
+    last = Math.max(last, t);
+  });
+  seg.forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-show')); }); });
+  document.getElementById('dm-reset').addEventListener('click', function () {
+    /* restaura solo este módulo; turnos, sesión del Portal y otras demos quedan intactos */
+    try { localStorage.removeItem(KEY); sessionStorage.removeItem('rx-current-patient'); } catch (e) {}
+    location.reload();
+  });
+})();
+</script>
+</body>
+</html>

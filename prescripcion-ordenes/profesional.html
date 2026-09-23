@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23102A43'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%230F8B8D' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>7Ideas · Prescripción y órdenes · Panel profesional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="css/rx-sheet.css">
+<link rel="stylesheet" href="css/rx.css">
+</head>
+<body class="rx rx-pro">
+<a class="skip-link" href="#main">Ir al contenido</a>
+
+<div class="rx-demo" data-demo-chrome>
+  <div class="rx-demo-in">
+    <a href="index.html"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span class="rx-demo-long">Prescripción y Órdenes Digitales</span><span class="rx-demo-short">Módulo</span></a>
+    <span class="rx-demo-tag">Prototipo conceptual · datos ficticios</span>
+    <a class="rx-demo-portal" href="../app-mobile-pacientes/index.html#recetas" target="_blank" rel="noopener"><span class="rx-demo-long">Abrir Portal del Paciente</span><span class="rx-demo-short">Portal</span> <span aria-hidden="true">↗</span><span class="visually-hidden">(se abre en otra pestaña)</span></a>
+    <button class="rx-demo-reset" type="button" id="resetDemo">Reiniciar demo</button>
+  </div>
+</div>
+
+<header class="rx-top">
+  <div class="rx-top-in">
+    <a class="rx-brand" href="#/paciente">
+      <span class="rx-brand-mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span>
+      <span class="rx-brand-txt"><b>Prescripción y órdenes</b><small>Clínica San Rafael</small></span>
+    </a>
+    <nav class="rx-nav" aria-label="Secciones">
+      <a href="#/paciente" data-nav="paciente">Paciente</a>
+      <a href="#/historial" data-nav="historial">Historial</a>
+    </nav>
+    <div class="rx-user">
+      <button class="rx-channels-btn" type="button" id="channelsBtn" aria-haspopup="dialog">
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span>Avisos al paciente</span>
+      </button>
+      <span class="rx-avatar" aria-hidden="true">NR</span>
+      <span class="rx-user-txt"><b>Dr. Nicolás Romero</b><small>Cardiología</small></span>
+    </div>
+  </div>
+</header>
+
+<main class="rx-main" id="main" tabindex="-1">
+  <div id="view"></div>
+</main>
+
+<footer class="rx-foot">
+  <p><b>Prototipo conceptual.</b> Una implementación productiva deberá adaptarse a los requisitos regulatorios, de identificación, firma, interoperabilidad y seguridad aplicables. Catálogo de medicamentos de demostración, sin lógica clínica.</p>
+</footer>
+
+<!-- Detalle de documento -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer rx-drawer" id="docDrawer" role="dialog" aria-modal="true" aria-labelledby="docDrawerTitle" aria-hidden="true">
+  <div class="rx-drawer-head">
+    <div>
+      <p class="rx-eyebrow" id="docDrawerKind">Documento</p>
+      <h2 class="rx-drawer-title" id="docDrawerTitle">Documento</h2>
+    </div>
+    <button class="rx-iconbtn" type="button" id="docDrawerClose" aria-label="Cerrar detalle">
+      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="rx-drawer-body" id="docDrawerBody"></div>
+  <div class="rx-drawer-foot" id="docDrawerFoot"></div>
+</aside>
+
+<!-- Anular -->
+<dialog class="rx-dialog" id="annulDialog" aria-labelledby="annulTitle" aria-describedby="annulDesc">
+  <form method="dialog" class="rx-dialog-form" id="annulForm">
+    <h2 id="annulTitle">¿Anular esta prescripción?</h2>
+    <p id="annulDesc">El documento quedará marcado como anulado. No se borra: sigue en el historial y el paciente lo verá como anulado en su Portal.</p>
+    <p class="rx-dialog-doc" id="annulDoc"></p>
+    <label class="field-label" for="annulReason">Motivo <small>(opcional)</small></label>
+    <select class="select" id="annulReason">
+      <option value="">Sin especificar</option>
+      <option>Error en los datos del documento</option>
+      <option>Se reemplaza por un nuevo documento</option>
+      <option>Solicitud del paciente</option>
+    </select>
+    <div class="rx-dialog-actions">
+      <button class="btn btn-secondary" type="button" id="annulCancel">Cancelar</button>
+      <button class="btn rx-btn-danger" type="submit" id="annulConfirm">Anular documento</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Canales de aviso -->
+<dialog class="rx-dialog" id="channelsDialog" aria-labelledby="channelsTitle" aria-describedby="channelsDesc">
+  <form method="dialog" class="rx-dialog-form">
+    <h2 id="channelsTitle">Avisos al paciente</h2>
+    <p id="channelsDesc">Al emitir, el paciente recibe un aviso. El aviso no incluye el contenido del documento: indica que hay algo nuevo en su Portal.</p>
+    <ul class="rx-channels">
+      <li><span><b>Portal del Paciente</b><small>Siempre activo: ahí se consulta el documento.</small></span><span class="rx-channel-fixed">Siempre</span></li>
+      <li><label for="chWhatsapp"><b>WhatsApp</b><small>«Tu documentación médica ya está disponible en el Portal del Paciente.»</small></label><input class="rx-switch" type="checkbox" id="chWhatsapp" role="switch"></li>
+      <li><label for="chEmail"><b>Email</b><small>Mismo aviso, sin datos del documento.</small></label><input class="rx-switch" type="checkbox" id="chEmail" role="switch"></li>
+    </ul>
+    <p class="rx-dialog-note">Representación conceptual: la demo no envía mensajes reales.</p>
+    <div class="rx-dialog-actions">
+      <button class="btn btn-primary" type="submit">Listo</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+<script src="js/rx-store.js"></script>
+<script src="js/rx-sheet.js"></script>
+<script src="js/profesional.js"></script>
+</body>
+</html>

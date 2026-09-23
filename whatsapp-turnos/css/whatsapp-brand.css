@@ -959,3 +959,8 @@ body.whatsapp-chat .wa-bubble.confirmado {
   border-left: 4px solid var(--health-success);
 }
 body.whatsapp-chat .wa-phone-avatar { border-radius: 50%; }
+
+/* Aviso con enlace (Prescripción y órdenes): el chat lleva al Portal, no muestra el documento */
+body.whatsapp-chat .wa-cta { display: flex; align-items: center; justify-content: center; min-height: 40px; margin: 10px -4px -2px; padding: 0 12px; border-top: 1px solid rgba(15, 42, 67, 0.12); color: #0B6F71; font-weight: 700; font-size: 14px; text-decoration: none; }
+body.whatsapp-chat .wa-cta::after { content: "↗"; margin-left: 6px; font-weight: 600; }
+body.whatsapp-chat .wa-cta:hover { text-decoration: underline; text-underline-offset: 3px; }

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23102A43'/%3E%3Cpath d='M16 9v14M9 16h14' stroke='%230F8B8D' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>7Ideas · Atención en curso · Integración con Prescripción y órdenes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="css/rx-sheet.css">
+<link rel="stylesheet" href="css/rx.css">
+</head>
+<body class="rx rx-encounter">
+<div class="rx-demo">
+  <div class="rx-demo-in">
+    <a href="index.html"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg><span class="rx-demo-long">Prescripción y Órdenes Digitales</span><span class="rx-demo-short">Módulo</span></a>
+    <span class="rx-demo-tag">Vista ilustrativa de una atención en Horus · no es el producto real</span>
+  </div>
+</div>
+
+<header class="rx-hz-top">
+  <div class="rx-hz-top-in">
+    <span class="rx-hz-mark"><span aria-hidden="true">H</span>Horus <small>Gestión clínica</small></span>
+    <span class="rx-hz-ctx">Consultorio 2 · Cardiología</span>
+  </div>
+</header>
+
+<main class="rx-main rx-hz" id="main">
+  <section class="rx-hz-patient" aria-labelledby="hzName">
+    <p class="rx-eyebrow">Atención en curso · turno de las 10:30</p>
+    <h1 id="hzName">María González</h1>
+    <p class="rx-patient-meta num" id="hzMeta"></p>
+  </section>
+
+  <div class="rx-hz-grid">
+    <section class="rx-hz-record" aria-labelledby="recTitle">
+      <h2 id="recTitle">Registro de la atención</h2>
+      <div class="rx-hz-placeholder">
+        <p>El registro clínico de la consulta vive en Horus o en el sistema clínico de la institución.</p>
+        <p>Esta demo no lo reproduce: solo muestra desde dónde se abre Prescripción y órdenes.</p>
+      </div>
+    </section>
+
+    <aside class="rx-hz-docs" aria-labelledby="docsTitle">
+      <h2 id="docsTitle">Documentos de esta atención</h2>
+      <div class="rx-hz-actions">
+        <a class="btn btn-primary" href="profesional.html?paciente=maria&amp;nueva=receta&amp;origen=horus"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nueva prescripción</a>
+        <a class="btn btn-secondary" href="profesional.html?paciente=maria&amp;nueva=orden&amp;origen=horus"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</a>
+      </div>
+      <p class="field-hint">Abren el módulo con la paciente ya seleccionada.</p>
+      <ul class="rx-hz-list" id="hzList" aria-live="polite"></ul>
+      <a class="rx-link" href="profesional.html?paciente=maria">Ver todos los documentos de María</a>
+    </aside>
+  </div>
+</main>
+
+<footer class="rx-foot">
+  <p><b>Prototipo conceptual.</b> Una implementación productiva deberá adaptarse a los requisitos regulatorios, de identificación, firma, interoperabilidad y seguridad aplicables.</p>
+</footer>
+
+<script src="js/rx-store.js"></script>
+<script src="js/rx-sheet.js"></script>
+<script>
+(function () {
+  var S = window.RxStore, R = window.RxSheet;
+  var p = S.patient('maria');
+  document.getElementById('hzMeta').textContent = S.ageFrom(p.birthISO) + ' años · DNI ' + p.dni + ' · ' + p.coverage + ' ' + p.plan;
+  function render() {
+    var today = S.todayISO();
+    var docs = S.docsForPatient('maria').filter(function (d) { return d.dateISO === today || S.isoOf(d.createdAt) === today; });
+    var list = document.getElementById('hzList');
+    list.innerHTML = docs.length
+      ? docs.map(function (d) {
+        return '<li><span class="rx-doc-kind">' + R.esc(S.kindShort(d)) + '</span><b>' + R.esc(S.headline(d)) + '</b>'
+          + '<span class="rx-hz-row">' + R.statusTag(d, 'pro') + (d.number ? '<span class="num">' + R.esc(d.number) + '</span>' : '') + '</span></li>';
+      }).join('')
+      : '<li class="rx-hz-empty">Todavía no se emitieron documentos en esta atención.</li>';
+  }
+  render();
+  window.addEventListener('storage', function (e) { if (e.key === S.KEY) render(); });
+  window.addEventListener('pageshow', render);
+})();
+</script>
+</body>
+</html>

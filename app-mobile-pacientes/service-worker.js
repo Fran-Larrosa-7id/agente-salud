@@ -1,4 +1,4 @@
-const CACHE_NAME = 'portal-vertical-salud-v2';
+const CACHE_NAME = 'portal-vertical-salud-v3';
 const APP_FILES = [
   './',
   './index.html',
@@ -15,6 +15,9 @@ const APP_FILES = [
   '../css/tokens.css',
   '../css/base.css',
   '../css/components.css',
+  '../prescripcion-ordenes/css/rx-sheet.css',
+  '../prescripcion-ordenes/js/rx-store.js',
+  '../prescripcion-ordenes/js/rx-sheet.js',
 ];
 
 self.addEventListener('install', (event) => {

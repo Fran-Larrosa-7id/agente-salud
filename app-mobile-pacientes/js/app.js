@@ -1,5 +1,10 @@
 (function () {
-  const SCREENS = ['inicio', 'turnos', 'estudios', 'notificaciones', 'perfil'];
+  const SCREENS = ['inicio', 'turnos', 'estudios', 'recetas', 'notificaciones', 'perfil'];
+  // Prescripción y Órdenes Digitales: estado compartido con el panel profesional (prescripcion-ordenes/js/rx-store.js)
+  const RX = window.RxStore || null;
+  const RXS = window.RxSheet || null;
+  // Dentro de la vista en paralelo (prescripcion-ordenes/demo.html) no se muestra el enlace al catálogo
+  if (window.self !== window.top) document.body.classList.add('is-embedded');
   const TURNOS_STORAGE_KEY = 'vertical-salud-turnos-online-v2';
   const PORTAL_SESSION_KEY = 'vertical-salud-portal-session-v1';
   let pendingScreen = 'inicio';
@@ -132,7 +137,7 @@
   }
 
   function showScreen(id) {
-    if (id === 'turnos' && !portalSession) { openAuthDialog('turnos'); return; }
+    if ((id === 'turnos' || id === 'recetas') && !portalSession) { openAuthDialog(id); return; }
     SCREENS.forEach((s) => {
       document.getElementById('screen-' + s).classList.toggle('is-active', s === id);
     });
@@ -143,6 +148,7 @@
     if (id === 'notificaciones') renderNotificaciones();
     if (id === 'inicio') renderInicio();
     if (id === 'turnos') renderTurnos();
+    if (id === 'recetas') renderRecetas();
   }
 
   document.querySelectorAll('[data-goto]').forEach((el) => el.addEventListener('click', (event) => { event.preventDefault(); showScreen(el.dataset.goto); }));
@@ -383,7 +389,9 @@
 
     const mini = document.getElementById('notifMini');
     const coverageNotices = patientAppointments().filter((appointment) => appointment.coverageReview === 'requires-review' && appointment.coverageNotifiedAt).map((appointment) => ({ titulo: 'Cambio en tu cobertura', cuerpo: 'Tu turno del ' + appointment.fecha + ' con ' + appointment.profesional + ' sigue registrado. Revisá las opciones en Mis turnos.' }));
-    mini.innerHTML = [...coverageNotices, ...APP_NOTIFICACIONES].slice(0, 2).map((n) => `
+    renderRxNotice();
+    const rxNotices = rxNotifications().filter((n) => !n.leida).map((n) => ({ titulo: n.titulo, cuerpo: n.cuerpo }));
+    mini.innerHTML = [...coverageNotices, ...rxNotices, ...APP_NOTIFICACIONES].slice(0, 2).map((n) => `
       <div class="app-notif-mini-row">
         <div class="app-notif-title">${escapeHTML(n.titulo)}</div>
         <div class="app-notif-body">${escapeHTML(n.cuerpo)}</div>
@@ -496,6 +504,7 @@
   const scrim = document.getElementById('scrim');
   const drawerTurno = document.getElementById('drawerPedirTurno');
   const drawerEstudio = document.getElementById('drawerEstudio');
+  const drawerDoc = document.getElementById('drawerDoc');
 
   let drawerReturnFocus = null;
 
@@ -508,15 +517,16 @@
   }
   function closeDrawers() {
     scrim.classList.remove('is-open');
-    [drawerTurno, drawerEstudio].forEach((d) => { d.classList.remove('is-open'); d.setAttribute('aria-hidden', 'true'); });
+    [drawerTurno, drawerEstudio, drawerDoc].forEach((d) => { d.classList.remove('is-open'); d.setAttribute('aria-hidden', 'true'); });
     if (drawerReturnFocus && document.body.contains(drawerReturnFocus)) drawerReturnFocus.focus();
     drawerReturnFocus = null;
   }
   scrim.addEventListener('click', closeDrawers);
   document.getElementById('closeDrawerTurno').addEventListener('click', closeDrawers);
   document.getElementById('closeDrawerEstudio').addEventListener('click', closeDrawers);
+  document.getElementById('closeDrawerDoc').addEventListener('click', closeDrawers);
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && (drawerTurno.classList.contains('is-open') || drawerEstudio.classList.contains('is-open'))) closeDrawers();
+    if (e.key === 'Escape' && (drawerTurno.classList.contains('is-open') || drawerEstudio.classList.contains('is-open') || drawerDoc.classList.contains('is-open'))) closeDrawers();
   });
 
   document.getElementById('fabPedirTurno').addEventListener('click', (e) => {
@@ -581,6 +591,7 @@
     turno: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>',
     estudio: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 2h6l1 4H8l1-4z"/><path d="M6 6h12l1 15H5L6 6z"/></svg>',
     documentacion: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+    receta: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
     recordatorio: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0112 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 003.4 0"/></svg>',
   };
 
@@ -598,7 +609,7 @@
         leida: readCoverageNotifications.has(appointment.id),
         appointmentId: appointment.id,
       }));
-    return [...coverage, ...APP_NOTIFICACIONES];
+    return [...coverage, ...rxNotifications(), ...APP_NOTIFICACIONES];
   }
 
   function renderNotificaciones() {
@@ -617,6 +628,12 @@
     function marcarLeida(row) {
       const n = notificationItems().find((x) => x.id === row.dataset.notif);
       if (!n) return;
+      if (n.rxDocId) {
+        showScreen('recetas');
+        openDocDrawer(n.rxDocId, null);
+        updateBellBadge();
+        return;
+      }
       if (n.appointmentId) {
         readCoverageNotifications.add(n.appointmentId);
         showScreen('turnos');
@@ -781,6 +798,11 @@
       renderInicio(); renderTurnos(); renderPortalCoverage(); updateBellBadge();
       if (document.getElementById('screen-notificaciones').classList.contains('is-active')) renderNotificaciones();
     }
+    if (RX && event.key === RX.KEY) {
+      renderRecetas(); renderInicio(); updateBellBadge();
+      if (document.getElementById('screen-notificaciones').classList.contains('is-active')) renderNotificaciones();
+      if (drawerDoc.classList.contains('is-open') && openDocId) paintDocDrawer(openDocId);
+    }
     if (event.key === PORTAL_SESSION_KEY) {
       try { const value = event.newValue ? JSON.parse(event.newValue) : null; portalSession = value?.authenticated ? value : null; } catch (_) { portalSession = null; }
       renderPortalIdentity();
@@ -805,6 +827,149 @@
     navigator.serviceWorker.register('./service-worker.js').catch(() => { /* PWA opcional en este entorno */ });
   }
 
+  // --- Recetas y órdenes ---
+  let openDocId = null;
+
+  function rxPatient() { return RX ? RX.patientForSession(portalSession) : null; }
+  function rxDocs() {
+    const patient = rxPatient();
+    return patient ? RX.docsForPatient(patient.id, { includeDrafts: false }) : [];
+  }
+  function rxNoun(d) { return d.kind === 'receta' ? 'receta' : 'orden'; }
+
+  // Avisos de documentos: el texto no incluye contenido médico
+  function rxNotifications() {
+    if (!RX) return [];
+    const recent = Date.now() - 14 * 24 * 3600000;
+    return rxDocs()
+      .filter((d) => d.notifiedAt && Math.max(d.notifiedAt, d.annulledAt || 0) >= recent)
+      .map((d) => {
+        const pro = RX.professional(d.professionalId);
+        const annulled = d.status === 'anulada';
+        const at = annulled ? d.annulledAt : d.notifiedAt;
+        return {
+          id: 'rx-' + d.id + (annulled ? '-anulada' : ''),
+          tipo: 'receta',
+          titulo: annulled ? (d.kind === 'receta' ? 'Receta anulada' : 'Orden anulada') : 'Tenés una nueva ' + rxNoun(d) + ' disponible',
+          cuerpo: annulled
+            ? 'El profesional anuló la ' + rxNoun(d) + ' del ' + RX.fmtDate(d.dateISO) + '. Sigue visible en Recetas y órdenes.'
+            : 'Emitida por ' + (pro ? pro.name : 'tu profesional') + '. Podés verla en Recetas y órdenes.',
+          hora: RX.channelsLabel(d.channels) + ' · ' + RX.fmtStamp(at),
+          leida: !!d.seenByPatient,
+          rxDocId: d.id,
+          at,
+        };
+      })
+      .sort((a, b) => b.at - a.at);
+  }
+
+  function renderRxNotice() {
+    const box = document.getElementById('rxNewNotice');
+    if (!box) return;
+    const unseen = portalSession && RX ? rxDocs().filter((d) => !d.seenByPatient && d.status === 'emitida') : [];
+    if (!unseen.length) { box.innerHTML = ''; return; }
+    const d = unseen[0];
+    const pro = RX.professional(d.professionalId);
+    box.innerHTML = `<div class="app-rx-new-card">
+        <span class="app-rx-new-ic" aria-hidden="true">${NOTIF_ICONS.receta}</span>
+        <div class="app-rx-new-txt"><b>Tenés una nueva ${rxNoun(d)} disponible</b><span>${escapeHTML(RX.kindLabel(d))} · ${escapeHTML(pro ? pro.name : '')}${unseen.length > 1 ? ' · y ' + (unseen.length - 1) + ' más' : ''}</span></div>
+        <button class="btn btn-accent btn-sm" type="button" data-rx-open="${escapeHTML(d.id)}">Ver ${rxNoun(d)}</button>
+      </div>`;
+    box.querySelector('[data-rx-open]').addEventListener('click', () => { showScreen('recetas'); openDocDrawer(d.id, null); });
+  }
+
+  function rxStatusLine(d) {
+    const key = RX.statusOf(d);
+    if (key === 'emitida') return 'hasta ' + RX.fmtDate(d.expiresISO);
+    if (key === 'vencida') return 'el ' + RX.fmtDate(d.expiresISO);
+    return 'el ' + RX.fmtDate(RX.isoOf(d.annulledAt));
+  }
+
+  function rxCard(d) {
+    const pro = RX.professional(d.professionalId);
+    const key = RX.statusOf(d);
+    const detail = d.kind === 'receta' ? RX.usageLine(d) : (RX.ORDER_TYPES[d.orderType] ? RX.ORDER_TYPES[d.orderType].label : '');
+    return `<article class="app-list-card app-rx-card${key !== 'emitida' ? ' is-inactive' : ''}">
+        <button class="app-rx-open" type="button" data-rx-open="${escapeHTML(d.id)}">
+          <span class="app-rx-kind">${escapeHTML(d.kind === 'receta' ? 'Prescripción' : RX.kindLabel(d))}${d.seenByPatient ? '' : '<span class="app-rx-dot">' + (d.status === 'anulada' ? 'Actualizada' : 'Nuevo') + '</span>'}</span>
+          <span class="app-list-card-title">${escapeHTML(RX.headline(d))}</span>
+          ${detail ? `<span class="app-rx-detail">${escapeHTML(detail)}</span>` : ''}
+          <span class="app-rx-meta">Emitida ${escapeHTML(RX.fmtDate(d.dateISO))} · ${escapeHTML(pro ? pro.name : '')}</span>
+          <span class="app-rx-status">${RXS.statusTag(d, 'patient')}<span>${escapeHTML(rxStatusLine(d))}</span></span>
+          <span class="app-rx-chev" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg></span>
+        </button>
+        ${key === 'anulada' ? '' : `<div class="app-rx-actions">
+          <button class="btn btn-ghost btn-sm" type="button" data-rx-download="${escapeHTML(d.id)}">Descargar</button>
+          <button class="btn btn-ghost btn-sm" type="button" data-rx-share="${escapeHTML(d.id)}">Compartir</button>
+        </div>`}
+      </article>`;
+  }
+
+  function renderRecetas() {
+    const list = document.getElementById('rxList');
+    if (!list) return;
+    if (!RX) { list.innerHTML = '<p class="app-empty-note">Este servicio no está disponible sin conexión.</p>'; return; }
+    if (!portalSession) { list.innerHTML = '<p class="app-empty-note">Ingresá para ver tus recetas y órdenes.</p>'; return; }
+    const docs = rxDocs();
+    const recetas = docs.filter((d) => d.kind === 'receta');
+    const ordenes = docs.filter((d) => d.kind === 'orden');
+    const group = (title, items, empty) => `<div class="app-section-title">${title}</div>` + (items.length ? items.map(rxCard).join('') : `<p class="app-empty-note">${empty}</p>`);
+    list.innerHTML = group('Recetas', recetas, 'Todavía no tenés recetas. Cuando un profesional emita una, aparece acá y te avisamos.')
+      + group('Órdenes', ordenes, 'Todavía no tenés órdenes para estudios o prestaciones.');
+    list.querySelectorAll('[data-rx-open]').forEach((b) => b.addEventListener('click', () => openDocDrawer(b.dataset.rxOpen, b)));
+    list.querySelectorAll('[data-rx-download]').forEach((b) => b.addEventListener('click', () => rxDownload(b.dataset.rxDownload)));
+    list.querySelectorAll('[data-rx-share]').forEach((b) => b.addEventListener('click', () => rxShare(b.dataset.rxShare)));
+  }
+
+  function rxDownload(id) {
+    const d = RX.doc(id);
+    if (!d) return;
+    RXS.downloadHTML(d, 'patient');
+    showToast('Descargamos una copia del documento de demostración.');
+  }
+  async function rxShare(id) {
+    const d = RX.doc(id);
+    if (!d) return;
+    const result = await RXS.share(d);
+    if (result === 'copied') showToast('Copiamos un aviso para compartir. No incluye datos médicos.');
+    else if (result === 'unavailable') showToast('Compartir no está disponible en este dispositivo.');
+  }
+
+  function paintDocDrawer(id) {
+    const d = RX.doc(id);
+    if (!d) { closeDrawers(); return; }
+    document.getElementById('docDrawerTitle').textContent = RX.kindLabel(d);
+    document.getElementById('docDrawerBody').innerHTML = RXS.render(d, { audience: 'patient' });
+    const actions = document.getElementById('docDrawerActions');
+    actions.innerHTML = d.status === 'anulada'
+      ? '<p class="app-policy-note">Este documento fue anulado por el profesional. Si tenés dudas, consultá con la institución.</p>'
+      : '<button class="btn btn-accent" type="button" id="docDownload">Descargar</button><button class="btn btn-secondary" type="button" id="docShare">Compartir</button>';
+    const download = document.getElementById('docDownload');
+    const share = document.getElementById('docShare');
+    if (download) download.addEventListener('click', () => rxDownload(d.id));
+    if (share) share.addEventListener('click', () => rxShare(d.id));
+  }
+
+  function openDocDrawer(id, trigger) {
+    if (!RX || !RX.doc(id)) return;
+    const patient = rxPatient();
+    const d = RX.doc(id);
+    if (!patient || d.patientId !== patient.id) return;
+    openDocId = id;
+    paintDocDrawer(id);
+    if (!d.seenByPatient) { RX.markSeen([id]); renderRecetas(); renderInicio(); updateBellBadge(); }
+    openDrawer(drawerDoc, trigger);
+  }
+
+  // Enlaces directos: index.html#recetas o #recetas/<id> (desde el panel profesional o WhatsApp)
+  function handleHash() {
+    const match = location.hash.match(/^#recetas(?:\/(.+))?$/);
+    if (!match) return;
+    showScreen('recetas');
+    if (match[1] && portalSession) openDocDrawer(decodeURIComponent(match[1]), null);
+  }
+  window.addEventListener('hashchange', handleHash);
+
   // --- Perfil / documentos ---
   function renderDocumentos() {
     document.getElementById('documentosList').innerHTML = APP_DOCUMENTOS.map((d) => `
@@ -820,6 +985,8 @@
 
   renderPortalIdentity();
   renderEstudios();
+  renderRecetas();
+  handleHash();
   renderDocumentos();
   updateBellBadge();
 })();

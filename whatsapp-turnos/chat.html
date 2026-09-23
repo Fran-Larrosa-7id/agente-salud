@@ -138,6 +138,15 @@
       } else {
         bubble.textContent = paso.texto;
       }
+      if (paso.cta) {
+        const cta = document.createElement('a');
+        cta.className = 'wa-cta';
+        cta.href = paso.cta.href;
+        cta.target = '_blank';
+        cta.rel = 'noopener';
+        cta.textContent = paso.cta.texto;
+        bubble.appendChild(cta);
+      }
       body.appendChild(bubble);
       body.scrollTop = body.scrollHeight;
       requestAnimationFrame(() => bubble.classList.add('is-visible'));

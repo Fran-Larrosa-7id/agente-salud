@@ -271,8 +271,51 @@ html:not(.js) .sync-tabs { display: none; }
 .ll-head { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px clamp(40px, 6vw, 96px); align-items: end; margin-bottom: clamp(36px, 4.5vw, 56px); }
 .ll-head .p-desc { margin-top: 0; }
 .ll-head .p-cta { margin-top: 24px; }
-.tv { margin: 0; padding: clamp(6px, 0.9vw, 12px); background: var(--navy-strong); border-radius: 16px; box-shadow: var(--shadow-shot); }
-.tv img { width: 100%; height: auto; aspect-ratio: 2000 / 800; object-fit: cover; object-position: top center; border-radius: 6px; }
+.tv { position: relative; margin: 0; padding: clamp(6px, 0.9vw, 12px); background: var(--navy-strong); border-radius: 16px; box-shadow: var(--shadow-shot); container-type: inline-size; }
+/* Pantalla de sala construida en HTML: todo escala con el ancho (1em = 1% del ancho) */
+.tvs { display: grid; grid-template-rows: auto minmax(0, 1fr); aspect-ratio: 5 / 2; overflow: hidden; border-radius: 6px; background: #f4f7fa; font-size: 1cqi; line-height: 1.2; color: var(--navy); }
+.tvs p { margin: 0; }
+.tvs-top { display: flex; align-items: center; gap: 1.5em; padding: 1.8em 2.6em; background: #fff; border-bottom: 1px solid var(--border); }
+.tvs-brand { display: flex; align-items: center; gap: 0.5em; min-width: 0; font-size: 1.6em; font-weight: 700; white-space: nowrap; }
+.tvs-brand i { flex: none; width: 0.42em; height: 0.42em; border-radius: 50%; background: var(--teal); }
+.tvs-brand span { margin-left: 0.6em; padding-left: 0.9em; border-left: 1px solid var(--border); font-size: 0.8em; font-weight: 500; color: var(--muted); }
+.tvs-clock { margin-left: auto !important; font-size: 2.1em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tvs-body { display: grid; grid-template-columns: minmax(0, 1.95fr) minmax(0, 1fr); gap: 2em; padding: 2.1em 2.6em; }
+.tvs-rooms { align-self: start; margin: 0; padding: 0; list-style: none; overflow: hidden; border: 1px solid var(--border); border-radius: 0.8em; background: #fff; }
+.tvs-rooms li { display: grid; grid-template-columns: 7.4em minmax(0, 1fr) auto; min-height: 8.9em; }
+.tvs-rooms li + li { border-top: 1px solid var(--border); }
+.tvs-num { display: grid; place-items: center; background: var(--navy-strong); font-size: 4.4em; font-weight: 700; color: #fff; }
+.tvs-who, .tvs-meta { align-self: center; padding: 0 2em; }
+.tvs-who { min-width: 0; }
+.tvs-who b { display: block; overflow: hidden; font-size: 3.1em; letter-spacing: -0.01em; white-space: nowrap; text-overflow: ellipsis; }
+.tvs-who small, .tvs-meta small { display: block; margin-top: 0.45em; font-size: 1.25em; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.tvs-rooms .is-empty .tvs-who b { font-size: 1.65em; font-weight: 600; }
+.tvs-meta { text-align: right; }
+.tvs-meta b { display: block; font-size: 2.1em; font-variant-numeric: tabular-nums; }
+.tvs-meta small { font-size: 1.05em; font-weight: 600; }
+.is-empty .tvs-meta b { display: none; }
+.tvs-side { min-width: 0; }
+.tvs-call { padding: 2.1em 2.4em; border-radius: 0.8em; background: var(--navy-strong); color: #fff; box-shadow: 0 0 0 0 rgba(15, 139, 141, 0), 0 0.6em 1.4em rgba(8, 31, 51, 0.22); }
+.tvs-call p { font-size: 1.05em; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--on-dark); }
+.tvs-call b { display: block; margin-top: 0.3em; overflow: hidden; font-size: 3.1em; white-space: nowrap; text-overflow: ellipsis; }
+.tvs-call span { display: block; margin-top: 0.4em; font-size: 1.7em; font-weight: 600; }
+.tvs-k { margin-top: 2.2em !important; padding-bottom: 0.8em; border-bottom: 1px solid var(--teal); font-size: 1.05em; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal-strong); }
+.tvs-prev { margin: 0; padding: 0; list-style: none; }
+.tvs-prev li { display: grid; grid-template-rows: 1fr; }
+.tvs-prev li > div { display: flex; align-items: baseline; justify-content: space-between; gap: 1em; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.tvs-prev b { padding: 0.95em 0; font-size: 1.3em; font-weight: 600; }
+.tvs-prev small { font-size: 0.85em; color: var(--muted); }
+/* App del profesional: aparece sobre el borde del televisor cuando alguien llama */
+.tvs-pro { position: absolute; right: clamp(10px, 3cqi, 36px); bottom: -2.2em; display: grid; gap: 0.45em; width: 22em; padding: 1em 1.1em 1.1em; border-radius: 1em; background: #fff; font-size: clamp(8.5px, 1.2cqi, 13px); color: var(--navy); box-shadow: 0 0 0 1px rgba(16, 42, 67, 0.08), 0 1.4em 2.6em -0.8em rgba(8, 31, 51, 0.5); opacity: 0; visibility: hidden; transform: translateY(0.8em) scale(0.97); transform-origin: 50% 100%; }
+.tvs-pro.is-in { opacity: 1; visibility: visible; transform: none; }
+.tvs-pro p { margin: 0; }
+.tvs-pro-h { display: flex; align-items: center; gap: 0.45em; font-size: 0.8em; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--teal-strong); }
+.tvs-pro-h svg { width: 1.3em; height: 1.3em; }
+.tvs-pro-d { font-weight: 700; }
+.tvs-pro-n { color: var(--muted); }
+.tvs-pro-n b { color: var(--navy); }
+.tvs-pro-btn { display: grid; place-items: center; margin-top: 0.3em; padding: 0.7em; border-radius: 0.6em; background: var(--navy); font-weight: 600; color: #fff; }
+.tvs-pro-btn.is-press { background: var(--teal-strong); transform: scale(0.96); }
 .ll-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(24px, 3vw, 48px); margin: clamp(36px, 4.5vw, 56px) 0 0; padding: 0; list-style: none; }
 .ll-flow li { position: relative; padding-top: 20px; border-top: 1px solid var(--border); }
 .ll-flow li::before { content: ''; position: absolute; top: -1px; left: 0; width: 40px; height: 2px; background: var(--navy); }
@@ -341,6 +384,12 @@ html:not(.js) .sync-tabs { display: none; }
 @keyframes waDot { 0%, 60%, 100% { transform: none; opacity: 0.5; } 30% { transform: translateY(-0.25em); opacity: 1; } }
 @keyframes waSpin { to { transform: rotate(360deg); } }
 @keyframes waCaret { 50% { opacity: 0; } }
+@keyframes llFlash {
+  0%, 16% { background-color: var(--teal-strong); box-shadow: 0 0 0 0.7em rgba(15, 139, 141, 0.28), 0 0.6em 1.4em rgba(8, 31, 51, 0.22); }
+  32% { background-color: var(--navy-strong); }
+  48% { background-color: var(--teal-strong); }
+  100% { background-color: var(--navy-strong); box-shadow: 0 0 0 1.6em rgba(15, 139, 141, 0), 0 0.6em 1.4em rgba(8, 31, 51, 0.22); }
+}
 @keyframes hfPing { 0% { opacity: 0.6; transform: scale(0.5); } 80%, 100% { opacity: 0; transform: scale(1.4); } }
 @keyframes rise { from { opacity: 0; transform: translateY(var(--y, 10px)); } }
 @media (prefers-reduced-motion: no-preference) {
@@ -394,6 +443,24 @@ html:not(.js) .sync-tabs { display: none; }
   .wa-flow li::before { transition: background-color 240ms ease, color 240ms ease; }
   .wa-flow li.is-on::before { background: var(--teal-strong); border-color: var(--teal-strong); color: #fff; }
   .wa-flow li.is-done::before { background: #e3f3ef; }
+  /* Llamador: cada llamado recorre recepción → profesional → sala */
+  .ll-flow li::before { transition: width 700ms var(--ease), background-color 240ms ease; }
+  .ll-flow li.is-on::before { width: 100%; background: var(--teal); }
+  .ll-flow b { transition: color 240ms ease; }
+  .ll-flow li.is-on b { color: var(--teal-strong); }
+  .tvs-rooms li, .tvs-num { transition: background-color 360ms ease; }
+  .tvs-rooms li.is-focus { background: var(--mint-soft); }
+  .tvs-rooms li.is-focus .tvs-num { background: var(--teal-strong); }
+  .tvs-who, .tvs-meta, .tvs-call-in { transition: opacity 200ms ease, filter 200ms ease, transform 320ms var(--ease); }
+  .is-swap .tvs-who, .is-swap .tvs-meta, .is-swap .tvs-call-in { opacity: 0; filter: blur(2px); transform: translateY(0.4em); }
+  .tvs-call.is-flash { animation: llFlash 1500ms ease-out; }
+  .tvs-prev li { transition: grid-template-rows 420ms var(--ease), opacity 300ms ease; }
+  .tvs-prev li.is-new, .tvs-prev li.is-out { grid-template-rows: 0fr; opacity: 0; }
+  .tvs-pro { transition: opacity 240ms ease, transform 420ms var(--ease), visibility 0s linear 420ms; }
+  .tvs-pro.is-in { transition: opacity 240ms ease, transform 420ms var(--ease), visibility 0s; }
+  .tvs-pro-btn { transition: background-color 160ms ease, transform 160ms var(--ease); }
+  .tvs > * { transition: opacity 360ms ease; }
+  .tvs.is-fading > * { opacity: 0; }
   .js .j-line { transition: transform 900ms cubic-bezier(0.65, 0, 0.35, 1); }
   .js .j-stages li { transition: opacity 380ms var(--ease), transform 380ms var(--ease); transition-delay: calc(160ms + var(--i, 0) * 120ms); }
   .js .j-ia { transition: opacity 380ms var(--ease); transition-delay: 820ms; }

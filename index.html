@@ -121,21 +121,60 @@
           </details>
         </div>
 
-        <div class="turnos-stage reveal reveal-media" data-sync data-step="3">
+        <div class="turnos-stage reveal reveal-media" data-sync data-scene="new" data-step="3">
+          <div class="sync-tabs" role="tablist" aria-label="Caso a mostrar">
+            <button type="button" role="tab" id="sc-new" aria-selected="true" aria-controls="turnos-sync" data-scene="new" data-steps="Elige horario|Confirma|En la agenda">Reserva</button>
+            <button type="button" role="tab" id="sc-cancel" aria-selected="false" aria-controls="turnos-sync" tabindex="-1" data-scene="cancel" data-steps="Cancela|Confirma|Lista de espera">Cancelación</button>
+            <button type="button" role="tab" id="sc-reprog" aria-selected="false" aria-controls="turnos-sync" tabindex="-1" data-scene="reprog" data-steps="Reprograma|Confirma|En la agenda">Reprogramación</button>
+          </div>
+          <div id="turnos-sync" role="tabpanel" aria-labelledby="sc-new">
           <figure class="shot shot-desk">
             <div class="frames">
-              <img class="fr fr-a" src="assets/home/turnos-agenda-a.webp" alt="" aria-hidden="true" width="2000" height="1265" loading="lazy">
-              <img class="fr fr-b" src="assets/home/turnos-agenda-b.webp" alt="Agenda del día de la recepción: el turno de Ana Suárez a las 09:30 con la Dra. Laura Gómez aparece junto al resto de los turnos" width="2000" height="1265" loading="lazy">
-              <span class="sync-hl" aria-hidden="true"></span>
-              <span class="sync-chip" aria-hidden="true">Nuevo turno</span>
+              <div class="sc" data-sc="new">
+                <img class="fr fr-a" src="assets/home/turnos-agenda-a.webp" alt="" aria-hidden="true" width="2000" height="1265" loading="lazy">
+                <img class="fr fr-b" src="assets/home/turnos-agenda-b.webp" alt="Agenda del día de la recepción: el turno de Ana Suárez a las 09:30 con la Dra. Laura Gómez aparece junto al resto de los turnos" width="2000" height="1265" loading="lazy">
+                <span class="sync-hl" aria-hidden="true"></span>
+                <span class="sync-chip" aria-hidden="true">Nuevo turno</span>
+              </div>
+              <div class="sc" data-sc="cancel">
+                <img class="fr fr-a" src="assets/home/turnos-c-a.webp" alt="" aria-hidden="true" width="2000" height="1265" loading="lazy">
+                <img class="fr fr-b" src="assets/home/turnos-c-b.webp" alt="Agenda de la recepción: el horario de las 10:00 que liberó Ana Suárez aparece ofrecido a Valentina Ríos, de la lista de espera" width="2000" height="1265" loading="lazy">
+                <span class="sync-hl" style="top:53.49%" aria-hidden="true"></span>
+                <span class="sync-chip is-up" style="top:53.49%" aria-hidden="true">Lista de espera</span>
+              </div>
+              <div class="sc" data-sc="reprog">
+                <img class="fr fr-a" src="assets/home/turnos-c-a.webp" alt="" aria-hidden="true" width="2000" height="1265" loading="lazy">
+                <img class="fr fr-b" src="assets/home/turnos-r-b.webp" alt="Agenda de la recepción: el turno de Ana Suárez pasó a las 11:30 y su horario anterior de las 10:00 se le ofreció a Valentina Ríos, de la lista de espera" width="2000" height="1265" loading="lazy">
+                <span class="sync-hl" style="top:68.84%" aria-hidden="true"></span>
+                <span class="sync-chip" style="top:71.13%" aria-hidden="true">Reprogramado</span>
+                <span class="sync-hl is-2" style="top:53.49%" aria-hidden="true"></span>
+                <span class="sync-chip is-up is-2" style="top:53.49%" aria-hidden="true">Lista de espera</span>
+              </div>
             </div>
           </figure>
           <figure class="shot shot-phone">
             <div class="frames">
-              <img class="fr fr-1" src="assets/home/turnos-p1.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
-              <img class="fr fr-2" src="assets/home/turnos-p2.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
-              <img class="fr fr-3" src="assets/home/turnos-p3.webp" alt="Confirmación en el celular del paciente: turno reservado para las 09:30 con la Dra. Laura Gómez" width="780" height="1688" loading="lazy">
-              <span class="sync-tap" aria-hidden="true"></span>
+              <div class="sc" data-sc="new">
+                <img class="fr fr-1" src="assets/home/turnos-p1.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+                <img class="fr fr-2" src="assets/home/turnos-p2.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+                <img class="fr fr-3" src="assets/home/turnos-p3.webp" alt="Confirmación en el celular del paciente: turno reservado para las 09:30 con la Dra. Laura Gómez" width="780" height="1688" loading="lazy">
+                <span class="sync-tap t1" aria-hidden="true"></span>
+                <span class="sync-tap t2" style="left:82.2%;top:96%" aria-hidden="true"></span>
+              </div>
+              <div class="sc" data-sc="cancel">
+                <img class="fr fr-1" src="assets/home/turnos-c-p1.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+                <img class="fr fr-2" src="assets/home/turnos-c-p2.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+                <img class="fr fr-3" src="assets/home/turnos-c-p3.webp" alt="Mis turnos en el celular del paciente: el turno del miércoles 23 a las 10:00 con la Dra. Laura Gómez figura como cancelado" width="780" height="1688" loading="lazy">
+                <span class="sync-tap t1" style="left:54.73%;top:47.89%" aria-hidden="true"></span>
+                <span class="sync-tap t2" style="left:72.56%;top:95.02%" aria-hidden="true"></span>
+              </div>
+              <div class="sc" data-sc="reprog">
+                <img class="fr fr-1" src="assets/home/turnos-r-p1.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+                <img class="fr fr-2" src="assets/home/turnos-r-p2.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+                <img class="fr fr-3" src="assets/home/turnos-r-p3.webp" alt="Mis turnos en el celular del paciente: el turno con la Dra. Laura Gómez quedó confirmado para las 11:30" width="780" height="1688" loading="lazy">
+                <span class="sync-tap t1" style="left:22.7%;top:47.89%" aria-hidden="true"></span>
+                <span class="sync-tap t2" style="left:69.04%;top:95.97%" aria-hidden="true"></span>
+              </div>
             </div>
           </figure>
           <div class="sync-bar">
@@ -144,6 +183,7 @@
               <li data-s="2">Confirma</li>
               <li data-s="3">En la agenda</li>
             </ol>
+          </div>
           </div>
         </div>
       </div>
@@ -421,25 +461,62 @@
   }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
   els.forEach(function (e) { io.observe(e); });
 })();
-/* Turnos Online: el paciente reserva en el celular y el turno aparece en la agenda.
-   Corre en bucle mientras la sección está en pantalla; fuera de pantalla se pausa. Sin movimiento: estado final. */
+/* Turnos Online: reserva, cancelación y reprogramación, del celular a la agenda.
+   Corre en bucle mientras la sección está en pantalla y pasa solo al caso siguiente hasta que el
+   visitante elige uno con las pestañas; fuera de pantalla se pausa. Sin movimiento: estado final. */
 (function () {
   var stage = document.querySelector('[data-sync]');
-  if (!stage || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var timers = [];
+  if (!stage) return;
+  var tabs = [].slice.call(stage.querySelectorAll('[role="tab"]'));
+  var labels = stage.querySelectorAll('.sync-steps li');
+  var panel = document.getElementById('turnos-sync');
+  var still = !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var timers = [], pinned = false;
   function step(n) { stage.setAttribute('data-step', n); }
   function stop() { timers.forEach(clearTimeout); timers = []; }
+  function reset(n) { stage.classList.add('is-resetting'); step(n); void stage.offsetWidth; stage.classList.remove('is-resetting'); }
+  function scene(tab) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+    });
+    stage.setAttribute('data-scene', tab.getAttribute('data-scene'));
+    panel.setAttribute('aria-labelledby', tab.id);
+    tab.getAttribute('data-steps').split('|').forEach(function (s, i) { labels[i].textContent = s; });
+  }
+  function current() { return tabs.filter(function (t) { return t.getAttribute('aria-selected') === 'true'; })[0]; }
   function cycle() {
     stop(); step(0);
     [[900, 1], [2300, 2], [3400, 3]].forEach(function (t) {
       timers.push(setTimeout(function () { step(t[1]); }, t[0]));
     });
-    timers.push(setTimeout(cycle, 3400 + 3600));
+    timers.push(setTimeout(function () {
+      if (!pinned) { scene(tabs[(tabs.indexOf(current()) + 1) % tabs.length]); reset(0); }
+      cycle();
+    }, 3400 + 3600));
   }
+  function choose(tab) {
+    pinned = true;
+    if (tab === current() && timers.length) return;
+    stop(); scene(tab);
+    if (still) reset(3); else { reset(0); cycle(); }
+  }
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () { choose(t); });
+    t.addEventListener('keydown', function (e) {
+      var i = tabs.indexOf(t), n = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (n === undefined) return;
+      e.preventDefault();
+      var next = tabs[(n + tabs.length) % tabs.length];
+      next.focus(); choose(next);
+    });
+  });
+  if (still) return;
   step(0);
   new IntersectionObserver(function (entries) {
     if (entries[0].isIntersecting) { if (!timers.length) cycle(); }
-    else { stop(); stage.classList.add('is-resetting'); step(0); void stage.offsetWidth; stage.classList.remove('is-resetting'); }
+    else { stop(); reset(0); }
   }, { threshold: 0.3 }).observe(stage);
 })();
 (function () {

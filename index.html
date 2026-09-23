@@ -403,13 +403,33 @@
           </dl>
         </details>
       </div>
-      <div class="ob-stage reveal reveal-media">
+      <div class="ob-stage rx-stage reveal reveal-media" data-rx data-step="3">
         <figure class="shot shot-panel">
-          <img src="assets/home/prescripcion-panel.webp" alt="Panel profesional con una nueva prescripción para María González y la vista previa del documento" width="2000" height="1266" loading="lazy">
+          <div class="frames">
+            <img class="fr" src="assets/home/prescripcion-panel.webp" alt="" aria-hidden="true" width="2000" height="1266" loading="lazy">
+            <img class="fr rx-b" src="assets/home/prescripcion-panel-b.webp" alt="" aria-hidden="true" width="2000" height="1266" loading="lazy">
+            <img class="fr rx-c" src="assets/home/prescripcion-panel-c.webp" alt="Panel profesional: la prescripción RX-DEMO para María González quedó emitida y el aviso se envió a su Portal" width="2000" height="1266" loading="lazy">
+            <span class="sync-tap t1" style="left:47.43%;top:95.56%" aria-hidden="true"></span>
+            <span class="sync-tap t2" style="left:85.47%;top:64.98%" aria-hidden="true"></span>
+          </div>
         </figure>
         <figure class="shot shot-phone shot-phone-ob">
-          <img src="assets/home/prescripcion-portal.webp" alt="Portal del Paciente con la nueva receta disponible en Recetas y órdenes" width="780" height="1688" loading="lazy">
+          <div class="frames">
+            <img class="fr" src="assets/home/prescripcion-p1.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+            <img class="fr rx-p2" src="assets/home/prescripcion-p2.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+            <img class="fr rx-p3" src="assets/home/prescripcion-portal.webp" alt="Portal del Paciente: la nueva receta aparece primera en Recetas y órdenes, marcada como nueva" width="780" height="1688" loading="lazy">
+            <span class="rx-ping" aria-hidden="true"></span>
+            <span class="sync-tap t3" style="left:34.5%;top:80.97%" aria-hidden="true"></span>
+            <span class="sync-hl" style="left:5.38%;top:31.28%;width:89.23%;height:24.38%" aria-hidden="true"></span>
+          </div>
         </figure>
+        <div class="sync-bar rx-bar">
+          <ol class="sync-steps">
+            <li data-s="1">Completa y revisa</li>
+            <li data-s="2">Emite</li>
+            <li data-s="3">Llega al Portal</li>
+          </ol>
+        </div>
       </div>
     </div>
   </section>
@@ -765,6 +785,27 @@
     if (entries[0].isIntersecting) { if (!timers.length) run(); }
     else { clear(); tv.classList.remove('is-fading'); }
   }, { threshold: 0.35 }).observe(tv);
+})();
+/* Prescripción: el profesional revisa y emite; el aviso llega al Portal y la receta queda en la lista.
+   En bucle mientras está en pantalla; fuera de pantalla se pausa. Sin movimiento: estado final. */
+(function () {
+  var stage = document.querySelector('[data-rx]');
+  if (!stage || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var timers = [];
+  function step(n) { stage.setAttribute('data-step', n); }
+  function stop() { timers.forEach(clearTimeout); timers = []; }
+  function cycle() {
+    stop(); step(0);
+    [[1000, 1], [2900, 2], [5600, 3]].forEach(function (t) {
+      timers.push(setTimeout(function () { step(t[1]); }, t[0]));
+    });
+    timers.push(setTimeout(cycle, 5600 + 4200));
+  }
+  stage.classList.add('is-resetting'); step(0); void stage.offsetWidth; stage.classList.remove('is-resetting');
+  new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting) { if (!timers.length) cycle(); }
+    else { stop(); stage.classList.add('is-resetting'); step(0); void stage.offsetWidth; stage.classList.remove('is-resetting'); }
+  }, { threshold: 0.3 }).observe(stage);
 })();
 (function () {
   /* Hero: cada producto de la suite "avisa" algo; el link de la suite se enciende a la par */

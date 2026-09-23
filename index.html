@@ -329,7 +329,33 @@
       </div>
 
       <figure class="tv reveal reveal-media">
-        <img src="assets/home/llamador-pantalla.webp" alt="Pantalla de sala de espera: tres consultorios con el paciente en atención y un llamado destacado a Ana López en el consultorio 2" width="2000" height="900" loading="lazy">
+        <div class="tvs" data-ll role="img" aria-label="Pantalla de sala de espera: tres consultorios con el paciente en atención y un llamado destacado a Ana López en el consultorio 2">
+          <div class="tvs-top">
+            <p class="tvs-brand"><i></i>7Ideas · Vertical Salud · Llamador de pacientes<span>Sala de espera Planta Baja</span></p>
+            <p class="tvs-clock" data-clock>16:25</p>
+          </div>
+          <div class="tvs-body">
+            <ol class="tvs-rooms">
+              <li data-room="1"><span class="tvs-num">1</span><div class="tvs-who"><b>Roberto Aguirre</b><small>Dr. Juan Pérez · Traumatología</small></div><div class="tvs-meta"><b>10:15</b><small><span>2</span> en espera</small></div></li>
+              <li data-room="2"><span class="tvs-num">2</span><div class="tvs-who"><b>Ana López</b><small>Dra. Sofía Martínez · Cardiología</small></div><div class="tvs-meta"><b>10:40</b><small><span>2</span> en espera</small></div></li>
+              <li data-room="3" class="is-empty"><span class="tvs-num">3</span><div class="tvs-who"><b>Sin paciente en atención</b><small>Dr. Martín Gómez · Clínica Médica</small></div><div class="tvs-meta"><b></b><small><span>3</span> en espera</small></div></li>
+            </ol>
+            <div class="tvs-side">
+              <div class="tvs-call"><div class="tvs-call-in"><p>Llamando</p><b>Ana López</b><span>Consultorio 2</span></div></div>
+              <p class="tvs-k">Llamados anteriores</p>
+              <ol class="tvs-prev">
+                <li><div><b>Roberto Aguirre</b><small>Consultorio 1 · 16:22</small></div></li>
+                <li><div><b>Julián Castro</b><small>Consultorio 3 · 16:18</small></div></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <div class="tvs-pro" data-pro aria-hidden="true">
+          <p class="tvs-pro-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>App del profesional</p>
+          <p class="tvs-pro-d"></p>
+          <p class="tvs-pro-n">Siguiente: <b></b></p>
+          <span class="tvs-pro-btn">Llamar al siguiente</span>
+        </div>
       </figure>
 
       <ol class="ll-flow reveal">
@@ -622,6 +648,84 @@
     if (entries[0].isIntersecting) { if (!timers.length) run(); }
     else clear();
   }, { threshold: 0.35 }).observe(phone);
+})();
+/* Llamador: recepción ordena, el profesional llama desde su app y la sala lo muestra */
+(function () {
+  var tv = document.querySelector('[data-ll]');
+  if (!tv || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var pro = document.querySelector('[data-pro]'), btn = pro.querySelector('.tvs-pro-btn');
+  var steps = document.querySelectorAll('.ll-flow li');
+  var snap = tv.innerHTML, timers = [], calling;
+  var CALLS = [
+    { r: '3', doc: 'Dr. Martín Gómez', n: 'Lucía Fernández', t: '10:50', at: '16:26' },
+    { r: '1', doc: 'Dr. Juan Pérez', n: 'Carlos Méndez', t: '10:30', at: '16:28' },
+    { r: '2', doc: 'Dra. Sofía Martínez', n: 'Marta Ruiz', t: '11:00', at: '16:29' }
+  ];
+  function q(s) { return tv.querySelector(s); }
+  function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+  function step(n) { steps.forEach(function (li, i) { li.classList.toggle('is-on', i === n - 1); }); }
+  /* funde el contenido, lo cambia y lo vuelve a mostrar */
+  function swap(box, fn) {
+    box.classList.add('is-swap');
+    setTimeout(function () { fn(); box.classList.remove('is-swap'); }, 200);
+  }
+  function call(c, t0) {
+    var row;
+    at(t0, function () { step(1); row = q('[data-room="' + c.r + '"]'); row.classList.add('is-focus'); });
+    at(t0 + 1300, function () {
+      step(2);
+      pro.querySelector('.tvs-pro-d').textContent = 'Consultorio ' + c.r + ' · ' + c.doc;
+      pro.querySelector('b').textContent = c.n;
+      pro.classList.add('is-in');
+    });
+    at(t0 + 2500, function () { btn.classList.add('is-press'); });
+    at(t0 + 2680, function () { btn.classList.remove('is-press'); });
+    at(t0 + 2900, function () {
+      step(3); pro.classList.remove('is-in');
+      q('[data-clock]').textContent = c.at;
+      /* el llamado actual pasa a "anteriores" */
+      var list = q('.tvs-prev'), li = document.createElement('li');
+      li.className = 'is-new';
+      li.innerHTML = '<div><b></b><small></small></div>';
+      li.querySelector('b').textContent = calling.n;
+      li.querySelector('small').textContent = 'Consultorio ' + calling.r + ' · ' + calling.at;
+      list.insertBefore(li, list.firstChild);
+      var last = list.lastElementChild;
+      void li.offsetWidth; li.classList.remove('is-new'); last.classList.add('is-out');
+      setTimeout(function () { last.remove(); }, 440);
+      var card = q('.tvs-call');
+      swap(card, function () {
+        card.querySelector('b').textContent = c.n;
+        card.querySelector('span').textContent = 'Consultorio ' + c.r;
+        card.classList.remove('is-flash'); void card.offsetWidth; card.classList.add('is-flash');
+      });
+      swap(row, function () {
+        row.classList.remove('is-empty', 'is-focus');
+        row.querySelector('.tvs-who b').textContent = c.n;
+        row.querySelector('.tvs-meta b').textContent = c.t;
+        var w = row.querySelector('.tvs-meta span'); w.textContent = +w.textContent - 1;
+      });
+      calling = c;
+    });
+  }
+  function clear() {
+    timers.forEach(clearTimeout); timers = [];
+    tv.innerHTML = snap; pro.classList.remove('is-in'); step(0);
+    calling = { r: '2', n: 'Ana López', at: '16:25' };
+  }
+  function run() {
+    clear();
+    void tv.offsetWidth; tv.classList.remove('is-fading');
+    var t = 900;
+    CALLS.forEach(function (c) { call(c, t); t += 5600; });
+    at(t + 800, function () { step(0); tv.classList.add('is-fading'); });
+    at(t + 1200, run);
+  }
+  clear();
+  new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting) { if (!timers.length) run(); }
+    else { clear(); tv.classList.remove('is-fading'); }
+  }, { threshold: 0.35 }).observe(tv);
 })();
 (function () {
   /* Hero: cada producto de la suite "avisa" algo; el link de la suite se enciende a la par */

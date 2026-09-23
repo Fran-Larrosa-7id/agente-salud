@@ -121,13 +121,30 @@
           </details>
         </div>
 
-        <div class="turnos-stage reveal reveal-media">
+        <div class="turnos-stage reveal reveal-media" data-sync data-step="3">
           <figure class="shot shot-desk">
-            <img src="assets/home/turnos-agenda.webp" alt="Agenda del día de la recepción con turnos por profesional, estados y lista de espera" width="2000" height="1265" loading="lazy">
+            <div class="frames">
+              <img class="fr fr-a" src="assets/home/turnos-agenda-a.webp" alt="" aria-hidden="true" width="2000" height="1265" loading="lazy">
+              <img class="fr fr-b" src="assets/home/turnos-agenda-b.webp" alt="Agenda del día de la recepción: el turno de Ana Suárez a las 09:30 con la Dra. Laura Gómez aparece junto al resto de los turnos" width="2000" height="1265" loading="lazy">
+              <span class="sync-hl" aria-hidden="true"></span>
+              <span class="sync-chip" aria-hidden="true">Nuevo turno</span>
+            </div>
           </figure>
           <figure class="shot shot-phone">
-            <img src="assets/home/turnos-paciente.webp" alt="Paciente eligiendo día y horario para un turno de traumatología desde el celular" width="780" height="1688" loading="lazy">
+            <div class="frames">
+              <img class="fr fr-1" src="assets/home/turnos-p1.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+              <img class="fr fr-2" src="assets/home/turnos-p2.webp" alt="" aria-hidden="true" width="780" height="1688" loading="lazy">
+              <img class="fr fr-3" src="assets/home/turnos-p3.webp" alt="Confirmación en el celular del paciente: turno reservado para las 09:30 con la Dra. Laura Gómez" width="780" height="1688" loading="lazy">
+              <span class="sync-tap" aria-hidden="true"></span>
+            </div>
           </figure>
+          <div class="sync-bar">
+            <ol class="sync-steps">
+              <li data-s="1">Elige horario</li>
+              <li data-s="2">Confirma</li>
+              <li data-s="3">En la agenda</li>
+            </ol>
+          </div>
         </div>
       </div>
     </div>
@@ -403,6 +420,27 @@
     entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
   }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
   els.forEach(function (e) { io.observe(e); });
+})();
+/* Turnos Online: el paciente reserva en el celular y el turno aparece en la agenda.
+   Corre en bucle mientras la sección está en pantalla; fuera de pantalla se pausa. Sin movimiento: estado final. */
+(function () {
+  var stage = document.querySelector('[data-sync]');
+  if (!stage || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var timers = [];
+  function step(n) { stage.setAttribute('data-step', n); }
+  function stop() { timers.forEach(clearTimeout); timers = []; }
+  function cycle() {
+    stop(); step(0);
+    [[900, 1], [2300, 2], [3400, 3]].forEach(function (t) {
+      timers.push(setTimeout(function () { step(t[1]); }, t[0]));
+    });
+    timers.push(setTimeout(cycle, 3400 + 3600));
+  }
+  step(0);
+  new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting) { if (!timers.length) cycle(); }
+    else { stop(); stage.classList.add('is-resetting'); step(0); void stage.offsetWidth; stage.classList.remove('is-resetting'); }
+  }, { threshold: 0.3 }).observe(stage);
 })();
 (function () {
   var bar = document.querySelector('.hd');

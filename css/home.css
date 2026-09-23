@@ -129,9 +129,31 @@ body { font-family: 'Inter', var(--font-body); background: #fff; color: var(--te
 .p-points li { padding: 16px 0; border-top: 1px solid #cfdfeb; font-size: 15px; color: var(--muted); }
 .p-points li:last-child { border-bottom: 1px solid #cfdfeb; }
 .p-points b { display: block; margin-bottom: 2px; font-size: 16px; font-weight: 700; color: var(--navy); }
-.turnos-stage { position: relative; padding: 0 0 56px 56px; --bleed: min(200px, (100vw - var(--content)) / 2); }
+.turnos-stage { position: relative; padding: 0 0 0 var(--pl); --pl: 56px; --pw: clamp(150px, 30%, 230px); --bleed: min(200px, (100vw - var(--content)) / 2); }
 .shot-desk { width: calc(100% + var(--bleed)); aspect-ratio: 2000 / 1265; border-radius: 12px 0 0 12px; border: 1px solid #cfdfeb; border-right: 0; }
-.turnos-stage .shot-phone { position: absolute; left: 0; bottom: 0; width: 30%; min-width: 150px; max-width: 230px; }
+.turnos-stage .shot-phone { position: absolute; left: 0; bottom: 0; width: var(--pw); }
+
+/* Sincronía paciente → agenda: capturas reales apiladas; data-step (0–3) decide qué se ve.
+   Sin JS o con movimiento reducido queda en el estado final (3). */
+.frames { position: relative; }
+.shot-phone .frames { aspect-ratio: 780 / 1688; }
+.frames .fr { display: block; width: 100%; height: auto; }
+.frames .fr + .fr { position: absolute; inset: 0; height: 100%; }
+.fr-2, .fr-3, .fr-b, .sync-hl, .sync-chip { opacity: 0; }
+[data-step]:not([data-step="0"]) .fr-2,
+[data-step="2"] .fr-3, [data-step="3"] .fr-3,
+[data-step="3"] .fr-b, [data-step="3"] .sync-hl, [data-step="3"] .sync-chip { opacity: 1; }
+.sync-tap { position: absolute; left: 61.74%; top: 56.55%; width: 17%; aspect-ratio: 1; border-radius: 50%; background: rgba(8, 31, 51, 0.22); border: 2px solid rgba(255, 255, 255, 0.95); box-shadow: 0 2px 8px rgba(8, 31, 51, 0.25); transform: translate(-50%, -50%); opacity: 0; pointer-events: none; }
+.sync-hl { position: absolute; left: 25%; top: 46.51%; width: 17.32%; height: 4.65%; border-radius: 6px; outline: 2px solid var(--teal); outline-offset: 3px; box-shadow: 0 0 0 7px rgba(15, 139, 141, 0.14); pointer-events: none; }
+.sync-chip { position: absolute; left: calc(42.32% + 14px); top: 48.8%; transform: translateY(-50%); padding: 5px 10px; border-radius: 999px; background: var(--navy); color: #fff; font-size: 12px; font-weight: 600; line-height: 1.3; white-space: nowrap; box-shadow: 0 6px 16px -6px rgba(8, 31, 51, 0.45); }
+.sync-chip::before { content: ''; position: absolute; left: -4px; top: 50%; width: 8px; height: 8px; background: var(--navy); transform: translateY(-50%) rotate(45deg); border-radius: 1px; }
+.sync-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; min-height: 64px; margin-left: calc(var(--pw) - var(--pl) + 24px); padding-top: 12px; }
+.sync-steps { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; counter-reset: sync; }
+.sync-steps li { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--muted); counter-increment: sync; transition: color 240ms ease; }
+.sync-steps li::before { content: counter(sync); display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #b9cad8; font-size: 12px; font-weight: 700; color: var(--muted); transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease; }
+[data-step="1"] [data-s="1"], [data-step="2"] [data-s="2"], [data-step="3"] [data-s="3"] { color: var(--navy); font-weight: 600; }
+[data-step="1"] [data-s="1"]::before, [data-step="2"] [data-s="2"]::before, [data-step="3"] [data-s="3"]::before { background: var(--navy); border-color: var(--navy); color: #fff; }
+[data-step="2"] [data-s="1"]::before, [data-step="3"] [data-s="1"]::before, [data-step="3"] [data-s="2"]::before { background: var(--teal-strong); border-color: var(--teal-strong); color: #fff; }
 
 /* 2 · Turnos por WhatsApp — conversacional */
 .p-wa { background: #fff; }
@@ -229,6 +251,7 @@ body { font-family: 'Inter', var(--font-body); background: #fff; color: var(--te
 .ft-legal { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
 
 /* Motion: solo con movimiento permitido. Hero por CSS; el resto lo activa el observer (.in). */
+@keyframes tap { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.3); } 35% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 55% { transform: translate(-50%, -50%) scale(0.86); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } }
 @keyframes rise { from { opacity: 0; transform: translateY(var(--y, 10px)); } }
 @media (prefers-reduced-motion: no-preference) {
   .hero-copy > * { animation: rise 460ms var(--ease) var(--d, 0ms) backwards; }
@@ -245,6 +268,16 @@ body { font-family: 'Inter', var(--font-body); background: #fff; color: var(--te
   .js .comp-item:nth-child(3) { transition-delay: 120ms; }
 
   /* Recorrido: la línea se dibuja de izquierda a derecha, luego aparecen las etapas */
+  /* Sincronía: explicativa, se reproduce una sola vez al entrar en pantalla (sin bucle). */
+  .fr-2, .fr-3, .fr-b { transition: opacity 280ms ease; }
+  [data-step="1"] .fr-2 { transition-delay: 260ms; }
+  [data-step="3"] .fr-b { transition-duration: 360ms; }
+  .sync-hl { transition: opacity 320ms var(--ease) 280ms, transform 420ms var(--ease) 280ms; }
+  .sync-chip { transition: opacity 320ms var(--ease) 480ms, transform 420ms var(--ease) 480ms; }
+  [data-step]:not([data-step="3"]) .sync-hl { transform: scale(1.06); }
+  [data-step]:not([data-step="3"]) .sync-chip { transform: translate(-6px, -50%); }
+  [data-step="1"] .sync-tap { animation: tap 640ms var(--ease) both; }
+  .is-resetting * { transition: none !important; }
   .js .j-line { transition: transform 900ms cubic-bezier(0.65, 0, 0.35, 1); }
   .js .j-stages li { transition: opacity 380ms var(--ease), transform 380ms var(--ease); transition-delay: calc(160ms + var(--i, 0) * 120ms); }
   .js .j-ia { transition: opacity 380ms var(--ease); transition-delay: 820ms; }
@@ -289,7 +322,7 @@ body { font-family: 'Inter', var(--font-body); background: #fff; color: var(--te
   .ll-flow li:not(:last-child)::after { display: none; }
   .ft-top { grid-template-columns: 1fr 1fr; }
   .ft-brand { grid-column: 1 / -1; }
-  .turnos-stage { padding: 0 0 40px 32px; }
+  .turnos-stage { --pl: 32px; }
   .ob-stage { padding: 40px 40px 0 0; }
 }
 @media (max-width: 520px) {
@@ -304,7 +337,11 @@ body { font-family: 'Inter', var(--font-body); background: #fff; color: var(--te
   .hero-index ul { gap: 0 16px; }
   .p-cta { flex-direction: column; align-items: flex-start; gap: 4px; }
   .p-cta .btn { align-self: stretch; }
-  .turnos-stage { padding-left: 20px; }
+  .turnos-stage { --pl: 20px; --pw: 34%; }
+  .sync-bar { margin-left: calc(var(--pw) - var(--pl) + 14px); }
+  .sync-steps { flex-direction: column; gap: 6px; }
+  .sync-steps li { font-size: 13px; }
+  .sync-chip { display: none; }
   .turnos-stage .shot-phone, .ob-stage .shot-phone { min-width: 0; width: 34%; border-width: 4px; border-radius: 20px; }
   .turnos-stage .shot-phone img, .ob-stage .shot-phone img { border-radius: 16px; }
   .ob-stage { padding: 32px 28px 0 0; }

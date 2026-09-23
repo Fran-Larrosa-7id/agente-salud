@@ -384,7 +384,7 @@ button.to-row:focus-visible{outline-offset:-2px;border-radius:var(--to-r-card)}
 .to-cal-head{position:sticky;top:0;z-index:6;background:#fff;border-bottom:1px solid var(--to-line)}
 .to-colh{display:flex;align-items:center;gap:10px;padding:12px 14px;border-left:1px solid var(--to-line-soft);min-width:0}
 .to-colh b{display:block;font-size:14px;color:var(--to-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.to-colh small{font-size:12.5px;color:var(--to-ink-2);white-space:nowrap}
+.to-colh small{display:block;font-size:12.5px;color:var(--to-ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .to-gutter{position:relative;border-right:1px solid var(--to-line-soft)}
 .to-hour{position:absolute;right:10px;font-size:12px;font-weight:500;color:var(--to-ink-3);transform:translateY(-7px);font-variant-numeric:tabular-nums}
 .to-now-tag{position:absolute;right:4px;transform:translateY(-50%);background:var(--to-err);color:#fff;font-size:11px;font-weight:700;padding:2px 5px;border-radius:5px;z-index:4;font-variant-numeric:tabular-nums}
@@ -557,6 +557,58 @@ button.to-trow:focus-visible{outline-offset:-2px}
 .to-pm>span>span{font-size:12.5px;color:var(--to-ink-2)}
 .to-pm .to-ic{margin-left:auto;color:var(--to-teal);opacity:0}
 .to-pm.is-selected .to-ic{opacity:1}
+
+/* ---------- lista de espera en vivo ---------- */
+.to-demo-both{margin-right:4px}
+.st-ofrecido{color:var(--to-teal-ink)}
+.st-ofrecido::before{background:transparent;border:2px dashed var(--to-teal);width:9px;height:9px}
+.to-live{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;background:#F1FAF8;border:1px solid var(--to-line);border-top:1px solid #CFE7E3;border-bottom:none;font-size:13px;color:var(--to-ink-2);min-width:0}
+.to-live b{color:var(--to-teal-ink);font-weight:700;flex-shrink:0}
+.to-live-t{color:var(--to-ink-3);flex-shrink:0}
+.to-live-x{color:var(--to-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.to-live-dot{position:relative;width:8px;height:8px;border-radius:50%;background:var(--to-teal);flex-shrink:0}
+.to-live-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--to-teal);opacity:0;animation:toPing 1.8s var(--to-ease) infinite}
+@keyframes toPing{0%{opacity:.6;transform:scale(.5)}80%,100%{opacity:0;transform:scale(1.4)}}
+.to-blk.st-b-ofrecido{border-color:#9ED3CC;border-style:dashed;border-left-style:solid;border-left-color:var(--to-teal);background:#F1FAF8}
+.to-blk.st-b-ofrecido .to-blk-l2{color:var(--to-teal-ink);font-weight:600}
+.to-blk.is-wl .to-blk-wl{width:13px;height:13px;margin-left:auto;color:var(--to-teal);flex-shrink:0}
+.to-blk.is-fresh{animation:toFresh 2.6s var(--to-ease) both;z-index:4}
+@keyframes toFresh{0%{box-shadow:0 0 0 0 rgba(15,139,141,.55),0 4px 14px rgba(15,42,67,.12)}25%{box-shadow:0 0 0 6px rgba(15,139,141,.18),0 4px 14px rgba(15,42,67,.12)}60%{box-shadow:0 0 0 2px var(--to-teal),0 4px 14px rgba(15,42,67,.12)}100%{box-shadow:0 1px 2px rgba(15,42,67,.05)}}
+.to-wl-how{font-size:13.5px;color:var(--to-ink-2);margin:-8px 0 16px;max-width:70ch}
+.to-recov{color:var(--to-teal-ink)}
+.to-recov b{color:var(--to-teal-ink)!important}
+.to-wl-row.is-offered{background:#FAFEFD;box-shadow:inset 3px 0 0 #9ED3CC}
+.to-wl-row.is-assigned .to-cell-b{color:var(--to-ink-2)}
+.to-match.is-wait{background:#fff;border-style:dashed;flex-direction:column;align-items:flex-start;gap:6px}
+.to-match.is-done{background:var(--to-ok-bg);border-color:#BFE2D3}
+.to-match.is-done small{color:var(--to-ok)}
+.to-wait-tag{font-size:12.5px;font-weight:600;color:var(--to-teal-ink);white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.to-wait-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--to-teal);animation:toBlink 1.2s ease-in-out infinite}
+@keyframes toBlink{50%{opacity:.25}}
+/* oferta en el celular del paciente */
+.to-offer{border:1px solid #BFE0DC;background:#F1FAF8;border-radius:var(--to-r-card);padding:16px 18px;margin:0 0 22px;animation:toIn .3s var(--to-ease) both}
+.to-offer-k{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13px;font-weight:700;color:var(--to-teal-ink)}
+.to-offer-when{margin:0;display:flex;flex-direction:column;gap:2px}
+.to-offer-when b{font-size:18px;color:var(--to-navy);letter-spacing:-.01em}
+.to-offer-when span{font-size:14px;color:var(--to-ink-2)}
+.to-offer-s{font-size:13.5px;color:var(--to-ink-2);line-height:1.45;margin:8px 0 14px}
+.to-offer-a{display:flex;gap:8px;flex-wrap:wrap}
+/* toasts con contexto */
+.to-toast-m{min-width:0;line-height:1.4}
+.to-toast-m small{display:block;font-size:11.5px;font-weight:600;color:var(--to-ink-3);letter-spacing:.01em;margin-bottom:2px}
+.to-toast.is-live{max-width:min(560px,calc(100vw - 32px))}
+.to-toast.is-live .to-ic{color:#6FD3B4}
+.to-toast.is-wa{top:12px;bottom:auto;left:12px;right:12px;transform:none;max-width:none;align-items:flex-start;background:#fff;color:var(--to-ink);border:1px solid var(--to-line);box-shadow:0 12px 32px rgba(15,42,67,.18);font-size:13.5px;animation-name:toWa}
+.to-toast.is-wa .to-ic{color:#1FA855;margin-top:2px}
+@keyframes toWa{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:none}}
+/* modo pane (demo.html muestra paciente y recepción lado a lado) */
+html.is-pane-patient{scrollbar-width:none}
+html.is-pane-patient::-webkit-scrollbar{display:none}
+.is-pane .to-p,.is-pane .to-a{min-height:100vh}
+.is-pane .to-side{height:100vh}
+.is-pane .to-cal-wrap{max-height:calc(100vh - 230px)}
+.is-pane .to-cal-grid{min-width:620px}
+.is-pane .to-legend2>span:last-child{display:none}
 
 /* ---------- responsive ---------- */
 @media (max-width:1180px){

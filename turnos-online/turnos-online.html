@@ -17,14 +17,16 @@
 <title>Turnos Online · Centro Médico San Martín</title>
 </helmet>
 
-<div class="to-root">
+<div class="to-root {{ rootCls }}">
 
+<sc-if value="{{ !isPane }}" hint-placeholder-val="{{ true }}">
 <div class="to-demo" role="region" aria-label="Controles de la demo">
   <div class="to-demo-in">
     <a href="../index.html"><span class="to-ic to-ic-sm i-arrow-l" aria-hidden="true"></span><span class="to-demo-hide">Catálogo</span></a>
     <span class="to-demo-sep" aria-hidden="true"></span>
     <span class="to-demo-tag"><span class="to-demo-hide">Demo · </span><b>Turnos Online</b></span>
     <div class="to-demo-sw">
+      <a class="to-demo-both to-demo-hide" href="demo.html">Ver las dos vistas a la vez</a>
       <span class="to-demo-hide">Ver como</span>
       <div class="to-demo-seg" role="group" aria-label="Vista de la demo">
         <button type="button" aria-pressed="{{ isPatientView }}" onClick="{{ selectPatientView }}">Paciente</button>
@@ -33,6 +35,7 @@
     </div>
   </div>
 </div>
+</sc-if>
 
 <sc-if value="{{ isPatientView }}" hint-placeholder-val="{{ true }}">
 <div class="to-p">
@@ -77,6 +80,17 @@
   <sc-if value="{{ stepIsHome }}" hint-placeholder-val="{{ true }}">
     <div class="to-grid to-enter">
       <div class="to-col">
+        <sc-if value="{{ myOffer }}">
+          <section class="to-offer" aria-labelledby="of-t-home">
+            <p class="to-offer-k" id="of-t-home"><span class="to-ic to-ic-sm i-bolt" aria-hidden="true"></span>Se liberó un turno para vos</p>
+            <p class="to-offer-when to-num"><b>{{ myOffer.when }}</b><span>{{ myOffer.profName }}</span></p>
+            <p class="to-offer-s">Estabas en la lista de espera de {{ myOffer.specName }}. Si lo tomás, queda reservado al instante.</p>
+            <div class="to-offer-a">
+              <button type="button" class="to-btn to-btn--primary" onClick="{{ acceptMyOffer }}">Tomar este turno</button>
+              <button type="button" class="to-btn to-btn--secondary" onClick="{{ declineMyOffer }}">No me sirve</button>
+            </div>
+          </section>
+        </sc-if>
         <p class="to-kicker">Turnos online</p>
         <h1 class="to-h1">Reservá tu turno</h1>
         <p class="to-lead">Elegí la especialidad y te mostramos los profesionales y horarios disponibles en la sede. Te lleva menos de dos minutos.</p>
@@ -416,6 +430,17 @@
         <div><h1 class="to-h1" style="font-size:28px">Mis turnos</h1><p class="to-sub" style="margin:0">Turnos reservados desde este dispositivo.</p></div>
         <button type="button" class="to-btn to-btn--primary" onClick="{{ goHome }}"><span class="to-ic to-ic-sm i-plus" aria-hidden="true"></span>Reservar otro turno</button>
       </div>
+      <sc-if value="{{ myOffer }}">
+        <section class="to-offer" aria-labelledby="of-t-mis">
+          <p class="to-offer-k" id="of-t-mis"><span class="to-ic to-ic-sm i-bolt" aria-hidden="true"></span>Se liberó un turno para vos</p>
+          <p class="to-offer-when to-num"><b>{{ myOffer.when }}</b><span>{{ myOffer.profName }}</span></p>
+          <p class="to-offer-s">Estabas en la lista de espera de {{ myOffer.specName }}. Si lo tomás, queda reservado al instante.</p>
+          <div class="to-offer-a">
+            <button type="button" class="to-btn to-btn--primary" onClick="{{ acceptMyOffer }}">Tomar este turno</button>
+            <button type="button" class="to-btn to-btn--secondary" onClick="{{ declineMyOffer }}">No me sirve</button>
+          </div>
+        </section>
+      </sc-if>
       <sc-if value="{{ myAppointments.length }}" hint-placeholder-val="{{ true }}">
         <div class="to-appts">
           <sc-for list="{{ myAppointments }}" as="a" hint-placeholder-count="1">
@@ -506,9 +531,15 @@
         </select>
       </div>
     </div>
+    <sc-if value="{{ liveEvent }}">
+      <div class="to-live" title="{{ liveEvent.full }}">
+        <span class="to-live-dot" aria-hidden="true"></span><b>En vivo</b><span class="to-num to-live-t">{{ liveEvent.time }}</span><span class="to-live-x">{{ liveEvent.text }}</span>
+      </div>
+    </sc-if>
     <div class="to-legend2" aria-label="Referencias">
       <span class="to-status st-confirmado">Confirmado</span>
       <span class="to-status st-pendiente">Sin confirmar</span>
+      <span class="to-status st-ofrecido">Ofrecido a lista de espera</span>
       <span class="to-status st-atendido">Atendido</span>
       <span class="to-status st-ausente">Ausente</span>
       <span class="to-status st-block">Bloqueado</span>
@@ -546,7 +577,7 @@
               </sc-for>
               <sc-for list="{{ col.blocks }}" as="b" hint-placeholder-count="2">
                 <button type="button" data-agenda-block="true" class="to-blk {{ b.cls }}" onClick="{{ b.onOpen }}" style="top:{{ b.top }}px;height:{{ b.height }}px" aria-label="{{ b.ariaLabel }}">
-                  <span class="to-blk-l1"><span class="to-num">{{ b.timeLabel }}</span><span class="to-nm">{{ b.patientName }}</span></span>
+                  <span class="to-blk-l1"><span class="to-num">{{ b.timeLabel }}</span><span class="to-nm">{{ b.patientName }}</span><sc-if value="{{ b.fromWaitlist }}"><span class="to-ic i-hourglass to-blk-wl" aria-hidden="true"></span></sc-if></span>
                   <sc-if value="{{ b.showType }}"><span class="to-blk-l2">{{ b.typeName }} · {{ b.statusLabel }}</span></sc-if>
                 </button>
               </sc-for>
@@ -668,10 +699,11 @@
 
   <sc-if value="{{ adminSectionIsEspera }}">
     <div class="to-top"><div><h1>Lista de espera</h1></div></div>
-    <p class="to-sumline"><span><b>{{ waitlistRows.length }}</b> {{ waitlistNoun }}</span><span><b>{{ waitlistMatchCount }}</b> con un turno disponible ahora</span></p>
+    <p class="to-sumline"><span><b>{{ waitlistWaitingCount }}</b> {{ waitlistNoun }}</span><span><b>{{ waitlistMatchCount }}</b> con un turno disponible ahora</span><span class="to-recov"><b>{{ waitlistRecovered }}</b> {{ waitlistRecoveredNoun }}</span></p>
+    <p class="to-wl-how">Cuando un paciente cancela o reprograma, el horario que se libera se ofrece solo por WhatsApp al primero compatible de la lista.</p>
     <sc-if value="{{ waitlistRows.length }}" hint-placeholder-val="{{ true }}">
       <div class="to-table">
-        <div class="to-thead to-wl-cols"><span>Paciente</span><span class="c-want">Busca</span><span class="c-pref">Preferencia</span><span class="c-age">Espera</span><span>Disponibilidad</span></div>
+        <div class="to-thead to-wl-cols"><span>Paciente</span><span class="c-want">Busca</span><span class="c-pref">Preferencia</span><span class="c-age">Espera</span><span>Estado</span></div>
         <sc-for list="{{ waitlistRows }}" as="w" hint-placeholder-count="2">
           <div class="to-trow to-wl-cols to-wl-row {{ w.cls }}">
             <span><span class="to-cell-b" style="display:block">{{ w.patientName }}</span><span class="to-cell-s to-num">{{ w.whatsapp }}</span></span>
@@ -679,10 +711,20 @@
             <span class="to-cell-s c-pref">{{ w.prefLabel }}</span>
             <span class="to-cell-s c-age">{{ w.ageLabel }}</span>
             <span class="c-match">
-              <sc-if value="{{ w.match }}">
-                <span class="to-match"><span><small><span class="to-ic to-ic-sm i-bolt" aria-hidden="true"></span>Turno disponible</small><b class="to-num">{{ w.match.label }} · {{ w.match.profName }}</b></span><button type="button" class="to-btn to-btn--accent to-btn--sm" onClick="{{ w.onContact }}"><span class="to-ic to-ic-sm i-chat" aria-hidden="true"></span>Ofrecer</button></span>
+              <sc-if value="{{ w.isAssigned }}">
+                <span class="to-match is-done"><span><small><span class="to-ic to-ic-sm i-check" aria-hidden="true"></span>Tomó el turno</small><b class="to-num">{{ w.offer.label }} · {{ w.offer.profName }}</b></span></span>
               </sc-if>
-              <sc-if value="{{ !w.match }}"><span class="to-nomatch">Sin horarios compatibles por ahora</span></sc-if>
+              <sc-if value="{{ w.isOffered }}">
+                <span class="to-match is-wait"><span><small><span class="to-ic to-ic-sm i-chat" aria-hidden="true"></span>Oferta enviada por WhatsApp</small><b class="to-num">{{ w.offer.label }} · {{ w.offer.profName }}</b></span><span class="to-wait-tag">Esperando respuesta</span></span>
+              </sc-if>
+              <sc-if value="{{ w.isWaiting }}">
+                <span>
+                  <sc-if value="{{ w.match }}">
+                    <span class="to-match"><span><small><span class="to-ic to-ic-sm i-bolt" aria-hidden="true"></span>Turno disponible</small><b class="to-num">{{ w.match.label }} · {{ w.match.profName }}</b></span><button type="button" class="to-btn to-btn--accent to-btn--sm" onClick="{{ w.onContact }}" aria-label="{{ w.offerLabel }}"><span class="to-ic to-ic-sm i-chat" aria-hidden="true"></span>Ofrecer</button></span>
+                  </sc-if>
+                  <sc-if value="{{ !w.match }}"><span class="to-nomatch">Sin horarios compatibles por ahora</span></sc-if>
+                </span>
+              </sc-if>
             </span>
           </div>
         </sc-for>
@@ -981,7 +1023,7 @@
     <div class="to-modal" onClick="{{ stopProp }}" role="alertdialog" aria-modal="true" aria-labelledby="cn-t" aria-describedby="cn-d" data-dialog="true">
       <div class="to-modal-b">
         <h3 id="cn-t">¿Cancelar este turno?</h3>
-        <p id="cn-d">{{ cancelSummary }} El horario queda libre para otro paciente.</p>
+        <p id="cn-d">{{ cancelSummary }} {{ cancelFreeNote }}</p>
         <div class="to-label" id="cn-r" style="margin-bottom:8px">Motivo <small>(opcional)</small></div>
         <div class="to-opts" role="radiogroup" aria-labelledby="cn-r">
           <sc-for list="{{ cancelReasons }}" as="r" hint-placeholder-count="4">
@@ -999,7 +1041,7 @@
 
 <div aria-live="polite" role="status" class="to-sr-live">
   <sc-if value="{{ toast }}">
-    <div class="to-toast"><span class="to-ic i-check" aria-hidden="true"></span>{{ toast }}</div>
+    <div class="to-toast {{ toastCls }}"><span class="to-ic {{ toastIcon }}" aria-hidden="true"></span><span class="to-toast-m"><sc-if value="{{ toastIsWa }}"><small>WhatsApp · Centro Médico San Martín</small></sc-if>{{ toast }}</span></div>
   </sc-if>
 </div>
 
@@ -1038,6 +1080,7 @@ const STATUS_META = {
   cancelado:{bg:'#FBEDEC',border:'#E9C6C4',dot:'#B54747',label:'Cancelado'},
   atendido:{bg:'#F1F5F9',border:'#DCE4EC',dot:'#657184',label:'Atendido'},
   ausente:{bg:'#F1F5F9',border:'#DCE4EC',dot:'#8A94A6',label:'No asistió'},
+  ofrecido:{bg:'#F1FAF8',border:'#BFE0DC',dot:'#0F8B8D',label:'Oferta enviada'},
 };
 const HOVER_ROW = {background:'#F7F9FC'};
 const HOVER_CARD_SOFT = {borderColor:'#0F8B8D'};
@@ -1049,8 +1092,12 @@ function addDays(base,n){const d=new Date(base);d.setDate(d.getDate()+n);return 
 function seedHash(str){let h=0;for(let i=0;i<str.length;i++){h=(h*31+str.charCodeAt(i))|0;}return Math.abs(h);}
 function cloneWeekly(){ return JSON.parse(JSON.stringify(WEEKLY_AVAIL)); }
 const WEEK_ORDER = [1,2,3,4,5,6,0];
-const TURNOS_STORAGE_KEY = 'vertical-salud-turnos-online-v1';
+const TURNOS_STORAGE_KEY = 'vertical-salud-turnos-online-v2';
 const ROW_H = 44; const TOP_PAD = 12; /*__TO_V2__*/
+const OFFER_MS = 6000; /* demora simulada hasta que el paciente de la lista de espera responde por WhatsApp */
+const MIN_ADVANCE_MIN = 120; /* regla "Anticipación mínima: 2 horas" */
+/* demo.html carga esta misma página dos veces (?pane=patient y ?pane=admin) y las sincroniza por localStorage */
+const PANE = (()=>{ try{ const m = /[?&]pane=(patient|admin)\b/.exec(location.search); return m ? m[1] : null; }catch(_e){ return null; } })();
 
 function readTurnosPersistedState(){
   try{
@@ -1059,11 +1106,13 @@ function readTurnosPersistedState(){
     if(!raw) return null;
     const parsed = JSON.parse(raw);
     if(!parsed || typeof parsed!=='object') return null;
+    if(parsed.seedISO!==isoOf(new Date())) return null; /* la demo arranca limpia cada día */
     const saved = {};
     if(Array.isArray(parsed.appointments)) saved.appointments = parsed.appointments;
     if(Array.isArray(parsed.blocks)) saved.blocks = parsed.blocks;
     if(Array.isArray(parsed.exceptions)) saved.exceptions = parsed.exceptions;
     if(Array.isArray(parsed.waitlistEntries)) saved.waitlistEntries = parsed.waitlistEntries;
+    if(Array.isArray(parsed.activity)) saved.activity = parsed.activity;
     if(parsed.profAvailability && typeof parsed.profAvailability==='object') saved.profAvailability = parsed.profAvailability;
     return Object.keys(saved).length ? saved : null;
   }catch(_e){ return null; }
@@ -1073,23 +1122,33 @@ function persistTurnosState(state){
   try{
     if(typeof localStorage==='undefined') return;
     localStorage.setItem(TURNOS_STORAGE_KEY, JSON.stringify({
+      seedISO:isoOf(new Date()),
       appointments:state.appointments,
       blocks:state.blocks,
       exceptions:state.exceptions,
       waitlistEntries:state.waitlistEntries,
+      activity:state.activity,
       profAvailability:state.profAvailability,
     }));
   }catch(_e){ /* localStorage puede estar bloqueado en modo privado */ }
 }
 
+/* Turno del paciente "dueño" del celular: el próximo horario de la Dra. Gómez que todavía se pueda cancelar */
+function seedMineAppointment(){
+  const now = new Date(); const nowMin = now.getHours()*60+now.getMinutes();
+  const t = ['10:00','11:30','12:00','15:00','15:30','16:00','16:30','17:00'].find(x=>timeToMin(x) >= nowMin+45);
+  return {id:'a7',patientName:'Ana Suárez',professionalId:'gomez',dateISO:isoOf(t ? now : addDays(now,1)),time:t||'10:00',coverage:'OSDE',typeId:'primera',status:'confirmado',origin:'Web',whatsapp:'11 4567 8901',email:'ana.suarez@correo.com',dni:'35.112.908',mine:true};
+}
+
 class Component extends DCLogic {
   state = {
-    view:'patient', toast:null,
+    view:PANE==='admin'?'admin':'patient', toast:null, toastKind:null, flash:null, tick:0,
     step:'home', search:'',
     draft:{specialtyId:null,professionalId:null,isFirstAvailable:false,coverage:null,typeId:null,dateISO:null,time:null,reprogramApptId:null},
     patientInfo:{nombre:'',apellido:'',dni:'',whatsapp:'',email:'',accept:false},
     dayOffset:0,
-    waitlistOpen:false, waitlistDone:false, waitlistForm:{nombre:'',whatsapp:'',pref:'cualquiera'},
+    waitlistOpen:false, waitlistDone:false, waitlistForm:{nombre:'Ana Suárez',whatsapp:'11 4567 8901',pref:'cualquiera'},
+    activity:[],
     cancelModal:null, cancelReason:null,
     myApptFocusId:null,
     admin:{dateOffset:0,filterProf:'all',selectedApptId:null,reprogramming:false,reprogramDayOffset:0,reSelectedDateISO:null,reSelectedTime:null},
@@ -1103,7 +1162,9 @@ class Component extends DCLogic {
     ],
     blocks:[],
     waitlistEntries:[
-      {id:'w1',patientName:'Laura Pérez',whatsapp:'11 4433 2210',specialtyId:'trauma',preferredProfId:null,pref:'mañana',daysAgo:2},
+      {id:'w1',patientName:'Valentina Ríos',whatsapp:'11 4433 2210',specialtyId:'trauma',preferredProfId:null,pref:'mañana',daysAgo:3,coverage:'OSDE',status:'esperando'},
+      {id:'w2',patientName:'Gonzalo Herrera',whatsapp:'11 5566 7788',specialtyId:'trauma',preferredProfId:'gomez',pref:'cualquiera',daysAgo:1,coverage:'IOMA',status:'esperando'},
+      {id:'w3',patientName:'Diego Sosa',whatsapp:'11 6677 1203',specialtyId:'cardio',preferredProfId:null,pref:'tarde',daysAgo:2,coverage:'Galeno',status:'esperando'},
     ],
     createTurnoOpen:false, ctPatientMode:'search', ctPatientQuery:'', ctSelectedPatientId:null,
     ctNewPatient:{nombre:'',apellido:'',dni:'',whatsapp:'',email:''},
@@ -1117,6 +1178,7 @@ class Component extends DCLogic {
       {id:'a4',patientName:'Camila Torres',professionalId:'fernandez',dateISO:isoOf(new Date()),time:'09:30',coverage:'Swiss Medical',typeId:'control',status:'confirmado',origin:'WhatsApp',whatsapp:'11 5544 3390',email:'camila.torres@mail.com',dni:'38.001.774'},
       {id:'a5',patientName:'Santiago López',professionalId:'romero',dateISO:isoOf(new Date()),time:'14:00',coverage:'Galeno',typeId:'primera',status:'ausente',origin:'Recepción',whatsapp:'11 7788 1122',email:'santiago.lopez@mail.com',dni:'27.998.410'},
       {id:'a6',patientName:'Sofía López',professionalId:'gomez',dateISO:isoOf(addDays(new Date(),1)),time:'08:30',coverage:'IOMA',typeId:'control',status:'pendiente',origin:'Web',whatsapp:'11 3322 9981',email:'sofia.lopez@mail.com',dni:'33.445.109'},
+      seedMineAppointment(),
     ],
   };
   _nextId = 100;
@@ -1125,17 +1187,29 @@ class Component extends DCLogic {
   componentDidMount(){
     const saved = readTurnosPersistedState();
     if(saved) this.setState(saved);
-    try{ if(/recepcion|admin/.test(location.hash+location.search)) this.setState({view:'admin'}); }catch(_e){}
+    if(PANE){ document.documentElement.classList.add('is-pane-'+PANE); }
+    else { try{ if(/recepcion|admin/.test(location.hash+location.search)) this.setState({view:'admin'}); }catch(_e){} }
     this.syncNextId();
     persistTurnosState(this.state);
     this._prevSnap = {step:this.state.step, view:this.state.view, adminSection:this.state.adminSection};
     this._onKey = (e)=>this.handleKey(e);
     window.addEventListener('keydown', this._onKey);
+    /* la otra vista escribió en localStorage: aplicamos sus datos y avisamos lo que cambió */
+    this._onStorage = (e)=>{ if(e.key===TURNOS_STORAGE_KEY) this.applyExternalState(); };
+    window.addEventListener('storage', this._onStorage);
+    this._announced = new Set(this.state.appointments.filter(a=>a.status==='ofrecido' && a.acceptAt && a.acceptAt<=Date.now()).map(a=>a.id));
+    this.scheduleOfferTick();
+    if(this.state.view==='admin') this.scrollAgendaToNow();
   }
-  componentWillUnmount(){ window.removeEventListener('keydown', this._onKey); document.body.classList.remove('to-noscroll'); }
+  componentWillUnmount(){
+    window.removeEventListener('keydown', this._onKey); window.removeEventListener('storage', this._onStorage);
+    clearTimeout(this._tickT); clearTimeout(this._flashT); clearTimeout(this._toastTimer);
+    document.body.classList.remove('to-noscroll');
+  }
   componentDidUpdate(_p, prev){
     this.syncNextId();
     persistTurnosState(this.state);
+    this.scheduleOfferTick();
     this.syncOverlayFocus();
     const s = this.state;
     prev = this._prevSnap; this._prevSnap = {step:s.step, view:s.view, adminSection:s.adminSection};
@@ -1150,6 +1224,95 @@ class Component extends DCLogic {
       if(s.view==='admin') this.scrollAgendaToNow();
     }
   }
+
+  /* ---------- sincronización entre vistas + lista de espera ---------- */
+  applyExternalState(){
+    const saved = readTurnosPersistedState();
+    if(!saved) return;
+    const known = new Set((this.state.activity||[]).map(ev=>ev.id));
+    const fresh = (saved.activity||[]).filter(ev=>!known.has(ev.id));
+    this.setState(saved);
+    if(fresh.length) this.onRemoteActivity(fresh[fresh.length-1]);
+  }
+  onRemoteActivity(ev){
+    const s = this.state;
+    if(s.view==='admin'){
+      if(ev.src==='admin') return;
+      this.showToast(ev.short||ev.text, 'live');
+      if(ev.focusISO) this.focusAgendaOn(ev.focusISO, ev.profId, ev.flashIds||[]);
+    } else if(ev.src==='admin' && ev.toPatient && ev.patientMsg){
+      this.showToast(ev.patientMsg, 'wa');
+    }
+  }
+  focusAgendaOn(iso, profId, ids){
+    const s = this.state;
+    if(s.adminSection!=='agenda' || this.topOverlay()) return;
+    const off = Math.round((new Date(iso+'T00:00:00') - new Date(isoOf(new Date())+'T00:00:00'))/864e5);
+    const filterProf = (s.admin.filterProf!=='all' && profId && s.admin.filterProf!==profId) ? 'all' : s.admin.filterProf;
+    this.setState(st=>({admin:{...st.admin, dateOffset:off, filterProf}}));
+    this.flash(ids);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const el = document.querySelector('.to-blk.is-fresh'); const w = el && el.closest('.to-cal-wrap'); if(!w) return;
+      const d = el.getBoundingClientRect().top - w.getBoundingClientRect().top;
+      if(d < 60 || d > w.clientHeight - 80) w.scrollTo({top: Math.max(0, w.scrollTop + d - 140), behavior:'smooth'});
+    }));
+  }
+  flash(ids){
+    if(!ids || !ids.length) return;
+    clearTimeout(this._flashT);
+    this.setState({flash:ids});
+    this._flashT = setTimeout(()=>this.setState({flash:null}), 2800);
+  }
+  /* las ofertas automáticas se aceptan solas a los OFFER_MS: el estado se deriva de acceptAt, así las dos vistas coinciden sin escribir nada */
+  scheduleOfferTick(){
+    const now = Date.now();
+    if(!this._announced) this._announced = new Set();
+    const pend = (this.state.appointments||[]).filter(a=>a.status==='ofrecido' && a.acceptAt);
+    const due = pend.filter(a=>a.acceptAt<=now && !this._announced.has(a.id));
+    if(due.length){ due.forEach(a=>this._announced.add(a.id)); this.onOffersAccepted(due); }
+    const next = pend.filter(a=>a.acceptAt>now).reduce((m,a)=>Math.min(m,a.acceptAt), Infinity);
+    if(next===this._tickAt) return;
+    clearTimeout(this._tickT); this._tickAt = next;
+    if(next!==Infinity) this._tickT = setTimeout(()=>{ this._tickAt = null; this.setState({tick:Date.now()}); }, next-now+40);
+  }
+  onOffersAccepted(list){
+    if(this.state.view!=='admin') return;
+    const a = list[list.length-1];
+    this.showToast(a.patientName+' aceptó por WhatsApp el turno de '+this.relLabel(a.dateISO)+' '+a.time, 'live');
+    if(this.state.adminSection==='agenda' && !this.topOverlay()) this.flash(list.map(x=>x.id));
+  }
+  slotLabel(iso,time){ return this.relLabel(iso)+' '+time; }
+  isFutureSlot(iso,time){ return new Date(iso+'T'+time+':00').getTime() > Date.now(); }
+  waitlistMatchFor(slot, entries){
+    if(!this.isFutureSlot(slot.dateISO, slot.time)) return null;
+    const prof = this.getProfessional(slot.profId); if(!prof) return null;
+    const t = timeToMin(slot.time);
+    const fits = (w)=> (w.status||'esperando')==='esperando' && w.specialtyId===prof.specialtyId
+      && (!w.preferredProfId || w.preferredProfId===slot.profId)
+      && (w.pref==='cualquiera' || (w.pref==='mañana' ? t<13*60 : t>=13*60));
+    return entries.filter(fits).sort((a,b)=>(b.daysAgo||0)-(a.daysAgo||0))[0] || null;
+  }
+  offerAppt(w, slot){
+    const now = Date.now();
+    return {id:'l'+(this._nextId++), patientName:w.patientName, professionalId:slot.profId, dateISO:slot.dateISO, time:slot.time,
+      coverage:w.coverage||'Particular', typeId:slot.typeId||'primera', status:'ofrecido', origin:'Lista de espera',
+      whatsapp:w.whatsapp, email:'—', dni:'—', waitlistId:w.id, offeredAt:now, acceptAt: w.mine ? null : now+OFFER_MS};
+  }
+  /* libera un horario: si alguien de la lista de espera es compatible, se lo ofrece */
+  releaseSlot(a, appointments, waitlistEntries, excludeWid){
+    const slot = {profId:a.professionalId, dateISO:a.dateISO, time:a.time, typeId:a.typeId};
+    const w = this.waitlistMatchFor(slot, waitlistEntries.filter(x=>x.id!==excludeWid));
+    if(!w) return {appointments, waitlistEntries, offer:null};
+    const appt = this.offerAppt(w, slot);
+    return {appointments:[...appointments, appt], waitlistEntries:waitlistEntries.map(x=>x.id===w.id?{...x,status:'ofrecido'}:x), offer:{appt, entry:w}};
+  }
+  offerText(offer, isFuture){
+    if(offer) return ' Se lo ofrecimos por WhatsApp a '+offer.entry.patientName+', de la lista de espera.';
+    return isFuture ? ' No hay nadie compatible en lista de espera: el horario quedó libre.' : '';
+  }
+  offerMsg(appt){ return 'Se liberó un turno para vos: '+this.slotLabel(appt.dateISO, appt.time)+' con '+(this.getProfessional(appt.professionalId)?.name||'')+'. Lo tenés en «Mis turnos» para tomarlo.'; }
+  mkEvent(ev){ return {id:'ev'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), at:Date.now(), ...ev}; }
+  pushEvent(activity, ev){ return [...(activity||[]), ev].slice(-20); }
   scrollAgendaToNow(){
     requestAnimationFrame(()=>{
       const w = document.querySelector('.to-cal-wrap'); if(!w) return;
@@ -1259,12 +1422,14 @@ class Component extends DCLogic {
     const mañana=[], tarde=[];
     const dayBlocks = s.blocks.filter(b=>b.profId===profId && b.dateISO===iso);
     const bookedTimes = new Set(s.appointments.filter(a=>a.professionalId===profId && a.dateISO===iso && a.status!=='cancelado').map(a=>a.time));
+    const nowD = new Date();
+    const earliest = iso===isoOf(nowD) ? nowD.getHours()*60+nowD.getMinutes()+MIN_ADVANCE_MIN : (iso<isoOf(nowD) ? Infinity : -1);
     windows.forEach(([from,to])=>{
       let t=timeToMin(from); const end=timeToMin(to);
       while(t<end){
         const time = minToTime(t);
         const blocked = dayBlocks.some(b=> t>=timeToMin(b.from) && t<timeToMin(b.to));
-        if(!bookedTimes.has(time) && !blocked){ (t<13*60?mañana:tarde).push(time); }
+        if(!bookedTimes.has(time) && !blocked && t>=earliest){ (t<13*60?mañana:tarde).push(time); }
         t+=30;
       }
     });
@@ -1304,10 +1469,10 @@ class Component extends DCLogic {
   setView(v){ this.setState({view:v}); }
   selectPatientView = ()=> this.setView('patient');
   selectAdminView = ()=> this.setView('admin');
-  showToast(msg){
+  showToast(msg, kind){
     if(this._toastTimer) clearTimeout(this._toastTimer);
-    this.setState({toast:msg});
-    this._toastTimer = setTimeout(()=>this.setState({toast:null}), 2600);
+    this.setState({toast:msg, toastKind:kind||null});
+    this._toastTimer = setTimeout(()=>this.setState({toast:null, toastKind:null}), kind ? 5200 : 2600);
   }
   notImplementedToast = ()=> this.showToast('Esta sección no está incluida en la demo');
   stopProp = (e)=>{ if(e&&e.stopPropagation) e.stopPropagation(); };
@@ -1345,10 +1510,51 @@ class Component extends DCLogic {
   setWaitlistPref = (k)=> this.setState(s=>({waitlistForm:{...s.waitlistForm,pref:k}}));
   submitWaitlist = ()=>{
     const s = this.state;
-    const entry = {id:'w'+(this._nextId++), patientName:s.waitlistForm.nombre||'Paciente', whatsapp:s.waitlistForm.whatsapp||'—', specialtyId:s.draft.specialtyId, preferredProfId:s.draft.professionalId||null, pref:s.waitlistForm.pref, daysAgo:0};
-    this.setState(s2=>({waitlistDone:true, waitlistEntries:[...s2.waitlistEntries, entry]}));
+    const entry = {id:'w'+(this._nextId++), patientName:s.waitlistForm.nombre||'Paciente', whatsapp:s.waitlistForm.whatsapp||'—', specialtyId:s.draft.specialtyId, preferredProfId:s.draft.professionalId||null, pref:s.waitlistForm.pref, daysAgo:0, coverage:s.draft.coverage||'Particular', status:'esperando', mine:true};
+    const spec = this.getSpecialty(entry.specialtyId)?.name||'';
+    const ev = this.mkEvent({src:'patient', text:entry.patientName+' se anotó en la lista de espera de '+spec+' desde la reserva online.', short:entry.patientName+' se anotó en la lista de espera de '+spec});
+    this.setState(s2=>({waitlistDone:true, waitlistEntries:[...s2.waitlistEntries, entry], activity:this.pushEvent(s2.activity, ev)}));
   };
-  contactWaitlist = (id)=>{ const w = this.state.waitlistEntries.find(x=>x.id===id); this.showToast('Oferta enviada por WhatsApp'+(w?' a '+w.patientName:'')); };
+  /* recepción ofrece a mano el primer horario compatible */
+  contactWaitlist = (id)=>{
+    const s = this.state; const w = s.waitlistEntries.find(x=>x.id===id); if(!w) return;
+    const cand = w.preferredProfId ? [w.preferredProfId] : PROFESSIONALS.filter(p=>p.specialtyId===w.specialtyId).map(p=>p.id);
+    const m = this.firstAvailableSlotPref(cand, w.pref); if(!m) return;
+    const appt = this.offerAppt(w, {profId:m.profId, dateISO:m.iso, time:m.time, typeId:'primera'});
+    const prof = this.getProfessional(m.profId)?.name||'';
+    const ev = this.mkEvent({src:'admin', text:'Recepción le ofreció a '+w.patientName+' el turno de '+this.slotLabel(m.iso,m.time)+' con '+prof+'.', short:'Oferta enviada a '+w.patientName,
+      focusISO:m.iso, profId:m.profId, flashIds:[appt.id], offerApptId:appt.id, toPatient:!!w.mine, patientMsg: w.mine ? this.offerMsg(appt) : null});
+    this.setState(s2=>({appointments:[...s2.appointments, appt], waitlistEntries:s2.waitlistEntries.map(x=>x.id===w.id?{...x,status:'ofrecido'}:x), activity:this.pushEvent(s2.activity, ev)}));
+    this.showToast('Oferta enviada por WhatsApp a '+w.patientName);
+  };
+  findMyOffer(){
+    const s = this.state;
+    return s.appointments.find(a=>a.status==='ofrecido' && a.waitlistId && s.waitlistEntries.some(w=>w.id===a.waitlistId && w.mine)) || null;
+  }
+  acceptMyOffer = ()=>{
+    const a = this.findMyOffer(); if(!a) return;
+    const prof = this.getProfessional(a.professionalId)?.name||'';
+    const ev = this.mkEvent({src:'patient', text:a.patientName+' tomó el turno que se liberó: '+this.slotLabel(a.dateISO,a.time)+' con '+prof+'.', short:a.patientName+' tomó el turno de '+this.slotLabel(a.dateISO,a.time),
+      focusISO:a.dateISO, profId:a.professionalId, flashIds:[a.id]});
+    this.setState(s=>({
+      appointments:s.appointments.map(x=>x.id===a.id?{...x,status:'confirmado',mine:true,acceptAt:null}:x),
+      waitlistEntries:s.waitlistEntries.map(w=>w.id===a.waitlistId?{...w,status:'asignado'}:w),
+      activity:this.pushEvent(s.activity, ev), step:'myturnos', myApptFocusId:a.id,
+    }));
+    this.showToast('Turno reservado');
+  };
+  declineMyOffer = ()=>{
+    const a = this.findMyOffer(); if(!a) return;
+    const s = this.state;
+    const rest = s.appointments.filter(x=>x.id!==a.id);
+    const back = s.waitlistEntries.map(w=>w.id===a.waitlistId?{...w,status:'esperando'}:w);
+    const r = this.releaseSlot(a, rest, back, a.waitlistId);
+    const ev = this.mkEvent({src:'patient', text:a.patientName+' no tomó el turno de '+this.slotLabel(a.dateISO,a.time)+'.'+this.offerText(r.offer, true),
+      short:a.patientName+' no tomó el turno'+(r.offer?' · ofrecido a '+r.offer.entry.patientName:''),
+      focusISO:a.dateISO, profId:a.professionalId, flashIds:r.offer?[r.offer.appt.id]:[], offerApptId:r.offer?.appt.id});
+    this.setState(s2=>({appointments:r.appointments, waitlistEntries:r.waitlistEntries, activity:this.pushEvent(s2.activity, ev)}));
+    this.showToast('Listo, seguís en la lista de espera');
+  };
 
   setPatientField = (k,v)=> this.setState(s=>({patientInfo:{...s.patientInfo,[k]:v}}));
   setNombre = (e)=> this.setPatientField('nombre', e.target.value);
@@ -1361,9 +1567,16 @@ class Component extends DCLogic {
   onContinue = ()=>{
     const {draft} = this.state;
     if(draft.reprogramApptId){
-      this.setState(s=>({
-        appointments: s.appointments.map(a=> a.id===draft.reprogramApptId ? {...a,dateISO:draft.dateISO,time:draft.time} : a),
-        step:'myturnos', draft:{...s.draft,reprogramApptId:null},
+      const s = this.state; const a = s.appointments.find(x=>x.id===draft.reprogramApptId);
+      if(!a || !draft.dateISO || !draft.time) return;
+      const moved = s.appointments.map(x=> x.id===a.id ? {...x,dateISO:draft.dateISO,time:draft.time} : x);
+      const r = this.releaseSlot(a, moved, s.waitlistEntries);
+      const ev = this.mkEvent({src:'patient', text:a.patientName+' reprogramó su turno: '+this.slotLabel(a.dateISO,a.time)+' → '+this.slotLabel(draft.dateISO,draft.time)+'.'+this.offerText(r.offer, this.isFutureSlot(a.dateISO,a.time)),
+        short:a.patientName+' reprogramó '+this.slotLabel(a.dateISO,a.time)+' → '+this.slotLabel(draft.dateISO,draft.time)+(r.offer?' · ofrecido a '+r.offer.entry.patientName:''),
+        focusISO: r.offer ? a.dateISO : draft.dateISO, profId:a.professionalId, flashIds:[a.id, r.offer?.appt.id].filter(Boolean), offerApptId:r.offer?.appt.id});
+      this.setState(s2=>({
+        appointments:r.appointments, waitlistEntries:r.waitlistEntries, activity:this.pushEvent(s2.activity, ev),
+        step:'myturnos', myApptFocusId:a.id, draft:{...s2.draft,reprogramApptId:null},
       }));
       this.showToast('Turno reprogramado');
       return;
@@ -1382,14 +1595,23 @@ class Component extends DCLogic {
       coverage:draft.coverage, typeId:draft.typeId, status:'confirmado', origin:'Web',
       whatsapp:patientInfo.whatsapp, email:patientInfo.email, dni:patientInfo.dni||'—', mine:true,
     };
-    this.setState(s=>({appointments:[...s.appointments,appt], step:'confirmed', myApptFocusId:id}));
+    const prof = this.getProfessional(appt.professionalId)?.name||'';
+    const ev = this.mkEvent({src:'patient', text:'Nuevo turno online: '+appt.patientName+', '+this.slotLabel(appt.dateISO,appt.time)+' con '+prof+'.', short:'Nuevo turno online · '+appt.patientName+' · '+this.slotLabel(appt.dateISO,appt.time),
+      focusISO:appt.dateISO, profId:appt.professionalId, flashIds:[id]});
+    this.setState(s=>({appointments:[...s.appointments,appt], activity:this.pushEvent(s.activity, ev), step:'confirmed', myApptFocusId:id}));
   };
   addToCalendar = ()=> this.showToast('Evento agregado a tu calendario');
   comoLlegar = ()=> this.showToast('Abrimos la ubicación en el mapa');
   goMisTurnos = ()=> this.setState({step:'myturnos'});
   goHome = ()=> this.setState({step:'home'});
 
-  confirmAppt = (id)=>{ this.setState(s=>({appointments:s.appointments.map(a=>a.id===id?{...a,status:'confirmado'}:a)})); this.showToast('Turno confirmado'); };
+  confirmAppt = (id)=>{
+    const a = this.state.appointments.find(x=>x.id===id); if(!a) return;
+    const ev = this.mkEvent({src:'patient', text:a.patientName+' confirmó su asistencia: '+this.slotLabel(a.dateISO,a.time)+'.', short:a.patientName+' confirmó asistencia · '+this.slotLabel(a.dateISO,a.time),
+      focusISO:a.dateISO, profId:a.professionalId, flashIds:[id]});
+    this.setState(s=>({appointments:s.appointments.map(x=>x.id===id?{...x,status:'confirmado'}:x), activity:this.pushEvent(s.activity, ev)}));
+    this.showToast('Turno confirmado');
+  };
   openReprogram = (id)=>{
     const a = this.state.appointments.find(x=>x.id===id);
     this.setState(s=>({step:'datetime', dayOffset:0, draft:{...s.draft,specialtyId:this.getProfessional(a.professionalId).specialtyId,professionalId:a.professionalId,coverage:a.coverage,typeId:a.typeId,dateISO:null,time:null,reprogramApptId:id}}));
@@ -1399,8 +1621,22 @@ class Component extends DCLogic {
   closeCancelModal = ()=> this.setState({cancelModal:null});
   confirmCancel = ()=>{
     const m = this.state.cancelModal; if(!m) return;
-    this.setState(s=>({appointments:s.appointments.map(a=>a.id===m.apptId?{...a,status:'cancelado'}:a), cancelModal:null, admin:{...s.admin, selectedApptId: m.context==='admin' ? null : s.admin.selectedApptId}}));
-    this.showToast('Turno cancelado');
+    const s = this.state; const a = s.appointments.find(x=>x.id===m.apptId); if(!a) return;
+    const isAdmin = m.context==='admin';
+    const cancelled = s.appointments.map(x=>x.id===a.id?{...x,status:'cancelado'}:x);
+    const entries = a.waitlistId ? s.waitlistEntries.map(w=>w.id===a.waitlistId?{...w,status:'esperando'}:w) : s.waitlistEntries;
+    const r = this.releaseSlot(a, cancelled, entries, a.waitlistId);
+    const prof = this.getProfessional(a.professionalId)?.name||'';
+    const slot = this.slotLabel(a.dateISO,a.time);
+    const text = (isAdmin ? 'Recepción canceló el turno de '+a.patientName+': '+slot+' con '+prof+'.' : a.patientName+' canceló su turno: '+slot+' con '+prof+'.')+this.offerText(r.offer, this.isFutureSlot(a.dateISO,a.time));
+    const toMineOffer = r.offer && r.offer.entry.mine;
+    const ev = this.mkEvent({src:isAdmin?'admin':'patient', text, short:a.patientName+' canceló '+slot+(r.offer?' · ofrecido a '+r.offer.entry.patientName:''),
+      focusISO:a.dateISO, profId:a.professionalId, flashIds:r.offer?[r.offer.appt.id]:[], offerApptId:r.offer?.appt.id,
+      toPatient: isAdmin && !!(a.mine || toMineOffer),
+      patientMsg: toMineOffer ? this.offerMsg(r.offer.appt) : (a.mine ? 'Cancelamos tu turno de '+slot+' con '+prof+'. Si necesitás otro horario, reservalo desde la app.' : null)});
+    this.setState(s2=>({appointments:r.appointments, waitlistEntries:r.waitlistEntries, activity:this.pushEvent(s2.activity, ev), cancelModal:null, admin:{...s2.admin, selectedApptId: isAdmin ? null : s2.admin.selectedApptId}}));
+    this.showToast(isAdmin && r.offer ? 'Turno cancelado · ofrecido a '+r.offer.entry.patientName : 'Turno cancelado');
+    if(isAdmin && r.offer) this.flash([r.offer.appt.id]);
   };
 
   onBack = ()=>{
@@ -1555,16 +1791,30 @@ class Component extends DCLogic {
     const {admin} = this.state; const id = admin.selectedApptId;
     const iso = admin.reSelectedDateISO;
     if(!iso || !admin.reSelectedTime) return;
-    this.setState(s=>({
-      appointments:s.appointments.map(a=>a.id===id?{...a,dateISO:iso,time:admin.reSelectedTime}:a),
-      admin:{...s.admin,reprogramming:false},
+    const s = this.state; const a = s.appointments.find(x=>x.id===id); if(!a) return;
+    const t = admin.reSelectedTime;
+    const moved = s.appointments.map(x=>x.id===id?{...x,dateISO:iso,time:t}:x);
+    const r = this.releaseSlot(a, moved, s.waitlistEntries);
+    const prof = this.getProfessional(a.professionalId)?.name||'';
+    const toMineOffer = r.offer && r.offer.entry.mine;
+    const ev = this.mkEvent({src:'admin', text:'Recepción reprogramó el turno de '+a.patientName+': '+this.slotLabel(a.dateISO,a.time)+' → '+this.slotLabel(iso,t)+'.'+this.offerText(r.offer, this.isFutureSlot(a.dateISO,a.time)),
+      short:a.patientName+' reprogramado', focusISO:a.dateISO, profId:a.professionalId, flashIds:[id, r.offer?.appt.id].filter(Boolean), offerApptId:r.offer?.appt.id,
+      toPatient: !!(a.mine || toMineOffer),
+      patientMsg: a.mine ? 'Reprogramamos tu turno para '+this.slotLabel(iso,t)+' con '+prof+'.' : (toMineOffer ? this.offerMsg(r.offer.appt) : null)});
+    this.setState(s2=>({
+      appointments:r.appointments, waitlistEntries:r.waitlistEntries, activity:this.pushEvent(s2.activity, ev),
+      admin:{...s2.admin,reprogramming:false},
     }));
-    this.showToast('Turno reprogramado');
+    this.showToast(r.offer ? 'Turno reprogramado · el horario anterior se ofreció a '+r.offer.entry.patientName : 'Turno reprogramado');
+    this.flash([id, r.offer?.appt.id].filter(Boolean));
   };
 
   renderVals(){
     const s = this.state;
     const todayISO = isoOf(new Date());
+    const nowMs = Date.now();
+    /* una oferta automática pasa a confirmada cuando vence su acceptAt (ver scheduleOfferTick) */
+    const appts = s.appointments.map(a=> (a.status==='ofrecido' && a.acceptAt && nowMs>=a.acceptAt) ? {...a, status:'confirmado', wasOffer:true} : a);
     const cx = (...a)=> a.filter(Boolean).join(' ');
     const shortDay = (iso)=>{ const d=new Date(iso+'T00:00:00'); const w=DOW_SHORT[d.getDay()]; return w.charAt(0).toUpperCase()+w.slice(1)+' '+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3); };
     const relShort = (iso)=> (iso===todayISO||iso===isoOf(addDays(new Date(),1))) ? this.relLabel(iso) : shortDay(iso);
@@ -1654,7 +1904,7 @@ class Component extends DCLogic {
     const endTime = s.draft.time ? minToTime(timeToMin(s.draft.time)+draftDuration) : '';
     const sd = s.draft.dateISO ? new Date(s.draft.dateISO+'T00:00:00') : null;
 
-    const myAppointments = s.appointments.filter(a=>a.mine).slice().sort((x,y)=> (x.dateISO+x.time).localeCompare(y.dateISO+y.time)).map(a=>{
+    const myAppointments = appts.filter(a=>a.mine).slice().sort((x,y)=> (x.dateISO+x.time).localeCompare(y.dateISO+y.time)).map(a=>{
       const d = new Date(a.dateISO+'T00:00:00');
       const canAct = a.status!=='cancelado'&&a.status!=='atendido'&&a.status!=='ausente';
       return {
@@ -1665,14 +1915,14 @@ class Component extends DCLogic {
         onConfirmClick:()=>this.confirmAppt(a.id), onReprogramClick:()=>this.openReprogram(a.id), onCancelClick:()=>this.openCancelPatient(a.id),
       };
     });
-    const misTurnosCount = s.appointments.filter(a=>a.mine && (a.status==='pendiente'||a.status==='confirmado') && a.dateISO>=todayISO).length;
+    const misTurnosCount = appts.filter(a=>a.mine && (a.status==='pendiente'||a.status==='confirmado') && a.dateISO>=todayISO).length;
     const focusNum = String(s.myApptFocusId||'').replace(/\D/g,'');
     const bookingCode = 'SM-'+String(4800+Number(focusNum||0)).padStart(5,'0');
 
     /* ---------- admin ---------- */
     const navItem = (key,label,icon,badge)=>({key,label,icon,badge, ariaCurrent:(key===s.adminSection || (key==='profesionales' && s.adminSection==='profesionalDetail'))?'page':undefined, onClick:()=>this.onSidebarClick(key)});
     const sidebarGroups = [
-      {title:'Operación', items:[navItem('agenda','Agenda','i-calendar'), navItem('turnos','Turnos','i-list'), navItem('espera','Lista de espera','i-hourglass', s.waitlistEntries.length||null)]},
+      {title:'Operación', items:[navItem('agenda','Agenda','i-calendar'), navItem('turnos','Turnos','i-list'), navItem('espera','Lista de espera','i-hourglass', s.waitlistEntries.filter(w=>(w.status||'esperando')==='esperando').length||null)]},
       {title:'Gestión', items:[navItem('pacientes','Pacientes','i-users'), navItem('profesionales','Profesionales','i-steth'), navItem('especialidades','Especialidades','i-tag')]},
       {title:'Sistema', items:[navItem('config','Configuración','i-settings')]},
     ];
@@ -1691,18 +1941,20 @@ class Component extends DCLogic {
     const nowIndicator = {show:nowShow, top: nowShow ? ((nowMin-startMin)/30)*rowH+TOP_PAD : 0, label:minToTime(nowMin)};
     let statTotal=0, statPending=0, statDone=0, statFree=0;
     const columns = professionalsForAgenda.map(p=>{
-      const dayAppts = s.appointments.filter(a=>a.professionalId===p.id && a.dateISO===agendaISO && a.status!=='cancelado');
+      const dayAppts = appts.filter(a=>a.professionalId===p.id && a.dateISO===agendaISO && a.status!=='cancelado');
       const sl = this.buildSlots(p.id, agendaISO);
       statTotal += dayAppts.length; statPending += dayAppts.filter(a=>a.status==='pendiente').length; statDone += dayAppts.filter(a=>a.status==='atendido').length; statFree += sl.mañana.length+sl.tarde.length;
       const blocks = dayAppts.map(a=>{
         const dur = this.getConsultType(a.typeId)?.duration||30;
         const top = ((timeToMin(a.time)-startMin)/30)*rowH + TOP_PAD + 2;
         const height = Math.max((dur/30)*rowH-4, 26);
-        const meta = STATUS_META[a.status];
+        const meta = STATUS_META[a.status] || STATUS_META.confirmado;
         const parts = a.patientName.split(' ');
-        return {id:a.id, top, height, timeLabel:a.time, patientName:parts[0]+' '+(parts[1]||''), typeName:this.getConsultType(a.typeId)?.name||'', statusLabel:meta.label, showType: height>=40,
-          cls: cx('st-b-'+a.status, a.id===s.admin.selectedApptId && 'is-selected'),
-          ariaLabel: a.time+' a '+minToTime(timeToMin(a.time)+dur)+', '+a.patientName+', '+(this.getConsultType(a.typeId)?.name||'')+', '+meta.label,
+        const fromWaitlist = a.origin==='Lista de espera';
+        const typeName = fromWaitlist ? 'Lista de espera' : (this.getConsultType(a.typeId)?.name||'');
+        return {id:a.id, top, height, timeLabel:a.time, patientName:parts[0]+' '+(parts[1]||''), typeName, statusLabel:meta.label, showType: height>=40, fromWaitlist,
+          cls: cx('st-b-'+a.status, fromWaitlist && 'is-wl', a.id===s.admin.selectedApptId && 'is-selected', (s.flash||[]).includes(a.id) && 'is-fresh'),
+          ariaLabel: a.time+' a '+minToTime(timeToMin(a.time)+dur)+', '+a.patientName+', '+typeName+', '+meta.label,
           onOpen:()=>this.openDrawer(a.id)};
       });
       const lockBlocks = s.blocks.filter(b=>b.profId===p.id && b.dateISO===agendaISO).map(b=>({
@@ -1711,7 +1963,16 @@ class Component extends DCLogic {
       return {profId:p.id, name:p.name, initials:p.initials, specialty:specName(p.specialtyId), countLabel: dayAppts.length===1?'1 turno':dayAppts.length+' turnos',
         blocks, lockBlocks, slotLines, onColumnClick:(e)=>this.onColumnClick(p.id,agendaISO,e)};
     });
-    const columnsTemplate = `repeat(${Math.max(columns.length,1)}, minmax(200px,1fr))`;
+    const columnsTemplate = `repeat(${Math.max(columns.length,1)}, minmax(${PANE?140:200}px,1fr))`;
+    const lastEv = (s.activity||[]).slice(-1)[0];
+    const liveEvent = lastEv ? (()=>{
+      let text = lastEv.short||lastEv.text, full = lastEv.text, at = lastEv.at;
+      const oa = lastEv.offerApptId && appts.find(a=>a.id===lastEv.offerApptId);
+      if(oa && oa.wasOffer){ text += ' · aceptó por WhatsApp'; full += ' '+oa.patientName+' lo aceptó y ya está en la agenda.'; at = oa.acceptAt; }
+      else if(oa && oa.status==='ofrecido'){ text += ' · esperando respuesta…'; full += ' Esperando respuesta…'; }
+      const d = new Date(at);
+      return {text, full, time:minToTime(d.getHours()*60+d.getMinutes())};
+    })() : null;
     const agendaMenu = s.agendaMenu ? {...s.agendaMenu, profName:this.getProfessional(s.agendaMenu.profId)?.name||''} : null;
 
     const adminSectionIsAgenda = s.adminSection==='agenda', adminSectionIsProfesionales = s.adminSection==='profesionales',
@@ -1756,16 +2017,27 @@ class Component extends DCLogic {
     const consultTypesReadonly = CONSULT_TYPES.map(c=>({...c,durationLabel:c.duration+' minutos'}));
 
     const prefLabelMap = {mañana:'Por la mañana',tarde:'Por la tarde',cualquiera:'Cualquier horario'};
+    const WL_ORDER = {ofrecido:0, esperando:1, asignado:2};
     const waitlistRows = s.waitlistEntries.map(w=>{
       const preferredLabel = w.preferredProfId ? (this.getProfessional(w.preferredProfId)?.name||'') : 'Cualquier profesional';
+      const ap = (w.status==='ofrecido'||w.status==='asignado') ? appts.filter(a=>a.waitlistId===w.id && a.status!=='cancelado').slice(-1)[0] : null;
+      const state = !ap ? 'esperando' : (ap.status==='ofrecido' ? 'ofrecido' : 'asignado');
       const candProfIds = w.preferredProfId ? [w.preferredProfId] : PROFESSIONALS.filter(p=>p.specialtyId===w.specialtyId).map(p=>p.id);
-      const match = this.firstAvailableSlotPref(candProfIds, w.pref);
+      const match = state==='esperando' ? this.firstAvailableSlotPref(candProfIds, w.pref) : null;
       return {...w, specialtyName:specName(w.specialtyId), preferredLabel, prefLabel:prefLabelMap[w.pref]||w.pref,
         ageLabel: w.daysAgo===0 ? 'Hoy' : (w.daysAgo===1 ? 'Hace 1 día' : 'Hace '+w.daysAgo+' días'),
-        cls: match ? 'has-match' : '',
+        state, isWaiting:state==='esperando', isOffered:state==='ofrecido', isAssigned:state==='asignado',
+        cls: cx(match && 'has-match', state==='ofrecido' && 'is-offered', state==='asignado' && 'is-assigned'),
+        offer: ap ? {profName:this.getProfessional(ap.professionalId)?.name, label:relShort(ap.dateISO)+' · '+ap.time} : null,
         match: match ? {profName:this.getProfessional(match.profId)?.name, label:relShort(match.iso)+' · '+match.time} : null,
+        offerLabel: match ? 'Ofrecer a '+w.patientName+' el turno de '+relShort(match.iso)+' '+match.time : '',
         onContact:()=>this.contactWaitlist(w.id)};
-    }).sort((a,b)=> (b.match?1:0)-(a.match?1:0));
+    }).sort((a,b)=> (WL_ORDER[a.state]-WL_ORDER[b.state]) || ((b.match?1:0)-(a.match?1:0)) || ((b.daysAgo||0)-(a.daysAgo||0)));
+    const waitlistWaitingCount = waitlistRows.filter(w=>w.state!=='asignado').length;
+    const waitlistRecovered = waitlistRows.filter(w=>w.state==='asignado').length;
+    const myOfferRaw = appts.find(a=>a.status==='ofrecido' && a.waitlistId && s.waitlistEntries.some(w=>w.id===a.waitlistId && w.mine));
+    const myOffer = myOfferRaw ? {when:this.fmtDateLong(myOfferRaw.dateISO)+' · '+myOfferRaw.time+' hs', profName:this.getProfessional(myOfferRaw.professionalId)?.name||'',
+      specName:(specName(this.getProfessional(myOfferRaw.professionalId)?.specialtyId)||'').toLowerCase()} : null;
 
     const ctPatientModeIsSearch = s.ctPatientMode==='search';
     const ctQ = (s.ctPatientQuery||'').trim().toLowerCase();
@@ -1791,8 +2063,8 @@ class Component extends DCLogic {
     const blockDraft = s.blockDraft ? {...s.blockDraft, profName:this.getProfessional(s.blockDraft.profId)?.name||'', dateLabel:this.fmtDateLong(s.blockDraft.dateISO)} : null;
     const exceptionModeIsSpecial = s.exceptionDraft?.mode==='special';
 
-    const selApptRaw = s.admin.selectedApptId ? s.appointments.find(a=>a.id===s.admin.selectedApptId) : null;
-    const ORIGIN = {Web:['Turnos online','i-calendar'], WhatsApp:['WhatsApp','i-chat'], 'Recepción':['Recepción','i-users']};
+    const selApptRaw = s.admin.selectedApptId ? appts.find(a=>a.id===s.admin.selectedApptId) : null;
+    const ORIGIN = {Web:['Turnos online','i-calendar'], WhatsApp:['WhatsApp','i-chat'], 'Recepción':['Recepción','i-users'], 'Lista de espera':['Lista de espera','i-hourglass']};
     const selectedAppt = selApptRaw ? (()=>{
       const dur = this.getConsultType(selApptRaw.typeId)?.duration||30;
       const d = new Date(selApptRaw.dateISO+'T00:00:00');
@@ -1819,15 +2091,24 @@ class Component extends DCLogic {
 
     const waitlistPrefs = [{key:'cualquiera',label:'Cualquiera'},{key:'mañana',label:'Mañana'},{key:'tarde',label:'Tarde'}].map(wp=>{ const sel = wp.key===s.waitlistForm.pref; return {...wp, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.setWaitlistPref(wp.key)}; });
     const cancelReasons = ['No puedo asistir','Conseguí otro horario','Ya no necesito el turno','Otro'].map(label=>{ const sel = label===s.cancelReason; return {label, selected:sel, cls:sel?'is-selected':'', onSelect:()=>this.setCancelReason(label)}; });
-    const cancelAppt = s.cancelModal ? s.appointments.find(a=>a.id===s.cancelModal.apptId) : null;
+    const cancelAppt = s.cancelModal ? appts.find(a=>a.id===s.cancelModal.apptId) : null;
     const cancelSummary = cancelAppt ? (s.cancelModal.context==='admin'
       ? `${cancelAppt.patientName}, ${this.fmtDateLong(cancelAppt.dateISO)} a las ${cancelAppt.time} con ${this.getProfessional(cancelAppt.professionalId)?.name}. Le avisamos por WhatsApp.`
       : `Tu turno del ${this.fmtDateLong(cancelAppt.dateISO)} a las ${cancelAppt.time} con ${this.getProfessional(cancelAppt.professionalId)?.name}.`) : '';
+    const cancelFreeNote = cancelAppt ? (()=>{
+      if(!this.isFutureSlot(cancelAppt.dateISO, cancelAppt.time)) return 'El horario queda libre.';
+      if(s.cancelModal.context!=='admin') return 'El horario queda libre y se lo ofrecemos a quien esté en lista de espera.';
+      const w = this.waitlistMatchFor({profId:cancelAppt.professionalId, dateISO:cancelAppt.dateISO, time:cancelAppt.time}, s.waitlistEntries.filter(x=>x.id!==cancelAppt.waitlistId));
+      return w ? `Le ofrecemos el horario por WhatsApp a ${w.patientName}, que está en lista de espera.` : 'Nadie en lista de espera busca este horario: queda libre para reservar online.';
+    })() : '';
 
     return {
       isPatientView:s.view==='patient', isAdminView:s.view==='admin',
       selectPatientView:this.selectPatientView, selectAdminView:this.selectAdminView,
+      isPane:!!PANE, rootCls: PANE ? 'is-pane' : '',
       toast:s.toast, notImplementedToast:this.notImplementedToast, stopProp:this.stopProp,
+      toastCls: s.toastKind ? 'is-'+s.toastKind : '', toastIsWa: s.toastKind==='wa', toastIcon: s.toastKind==='wa' ? 'i-chat' : (s.toastKind==='live' ? 'i-bolt' : 'i-check'),
+      liveEvent, myOffer, acceptMyOffer:this.acceptMyOffer, declineMyOffer:this.declineMyOffer, cancelFreeNote,
 
       showBackButton: !['home','confirmed'].includes(s.step), onBack:this.onBack,
       stepIsHome:s.step==='home', stepIsProfessional:s.step==='professional', stepIsCoverage:s.step==='coverage', stepIsType:s.step==='type',
@@ -1879,7 +2160,8 @@ class Component extends DCLogic {
       profDetailTabIsInfo: s.profDetailTab==='informacion', profDetailTabIsAvailability: s.profDetailTab==='disponibilidad', profDetailTabIsTypes: s.profDetailTab==='tipos',
       backToProfesionales:this.backToProfesionales, consultTypesReadonly, openExceptionModal:this.openExceptionModal,
 
-      waitlistRows, waitlistNoun: waitlistRows.length===1?'paciente esperando':'pacientes esperando', waitlistMatchCount: waitlistRows.filter(w=>w.match).length,
+      waitlistRows, waitlistWaitingCount, waitlistNoun: waitlistWaitingCount===1?'paciente esperando':'pacientes esperando', waitlistMatchCount: waitlistRows.filter(w=>w.match).length,
+      waitlistRecovered, waitlistRecoveredNoun: waitlistRecovered===1?'turno recuperado hoy':'turnos recuperados hoy',
 
       createTurnoOpen:s.createTurnoOpen, closeCreateTurno:this.closeCreateTurno,
       setPatientModeSearch:this.setPatientModeSearch, setPatientModeNew:this.setPatientModeNew,

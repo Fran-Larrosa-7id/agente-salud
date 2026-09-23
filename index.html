@@ -193,8 +193,32 @@
   <!-- 2 · Turnos por WhatsApp -->
   <section class="p p-wa" id="turnos-whatsapp" aria-labelledby="pWa">
     <div class="wrap wa-grid">
-      <figure class="wa-media reveal reveal-media">
-        <img src="assets/home/whatsapp-phone.webp" alt="Conversación de WhatsApp: una paciente pide un turno de cardiología, elige uno de los horarios ofrecidos y recibe la confirmación" width="760" height="1463" loading="lazy">
+      <figure class="wa-media reveal reveal-media" role="img" aria-label="Conversación de WhatsApp: una paciente pide un turno de cardiología, elige el martes 16/09 a las 10:30 entre los horarios que le ofrece el asistente y, después de revalidar la disponibilidad, recibe la confirmación. Luego consulta por su obra social y la conversación pasa a recepción.">
+        <div class="wa-phone" data-wa aria-hidden="true">
+          <div class="wa-top">
+            <span class="wa-av">CS</span>
+            <span class="wa-who"><b>Clínica San Martín</b><small><span class="wa-st-on">Asistente virtual · en línea</span><span class="wa-st-typing">escribiendo…</span></small></span>
+          </div>
+          <div class="wa-chat">
+            <div class="wa-m wa-out" data-k="m1"><div class="wa-mi"><p class="wa-b">Hola, quiero sacar un turno con Cardiología</p></div></div>
+            <div class="wa-m wa-in wa-typing" data-k="t1"><div class="wa-mi"><p class="wa-b wa-dots"><i></i><i></i><i></i></p></div></div>
+            <div class="wa-m wa-in" data-k="m2"><div class="wa-mi"><div class="wa-b">¡Hola María! Tengo estos horarios con la Dra. Sofía Martínez:
+              <span class="wa-opts"><span>Lun 15/09 · 16:00</span><span data-k="pick">Mar 16/09 · 10:30</span><span>Mié 17/09 · 09:00</span></span></div></div></div>
+            <div class="wa-m wa-out" data-k="m3"><div class="wa-mi"><p class="wa-b">Mar 16/09 · 10:30</p></div></div>
+            <div class="wa-m wa-sys wa-typing" data-k="t2"><div class="wa-mi"><p class="wa-pill wa-spin">Revalidando disponibilidad…</p></div></div>
+            <div class="wa-m wa-in" data-k="m4"><div class="wa-mi"><div class="wa-card">
+              <p class="wa-card-k">✓ Turno confirmado</p>
+              <dl><dt>Profesional</dt><dd>Dra. Sofía Martínez</dd><dt>Especialidad</dt><dd>Cardiología</dd><dt>Fecha</dt><dd>martes 16/09 · 10:30</dd></dl>
+              <p class="wa-card-n">Te vamos a recordar 24 hs antes.</p>
+            </div></div></div>
+            <div class="wa-m wa-out" data-k="m5"><div class="wa-mi"><p class="wa-b">Me cambié de obra social, ¿qué tengo que hacer?</p></div></div>
+            <div class="wa-m wa-in wa-typing" data-k="t3"><div class="wa-mi"><p class="wa-b wa-dots"><i></i><i></i><i></i></p></div></div>
+            <div class="wa-m wa-in" data-k="m6"><div class="wa-mi"><p class="wa-b">Te voy a derivar con un operador de la clínica.</p></div></div>
+            <div class="wa-m wa-sys" data-k="m7"><div class="wa-mi"><p class="wa-pill">Conversación transferida a Recepción</p></div></div>
+            <div class="wa-m wa-in" data-k="m8"><div class="wa-mi"><p class="wa-b"><b class="wa-from">Laura · Recepción</b>Hola María, pasame los datos de la credencial nueva y la cargo en tu turno.</p></div></div>
+          </div>
+          <div class="wa-bar"><span class="wa-field"><span class="wa-typed"></span><span class="wa-ph">Mensaje</span></span><span class="wa-send"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg></span></div>
+        </div>
       </figure>
       <div class="p-copy reveal">
         <p class="p-tag">WhatsApp · Motor de agenda</p>
@@ -518,6 +542,61 @@
     if (entries[0].isIntersecting) { if (!timers.length) cycle(); }
     else { stop(); reset(0); }
   }, { threshold: 0.3 }).observe(stage);
+})();
+/* Turnos por WhatsApp: la conversación se escribe sola, sincronizada con los cuatro pasos de al lado.
+   En bucle mientras está en pantalla; fuera de pantalla se pausa. Sin movimiento: conversación completa. */
+(function () {
+  var phone = document.querySelector('[data-wa]');
+  if (!phone || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var steps = document.querySelectorAll('.wa-flow li');
+  var typed = phone.querySelector('.wa-typed'), send = phone.querySelector('.wa-send');
+  var timers = [];
+  function el(k) { return phone.querySelector('[data-k="' + k + '"]'); }
+  function show(k) { el(k).classList.add('is-in'); }
+  function hide(k) { el(k).classList.remove('is-in'); }
+  function typing(on) { phone.classList.toggle('is-typing', on); }
+  function step(n) { steps.forEach(function (li, i) { li.classList.toggle('is-on', i === n - 1); li.classList.toggle('is-done', i < n - 1); }); }
+  function write(t0, text, k) {
+    for (var i = 1; i <= text.length; i++) at(t0 + i * 38, (function (s) { return function () { typed.textContent = s; }; })(text.slice(0, i)));
+    var end = t0 + text.length * 38 + 350;
+    at(end, function () { send.classList.add('is-press'); });
+    at(end + 140, function () { send.classList.remove('is-press'); typed.textContent = ''; show(k); });
+    return end + 140;
+  }
+  function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+  function clear() {
+    timers.forEach(clearTimeout); timers = [];
+    phone.classList.add('is-resetting');
+    phone.querySelectorAll('.is-in, .is-picked').forEach(function (n) { n.classList.remove('is-in', 'is-picked'); });
+    typed.textContent = ''; typing(false); step(0);
+    void phone.offsetWidth; phone.classList.remove('is-resetting', 'is-fading');
+  }
+  function run() {
+    clear();
+    at(500, function () { step(1); });
+    var t = write(700, 'Hola, quiero sacar un turno con Cardiología', 'm1');
+    at(t + 500, function () { step(2); show('t1'); typing(true); });
+    at(t + 1800, function () { hide('t1'); typing(false); show('m2'); });
+    at(t + 3300, function () { el('pick').classList.add('is-picked'); });
+    at(t + 3700, function () { show('m3'); });
+    at(t + 4300, function () { step(3); show('t2'); });
+    at(t + 5900, function () { hide('t2'); show('m4'); });
+    at(t + 7800, function () { step(4); });
+    t = write(t + 8000, 'Me cambié de obra social, ¿qué tengo que hacer?', 'm5');
+    at(t + 500, function () { show('t3'); typing(true); });
+    at(t + 1600, function () { hide('t3'); typing(false); show('m6'); });
+    at(t + 2500, function () { show('m7'); });
+    at(t + 3300, function () { typing(true); });
+    at(t + 4400, function () { typing(false); show('m8'); });
+    at(t + 9000, function () { phone.classList.add('is-fading'); });
+    at(t + 9500, run);
+  }
+  phone.classList.add('is-live');
+  clear();
+  new IntersectionObserver(function (entries) {
+    if (entries[0].isIntersecting) { if (!timers.length) run(); }
+    else clear();
+  }, { threshold: 0.35 }).observe(phone);
 })();
 (function () {
   var bar = document.querySelector('.hd');

@@ -57,6 +57,31 @@
       </div>
       <figure class="hero-media">
         <img src="assets/hero/centro-medico-san-martin.webp" alt="Reserva de turnos desde el celular y agenda de la recepción de un centro médico, con un turno confirmado" width="1122" height="1402" fetchpriority="high">
+        <div class="hero-feed" data-feed aria-hidden="true">
+          <p class="hf-live"><i></i>En vivo · Centro Médico San Martín</p>
+          <ol class="hf-list">
+            <li class="hf-n" data-for="turnos-online" data-pos="0">
+              <span class="hf-ic hf-to"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16M9.5 14.5l2 2 3.5-3.5"/></svg></span>
+              <span class="hf-tx"><b>Turnos Online</b><span>Ana S. reservó en Cardiología</span></span>
+              <time>ahora</time>
+            </li>
+            <li class="hf-n" data-for="turnos-whatsapp" data-pos="1">
+              <span class="hf-ic hf-wa"><svg viewBox="0 0 24 24"><path d="M5 19.5l1.2-3.6A7.5 7.5 0 1 1 9 18.6z"/><path d="M9.5 12.2l1.8 1.8 3.4-3.4"/></svg></span>
+              <span class="hf-tx"><b>Turnos por WhatsApp</b><span>María G. confirmó su turno por chat</span></span>
+              <time>ahora</time>
+            </li>
+            <li class="hf-n" data-for="onboarding" data-pos="x">
+              <span class="hf-ic hf-ob"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 14.5l2 2 4-4"/></svg></span>
+              <span class="hf-tx"><b>Onboarding</b><span>Lucía M. completó su ficha antes de llegar</span></span>
+              <time>ahora</time>
+            </li>
+            <li class="hf-n" data-for="llamador" data-pos="x">
+              <span class="hf-ic hf-ll"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l5 4V6L7 10z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg></span>
+              <span class="hf-tx"><b>Llamador</b><span>Juan P., pase al Consultorio 3</span></span>
+              <time>ahora</time>
+            </li>
+          </ol>
+        </div>
       </figure>
     </div>
   </section>
@@ -597,6 +622,51 @@
     if (entries[0].isIntersecting) { if (!timers.length) run(); }
     else clear();
   }, { threshold: 0.35 }).observe(phone);
+})();
+(function () {
+  /* Hero: cada producto de la suite "avisa" algo; el link de la suite se enciende a la par */
+  var feed = document.querySelector('[data-feed]');
+  if (!feed || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var cards = [].slice.call(feed.querySelectorAll('.hf-n'));
+  var links = cards.map(function (c) { return document.querySelector('.hero-index a[href="#' + c.getAttribute('data-for') + '"]'); });
+  var order = [], timer = null, inView = true, hover = false;
+  function render() {
+    cards.forEach(function (c, k) {
+      var was = c.getAttribute('data-pos'), i = order.indexOf(k);
+      var pos = i === 0 ? '0' : i === 1 ? '1' : (was === '0' || was === '1') ? '2' : 'x';
+      c.setAttribute('data-pos', pos);
+      if (links[k]) links[k].classList.toggle('is-live', pos === '0');
+    });
+  }
+  function push(k) {
+    var i = order.indexOf(k);
+    if (i === 0) return;
+    if (i > 0) order.splice(i, 1);
+    order.unshift(k);
+    render();
+  }
+  function stop() { clearTimeout(timer); timer = null; }
+  function schedule(ms) {
+    stop();
+    if (!inView || hover || document.hidden) return;
+    timer = setTimeout(function () {
+      push(order.length ? (order[0] + 1) % cards.length : 0);
+      schedule(3200);
+    }, ms);
+  }
+  links.forEach(function (a, k) {
+    if (!a) return;
+    function enter() { hover = true; stop(); push(k); }
+    function leave() { hover = false; schedule(2400); }
+    a.addEventListener('mouseenter', enter); a.addEventListener('focus', enter);
+    a.addEventListener('mouseleave', leave); a.addEventListener('blur', leave);
+  });
+  cards.forEach(function (c) { c.setAttribute('data-pos', 'x'); });
+  document.addEventListener('visibilitychange', function () { document.hidden ? stop() : schedule(1200); });
+  new IntersectionObserver(function (entries) {
+    inView = entries[0].isIntersecting;
+    inView ? schedule(order.length ? 1200 : 1100) : stop();
+  }, { threshold: 0.2 }).observe(feed.parentNode);
 })();
 (function () {
   var bar = document.querySelector('.hd');

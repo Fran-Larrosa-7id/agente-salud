@@ -40,6 +40,7 @@ PRODUCT.md, DESIGN.md      contexto de producto y sistema de diseño ("The Lab R
 | `vertical-salud-turnos-online-v2` | turnos, coberturas, políticas y actividad | Turnos Online y Portal del Paciente comparten estado por `storage` |
 | `vertical-salud-portal-session-v1` | sesión demo (nombre, email/DNI, cobertura) | Portal; Turnos Online lee el perfil para precompletar el formulario |
 | `salud_prescripciones_v1` | documentos (receta/orden), contadores demo, canales de aviso | panel profesional y atención escriben; el Portal lee y marca «visto» (evento `storage`) |
+| `portal_pacientes_v1` | sesión, estudios, accesos compartidos, autorizaciones, preferencias | solo `portal-pacientes/` |
 
 Las claves no llevan prefijo común (`salud:*`) para no romper lo ya sincronizado. Cada demo tiene su reinicio, que solo borra sus claves (nunca `localStorage.clear()`). Detalle de cada reinicio en `README.md`.
 
@@ -57,6 +58,9 @@ Las claves no llevan prefijo común (`salud:*`) para no romper lo ya sincronizad
 - **Avisos:** la tabla de canales en Configuración es descriptiva; los avisos siguen siendo eventos de actividad en `localStorage`.
 - **Prescripción y órdenes:** prototipo conceptual, sin lógica clínica. El catálogo (`MED_CATALOG`) usa nombres ficticios y no trae dosis. Estados guardados: `borrador`, `emitida`, `anulada`; `vencida` se deriva con `statusOf()` según `expiresISO`. Anular nunca borra; «Duplicar como nueva» crea un borrador con `duplicatedFrom`. Solo se pueden descartar borradores. El paciente del Portal se identifica por DNI o email (`patientForSession()`), igual que los turnos. Los avisos (Portal, WhatsApp, email) no llevan contenido médico. `rx-sheet.js` es la única plantilla del documento: panel, atención, Portal y la descarga HTML usan la misma. `?embed=1` oculta la barra de demo del panel dentro de `demo.html`.
 - **PWA:** el Portal tiene manifest (PNG 192/512 + maskable), `apple-touch-icon` y service worker. Debe servirse por `localhost` o HTTPS; abrir con `file://` no instala ni activa modo offline. Al cambiar archivos cacheados, subir `CACHE_NAME` en `service-worker.js`.
+
+## Portal de Pacientes (historia personal)
+`portal-pacientes/`: SPA estática con router por hash (`js/app.js`), datos y semilla en `js/data.js`, componentes en `js/ui.js`, pantallas en `js/screens.js`, flujo «Traer mis estudios» en `js/traer.js`, compartir en `js/share.js`, acceso en `js/auth.js`. Sigue el manual de marca (Inter, Lucide, navy/teal); los botones teal usan `#087477` porque `#0F8B8D` no llega a AA con texto blanco. Decisiones: cada dato muestra su procedencia (`P.prov`); el portal no interpreta resultados; el catálogo de lo que "encuentra" cada institución está en `CATALOG` (`data.js`), y `flaky: true` simula el error de conexión. Fecha narrativa: 23/09/2026.
 
 ## Datos mock
 8 pacientes argentinos en `js/data.js` con los 5 estados de onboarding; María González es la paciente de referencia en WhatsApp, Portal y Llamador. Fecha narrativa: lunes 15 de septiembre de 2025.

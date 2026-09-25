@@ -21,6 +21,7 @@ Son conceptos independientes: no forman parte de Horus ni de Osiris.
 | Llamador de pacientes | Ordenar la sala de espera | Recepción / Profesional / Paciente | Fuerte | `llamador-pacientes/index.html` |
 | Prescripción y Órdenes Digitales | Emitir recetas y órdenes y que el paciente las encuentre en su Portal | Profesional / Paciente | Solución principal · mock navegable | `prescripcion-ordenes/index.html` |
 | Portal del paciente | Acceso digital único a servicios de la institución | Paciente | Complementario | `app-mobile-pacientes/index.html` |
+| Portal de Pacientes (historia personal) | Reunir en un solo lugar la información de salud repartida entre instituciones; «Traer mis estudios» | Paciente | Nuevo · mock navegable | `portal-pacientes/index.html` |
 | Asistente IA | Consulta de información operativa en lenguaje natural | Personal administrativo | Capacidad transversal | `institucion.html?ia=1` |
 | Triage | Priorización basada en reglas de la institución | Paciente / Guardia | Exploratorio | `triage-riesgo/index.html` |
 
@@ -56,6 +57,14 @@ y abrir `http://localhost:8000`. Sirve cualquier servidor estático (`npx serve 
 - `institucion.html`: panel «Configuración de onboarding», cambiar la plantilla (p. ej. Diagnóstico por imágenes).
 - `paciente.html`: el flujo omite las secciones no solicitadas y muestra los documentos requeridos. Abrirlo después de cambiar la plantilla.
 - «Reiniciar configuración» vuelve a Consulta general.
+
+### Portal de Pacientes — historia personal (`portal-pacientes/index.html`)
+Independiente del Portal del paciente de turnos. Acceso demo: DNI 32.456.789 y cualquier contraseña (DNI distinto → error de acceso).
+- **Traer mis estudios** (flujo principal): Estudios → «Traer mis estudios» → Laboratorio Norte → Continuar → contraseña cualquiera → Autorizar → búsqueda → elegir → Guardar. Los 6 estudios aparecen como «Nuevo» en Estudios, Documentos e Historial.
+- **Error de conexión:** elegir Clínica del Sur; el primer intento falla y «Reintentar» funciona. Instituciones «Próximamente» en «Ver más instituciones».
+- **Compartir:** abrir un estudio → Compartir → qué y por cuánto tiempo → «Crear acceso seguro» → copiar o revocar. Los accesos quedan en Mi perfil → Privacidad.
+- **Estados:** estudio con resultado pendiente (Vitamina D), búsquedas sin resultados, y Mi perfil → «Ver como cuenta nueva» para los estados vacíos. «Restablecer datos de la demo» vuelve a la semilla.
+- Mi perfil → «Tamaño del texto» agranda toda la interfaz (pensado para adultos mayores).
 
 ### Portal del paciente (`app-mobile-pacientes/index.html`)
 Navegar Inicio, Turnos, Estudios, Avisos y Perfil. El acceso demo es local; el próximo turno y «Mis turnos» permiten revisar, cancelar (el diálogo muestra la política), agregar al calendario (`.ics`) y abrir la reprogramación en Turnos Online. La reserva conserva el email del acceso demo para asociarla al portal. Para probar los cambios de cobertura, abrir en otra pestaña Turnos Online → Panel → Coberturas, marcar un convenio para revisión y preparar el aviso al paciente.
@@ -109,6 +118,7 @@ Probar «¿Quién requiere revisión?» o «Mostrame pacientes de la Dra. Martí
 | `vertical-salud-turnos-online-v2` | Turnos, coberturas, políticas y actividad compartidos | No hay reset global; la demo de turnos reinicia su semilla cada día |
 | `vertical-salud-portal-session-v1` | Sesión mock del Portal del Paciente | «Cerrar sesión» en Perfil; es solo un acceso local de demostración |
 | `salud_prescripciones_v1` | Prescripciones, órdenes, numeración demo y canales de aviso (panel profesional, atención y Portal) | «Reiniciar demo» en la portada, el panel profesional o la vista en paralelo de Prescripción y órdenes |
+| `portal_pacientes_v1` | Sesión, estudios traídos, accesos compartidos, autorizaciones y preferencias del Portal de Pacientes (historia personal) | Mi perfil → «Restablecer datos de la demo» |
 
 Ningún reinicio usa `localStorage.clear()`: cada demo restaura solo sus claves. No se renombraron las claves a un prefijo común para no romper la sincronización existente.
 

@@ -112,6 +112,8 @@
     if (!P.db.session && !isAuth) { location.replace('#/login'); return; }
     if (P.db.session && isAuth) { location.replace('#/inicio'); return; }
     P.closeAllOverlays();
+    // Salir de «Traer mis estudios» (por ejemplo con el botón Atrás) cancela una importación real en curso.
+    if (lastTop === 'traer' && top !== 'traer' && P.leaveFlow) P.leaveFlow();
 
     if (isAuth) {
       if (top === 'login' && lastTop !== 'login') P.resetRecover();

@@ -225,6 +225,11 @@
 /* Hoja completa (visor) */
 .viewer { background: var(--surface-alt); margin: -24px; padding: 32px 24px; min-height: calc(100% + 48px); display: flex; justify-content: center; }
 .viewer-foot { text-align: center; font-size: 0.875rem; color: var(--text-muted); margin-top: 16px; }
+/* PDF original traído con el asistente */
+.viewer-pdf { padding: 0; align-items: stretch; }
+.pdf-frame { width: 100%; min-height: 72vh; border: 0; background: #fff; }
+.pdf-loading { display: flex; align-items: center; gap: 12px; margin: auto; color: var(--text-muted); font-weight: 500; }
+.pdf-loading .spin { border-color: var(--teal); border-right-color: transparent; }
 .sheet {
   position: relative; width: 100%; max-width: 720px; padding: 40px 48px 32px; background: #fff; overflow: hidden;
   box-shadow: 0 1px 3px rgba(15, 42, 67, 0.08), 0 12px 32px rgba(15, 42, 67, 0.08); border-top: 5px solid var(--tone);

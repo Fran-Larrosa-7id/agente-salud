@@ -508,6 +508,7 @@ label:has(> input[type="checkbox"]) > input, label:has(> input[type="radio"]) > 
 .toast.is-in { opacity: 1; transform: none; }
 .toast .i { color: var(--teal-on-navy); }
 .toast-info .i { color: #9cc3ff; }
+.toast-danger .i { color: #ffb4ab; }
 
 /* ---------- Mensajes ---------- */
 .alert { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-md); margin: 20px 0 0; font-size: 0.9375rem; }

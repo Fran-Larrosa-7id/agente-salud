@@ -285,8 +285,22 @@
   P.wait = (ms) => new Promise((r) => setTimeout(r, P.reducedMotion() ? Math.min(ms, 250) : ms));
   P.reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  P.instSub = (i) => i.kind + (i.city ? ' · ' + i.city : '');
+
+  /* Metadatos del archivo: los PDF traídos por el agente no traen cantidad de páginas. */
+  P.fileMeta = (d) => 'PDF' + (d.pages ? ' · ' + P.plural(d.pages, 'página', 'páginas') : '') + (d.size ? ' · ' + d.size : '');
+
   P.download = function (d) {
     const name = d.title.replace(/[^\wÁÉÍÓÚáéíóúñÑ ]+/g, '').trim().replace(/\s+/g, '_') + '_' + P.fmt(d.date).replace(/\//g, '-') + '.pdf';
-    P.toast('Descarga iniciada · <span class="num">' + P.esc(name) + '</span>', { icon: 'download' });
+    if (!d.file) {
+      P.toast('Descarga iniciada · <span class="num">' + P.esc(name) + '</span>', { icon: 'download' });
+      return;
+    }
+    // Documento real (traído con el agente): se descarga el PDF original guardado en este dispositivo.
+    P.files.get(d.file.key).then((blob) => {
+      if (!blob) throw new Error('missing');
+      P.saveBlob(blob, name);
+      P.toast('Descarga iniciada · <span class="num">' + P.esc(name) + '</span>', { icon: 'download' });
+    }).catch(() => P.toast('El archivo no está guardado en este dispositivo.', { icon: 'alert', tone: 'danger' }));
   };
 })();

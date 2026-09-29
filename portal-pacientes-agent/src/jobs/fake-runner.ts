@@ -1,0 +1,152 @@
+import { sleep } from '../util.js';
+import type { ExternalStudy, ImportJob } from './job.js';
+import { makeDemoPdf } from './pdf.js';
+import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
+import { JobState } from './states.js';
+
+const S = JobState;
+
+export type FakeScenario = 'ok' | 'human' | 'timeout' | 'unavailable' | 'empty' | 'partial' | 'parser_mismatch';
+
+export interface FakeOptions {
+  scenario?: FakeScenario;
+  /** Cuánto "tarda" el paciente en iniciar sesión. */
+  loginDelayMs?: number;
+  stepMs?: number;
+}
+
+export const FAKE_STUDIES: Omit<ExternalStudy, 'provider'>[] = [
+  { id: 'st_fake00000001', date: '2026-05-28', protocol: '00012345', deliveryDate: '2026-05-30', status: 'Finalizado' },
+  { id: 'st_fake00000002', date: '2026-01-14', protocol: '00009876', deliveryDate: '2026-01-16', status: 'Finalizado' },
+];
+
+/**
+ * FakeProviderAgent: recorre la misma máquina de estados y emite los mismos eventos que el runner
+ * real, sin navegador, sin laboratorio y sin IA. Para demos sin cuenta y para E2E del frontend.
+ */
+export class FakeProviderAgent implements JobRunner {
+  private readonly scenario: FakeScenario;
+  private readonly loginDelay: number;
+  private readonly step: number;
+
+  constructor(
+    private readonly job: ImportJob,
+    private readonly deps: RunnerDeps,
+    opts: FakeOptions = {},
+  ) {
+    this.scenario = opts.scenario ?? 'ok';
+    this.loginDelay = opts.loginDelayMs ?? 2500;
+    this.step = opts.stepMs ?? 600;
+  }
+
+  private async pause(ms = this.step): Promise<void> {
+    await sleep(ms, this.job.abort.signal);
+    if (this.job.abort.signal.aborted) throw new Error('ABORTED');
+  }
+
+  async start(): Promise<void> {
+    const { job } = this;
+    try {
+      job.transition(S.OPENING_PROVIDER);
+      await this.pause();
+      if (this.scenario === 'unavailable') return void job.fail(S.PROVIDER_UNAVAILABLE, 'PROVIDER_UNAVAILABLE');
+      job.push('provider_opened');
+      job.transition(S.WAITING_FOR_USER_LOGIN, { timeoutMs: this.deps.config.loginTimeoutMs });
+      if (this.scenario === 'timeout') {
+        await this.pause(this.loginDelay);
+        return void job.fail(S.AUTH_TIMEOUT, 'LOGIN_TIMEOUT');
+      }
+      await this.pause(this.loginDelay);
+      job.transition(S.AUTHENTICATED);
+      await this.pause(this.step / 2);
+      job.transition(S.AGENT_STARTING);
+      await this.pause(this.step / 2);
+      job.transition(S.AGENT_OBSERVING);
+      await this.pause();
+      if (this.scenario === 'human') {
+        job.transition(S.HUMAN_ACTION_REQUIRED, { reason: 'mfa' });
+        await this.pause(this.loginDelay);
+        job.transition(S.AGENT_OBSERVING);
+        await this.pause();
+      }
+      job.transition(S.SEARCHING_STUDIES);
+      await this.pause(this.step * 2);
+      if (this.scenario === 'parser_mismatch') {
+        job.transition(S.PROVIDER_PARSER_MISMATCH, { code: 'PROVIDER_PARSER_MISMATCH' });
+        return;
+      }
+      const studies = this.scenario === 'empty' ? [] : FAKE_STUDIES.map((s) => ({ ...s, provider: job.provider }));
+      job.setStudies(studies);
+      job.transition(S.STUDIES_FOUND, { count: studies.length });
+      job.transition(S.WAITING_SELECTION, { studies });
+    } catch {
+      if (!job.isTerminal) job.fail(S.ERROR, 'INTERNAL');
+    }
+  }
+
+  async retryDiscovery(): Promise<void> {
+    const { job } = this;
+    if (job.state !== S.PROVIDER_PARSER_MISMATCH) throw new Error('RETRY_NOT_AVAILABLE');
+    try {
+      job.transition(S.AGENT_STARTING);
+      await this.pause(this.step / 2);
+      job.transition(S.AGENT_OBSERVING);
+      job.transition(S.SEARCHING_STUDIES);
+      await this.pause(this.step);
+      const studies = FAKE_STUDIES.map((s) => ({ ...s, provider: job.provider }));
+      job.setStudies(studies);
+      job.transition(S.STUDIES_FOUND, { count: studies.length });
+      job.transition(S.WAITING_SELECTION, { studies });
+    } catch {
+      if (!job.isTerminal) job.fail(S.ERROR, 'INTERNAL');
+    }
+  }
+
+  async importSelected(studyIds: string[]): Promise<void> {
+    const { job } = this;
+    try {
+      for (let i = 0; i < studyIds.length; i++) {
+        const studyId = studyIds[i];
+        const study = job.studies.find((s) => s.id === studyId)!;
+        job.current = { studyId, index: i, total: studyIds.length };
+        job.transition(S.OPENING_STUDY, { studyId, index: i, total: studyIds.length });
+        await this.pause();
+        job.transition(S.FINDING_DOCUMENT, { studyId });
+        await this.pause();
+        job.transition(S.DOWNLOADING, { studyId });
+        await this.pause();
+        if (this.scenario === 'partial' && i === studyIds.length - 1 && studyIds.length > 1) {
+          job.failures.push({ studyId, code: 'NO_PDF_FOUND' });
+          job.push('study_failed', { studyId, code: 'NO_PDF_FOUND' });
+          continue;
+        }
+        job.transition(S.IMPORTING, { studyId });
+        const pdf = makeDemoPdf([
+          'Documento de prueba - FakeProviderAgent',
+          'Este PDF lo genero el modo simulado del Portal de Pacientes.',
+          'No proviene de ningun laboratorio y no contiene datos reales.',
+          'Fecha del estudio: ' + (study.date ?? '-'),
+          'Protocolo: ' + (study.protocol ?? '-'),
+        ]);
+        const saved = await this.deps.files.save(pdf, 'application/pdf');
+        if (!saved.ok) throw new Error(saved.reason);
+        job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate });
+        job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate });
+        await this.pause(this.step / 2);
+      }
+      job.current = undefined;
+      if (!job.files.length) return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'NO_DOCUMENTS');
+      job.transition(S.COMPLETED, { files: job.files.length, failures: job.failures.length });
+    } catch {
+      if (!job.isTerminal) job.fail(S.ERROR, 'INTERNAL');
+    }
+  }
+
+  async dispose(): Promise<void> {
+    /* no hay navegador que cerrar */
+  }
+}
+
+export function fakeRunnerFactory(opts: FakeOptions = {}): RunnerFactory {
+  return (job, deps) => new FakeProviderAgent(job, deps, opts);
+}

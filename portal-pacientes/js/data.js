@@ -19,6 +19,8 @@
 
   /* tone = color del monograma de cada institución (identifica la procedencia de un vistazo) */
   P.INSTITUTIONS = [
+    /* Conexión real: la trae el agente de IA (portal-pacientes-agent). El resto es simulado. */
+    { id: 'pc', name: 'Pérez Cambet', kind: 'Laboratorio', city: '', mono: 'PC', tone: 'teal', compatible: true, featured: true, live: 'percamb', host: 'www.biodatasa.com.ar' },
     { id: 'ln', name: 'Laboratorio Norte', kind: 'Laboratorio', city: 'San Isidro', mono: 'LN', tone: 'sage', compatible: true, featured: true, host: 'pacientes.laboratorionorte.ejemplo' },
     { id: 'lc', name: 'Laboratorio Central', kind: 'Laboratorio', city: 'CABA', mono: 'LC', tone: 'indigo', compatible: true, featured: true, host: 'resultados.laboratoriocentral.ejemplo' },
     { id: 'dm', name: 'Diagnóstico Médico', kind: 'Centro de diagnóstico', city: 'CABA', mono: 'DM', tone: 'sand', compatible: true, featured: true, host: 'portal.diagnosticomedico.ejemplo' },
@@ -242,6 +244,7 @@
     P.db.session = session;
     P.db.textSize = textSize;
     P.save();
+    if (P.files) P.files.clear();
   };
 
   /* ---------- Selectores ---------- */
@@ -279,6 +282,7 @@
         studyId: s.id,
         imported: !!s.importedAt,
         isImage: s.type !== 'laboratorio',
+        file: s.file || null,
       }));
     const own = P.db.emptyDemo ? [] : P.db.documents;
     return fromStudies.concat(own).sort(byDateDesc);

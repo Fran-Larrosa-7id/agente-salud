@@ -341,6 +341,11 @@
       main += '<section class="card card-pending"><div class="pending-row">' + ic('clock', 24) + '<div><h2 class="card-title">El resultado todavía no está listo</h2>' +
         '<p>' + inst.name + ' está procesando este estudio. Cuando esté disponible lo vas a ver acá y en Documentos.</p>' +
         '<p class="muted mt-2">Fecha estimada: <b class="num">' + P.fmt(s.expected) + '</b></p></div></div></section>';
+    } else if (s.file) {
+      main += '<section class="card" aria-labelledby="h-orig">' + cardHead('Documento original', null, 'h-orig') +
+        '<p>Trajimos el PDF original tal como lo emitió ' + inst.name + '. El Portal lo guarda sin leerlo ni interpretarlo.</p>' +
+        '<div class="btn-row mt-4"><button type="button" class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">' + ic('eye', 18) + 'Ver documento</button></div>' +
+        '<p class="disclaimer">' + ic('info', 18) + '<span>Si tenés dudas sobre los resultados, consultá con tu profesional de salud.</span></p></section>';
     } else if (s.results) {
       main += '<section class="card" aria-labelledby="h-res">' + cardHead('Resultados', null, 'h-res') +
         '<p class="muted">Valores tal como los informó ' + inst.name + '.</p>' +
@@ -374,12 +379,12 @@
       (available && doc
         ? '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Documento original', null, 'h-doc') +
           '<button type="button" class="doc-preview" data-action="doc-view" data-id="' + doc.id + '" aria-label="Ver documento original">' + P.paper(doc, true) + '<span class="doc-preview-cta">' + ic('eye', 18) + 'Ver documento</span></button>' +
-          '<p class="file-meta">' + ic('file', 18) + '<span>PDF · ' + P.plural(s.pages, 'página', 'páginas') + ' · ' + s.size + '</span></p>' +
+          '<p class="file-meta">' + ic('file', 18) + '<span>' + P.fileMeta(s) + '</span></p>' +
           '<div class="btn-row"><button type="button" class="btn btn-secondary" data-action="doc-view" data-id="' + doc.id + '">' + ic('eye', 18) + 'Ver documento</button>' +
           '<button type="button" class="btn btn-secondary" data-action="doc-download" data-id="' + doc.id + '">' + ic('download', 18) + 'Descargar</button></div></section>'
         : '') +
       '<section class="card" aria-labelledby="h-prov">' + cardHead('Procedencia', null, 'h-prov') +
-      '<div class="prov-block">' + P.mono(s.inst, 'lg') + '<div><p class="prov-name">' + inst.name + '</p><p class="muted">' + inst.kind + ' · ' + inst.city + '</p></div></div>' +
+      '<div class="prov-block">' + P.mono(s.inst, 'lg') + '<div><p class="prov-name">' + inst.name + '</p><p class="muted">' + P.instSub(inst) + '</p></div></div>' +
       '<ul class="prov-steps"><li>' + ic('calendar', 18) + '<span>Estudio realizado el <b class="num">' + P.fmt(s.date) + '</b></span></li>' +
       (s.reportDate ? '<li>' + ic('file-check', 18) + '<span>Informe emitido el <b class="num">' + P.fmt(s.reportDate) + '</b></span></li>' : '') +
       '<li>' + ic(s.importedAt ? 'import' : 'link', 18) + '<span>' + how + '</span></li></ul></section>' +
@@ -433,8 +438,26 @@
       headActions:
         '<div class="ov-head-actions"><button type="button" class="btn btn-secondary btn-sm" data-act="dl">' + ic('download', 18) + '<span>Descargar</span></button>' +
         (d.studyId ? '<button type="button" class="btn btn-accent btn-sm" data-act="share">' + ic('share', 18) + '<span>Compartir</span></button>' : '') + '</div>',
-      body: '<div class="viewer">' + P.sheet(d) + '</div><p class="viewer-foot">PDF · ' + P.plural(d.pages, 'página', 'páginas') + ' · ' + d.size + '</p>',
+      body: d.file
+        ? '<div class="viewer viewer-pdf" id="pdf-host"><p class="pdf-loading"><span class="spin" aria-hidden="true"></span>Abriendo el documento…</p></div>' +
+          '<p class="viewer-foot">' + P.fileMeta(d) + ' · Documento original de ' + P.esc(P.inst(d.inst).name) + '</p>'
+        : '<div class="viewer">' + P.sheet(d) + '</div><p class="viewer-foot">' + P.fileMeta(d) + '</p>',
+      onClose: () => { if (url) URL.revokeObjectURL(url); },
     });
+    let url = null;
+    if (d.file) {
+      const host = h.el.querySelector('#pdf-host');
+      P.files.get(d.file.key).then((blob) => {
+        if (!blob) throw new Error('missing');
+        url = URL.createObjectURL(blob);
+        host.innerHTML = '<iframe class="pdf-frame" title="Documento original: ' + P.esc(d.title) + '" src="' + url + '"></iframe>';
+      }).catch(() => {
+        host.innerHTML = P.empty({
+          compact: true, icon: 'file', title: 'El archivo no está en este dispositivo',
+          text: 'Los documentos traídos se guardan en el navegador donde los trajiste. Podés volver a traerlo desde «Traer mis estudios».',
+        });
+      });
+    }
     h.el.querySelector('[data-act="dl"]').addEventListener('click', () => P.download(d));
     const sh = h.el.querySelector('[data-act="share"]');
     if (sh) sh.addEventListener('click', () => { h.close(); P.openShare(d.studyId); });
@@ -549,7 +572,7 @@
       return count + '<div class="card card-flush"><ul class="doc-rows">' + list.map((d) =>
         '<li><button type="button" class="doc-row" data-action="doc-view" data-id="' + d.id + '">' +
         '<span class="ty ty-doc" aria-hidden="true">' + ic('file', 22) + '</span>' +
-        '<span class="study-main"><span class="study-name">' + P.esc(d.title) + '</span><span class="study-meta">' + P.DOC_KINDS[d.kind] + ' · PDF · ' + d.size + '</span>' +
+        '<span class="study-main"><span class="study-name">' + P.esc(d.title) + '</span><span class="study-meta">' + P.DOC_KINDS[d.kind] + ' · ' + P.fileMeta(d) + '</span>' +
         '<span class="study-meta-m">' + P.esc(P.inst(d.inst).name) + ' · <span class="num">' + P.fmt(d.date) + '</span></span></span>' +
         '<span class="study-inst">' + P.instBadge(d.inst) + '</span><span class="study-date num">' + P.fmt(d.date) + '</span>' +
         '<span class="study-status">' + (d.imported ? P.badge('new', 'Traído por vos') : '') + '</span>' + ic('eye', 20, 'chev') + '</button></li>'

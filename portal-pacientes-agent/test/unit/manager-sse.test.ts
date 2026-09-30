@@ -116,6 +116,13 @@ test('API + SSE: eventos en orden, importación y descarga del PDF', async () =>
       if (!imported && events.includes('waiting_selection')) {
         imported = true;
         const studies = (await (await fetch(`${base}/api/imports/${jobId}/studies`)).json()) as { studies: { id: string }[] };
+        const guardedJob = m.get(jobId)!;
+        const sourceKey = 'b'.repeat(64);
+        guardedJob.studies[0].sourceKey = sourceKey;
+        const duplicate = await fetch(`${base}/api/imports/${jobId}/import`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ studyIds: [studies.studies[0].id], importedSourceKeys: [sourceKey] }) });
+        assert.equal(duplicate.status, 409);
+        assert.deepEqual(await duplicate.json(), { error: 'ALREADY_IMPORTED' });
+        assert.equal(guardedJob.selection.length, 0, 'una selección repetida no arranca el runner');
         const bad = await fetch(`${base}/api/imports/${jobId}/import`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ studyIds: ['nope'] }) });
         assert.equal(bad.status, 400);
         const ok = await fetch(`${base}/api/imports/${jobId}/import`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ studyIds: studies.studies.map((s) => s.id) }) });

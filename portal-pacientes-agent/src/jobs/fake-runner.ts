@@ -1,4 +1,5 @@
 import { sleep } from '../util.js';
+import { percambSourceKey } from '../providers/percamb/source-key.js';
 import type { ExternalStudy, ImportJob } from './job.js';
 import { makeDemoPdf } from './pdf.js';
 import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
@@ -75,7 +76,11 @@ export class FakeProviderAgent implements JobRunner {
         job.transition(S.PROVIDER_PARSER_MISMATCH, { code: 'PROVIDER_PARSER_MISMATCH' });
         return;
       }
-      const studies = this.scenario === 'empty' ? [] : FAKE_STUDIES.map((s) => ({ ...s, provider: job.provider }));
+      const studies = this.scenario === 'empty' ? [] : FAKE_STUDIES.map((s) => ({
+        ...s,
+        ...(job.provider === 'percamb' ? { sourceKey: percambSourceKey(s.date, s.protocol) } : {}),
+        provider: job.provider,
+      }));
       job.setStudies(studies);
       job.transition(S.STUDIES_FOUND, { count: studies.length });
       job.transition(S.WAITING_SELECTION, { studies });
@@ -130,8 +135,9 @@ export class FakeProviderAgent implements JobRunner {
         ]);
         const saved = await this.deps.files.save(pdf, 'application/pdf');
         if (!saved.ok) throw new Error(saved.reason);
-        job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate });
-        job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate });
+        const imported = { importedAt: new Date().toISOString(), importedBy: 'agent' as const };
+        job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
+        job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
         await this.pause(this.step / 2);
       }
       job.current = undefined;

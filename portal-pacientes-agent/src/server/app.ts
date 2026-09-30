@@ -108,10 +108,11 @@ export function createApp({ config, manager, providers, info }: AppDeps) {
     const job = jobParam(req, res);
     if (!job) return;
     try {
-      const ids = manager.select(job.id, (req.body as { studyIds?: unknown } | undefined)?.studyIds);
+      const body = req.body as { studyIds?: unknown; importedSourceKeys?: unknown } | undefined;
+      const ids = manager.select(job.id, body?.studyIds, body?.importedSourceKeys);
       res.status(202).json({ accepted: ids });
     } catch (e) {
-      if (e instanceof SelectionError) return void res.status(e.code === 'NOT_WAITING_SELECTION' ? 409 : 400).json({ error: e.code });
+      if (e instanceof SelectionError) return void res.status(e.code === 'NOT_WAITING_SELECTION' || e.code === 'ALREADY_IMPORTED' ? 409 : 400).json({ error: e.code });
       if (e instanceof ManagerError) return void res.status(e.status).json({ error: e.code });
       throw e;
     }

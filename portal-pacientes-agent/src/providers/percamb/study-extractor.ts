@@ -205,7 +205,7 @@ export const LABWIN_EXTRACTOR_SOURCE = String.raw`(function (args) {
     row.setAttribute('data-pp-study-row', rowToken);
     action.setAttribute('data-pp-study-action', actionToken);
     action.setAttribute('data-pp-id', 'study-' + actionToken);
-    if (date && deliveryDate && statusLike(status)) metadataComplete++;
+    if (date && protocolLike(protocol) && deliveryDate && statusLike(status)) metadataComplete++;
     rows.push({ date: date, deliveryDate: deliveryDate, status: statusLike(status) ? status : '',
       protocol: protocolLike(protocol) ? protocol : '', href: href, rowToken: rowToken, actionToken: actionToken });
   });

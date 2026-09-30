@@ -13,16 +13,18 @@
   P.cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   P.toDate = (iso) => {
     if (iso instanceof Date) return iso;
+    if (typeof iso !== 'string' || !iso) return new Date(NaN);
+    if (/T.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(iso)) return new Date(iso);
     const [d, t] = iso.split('T');
     const [y, m, day] = d.split('-').map(Number);
     const [h, min] = (t || '0:0').split(':').map(Number);
     return new Date(y, m - 1, day || 1, h || 0, min || 0);
   };
-  P.fmt = (iso) => { const d = P.toDate(iso); return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
-  P.fmtLong = (iso) => { const d = P.toDate(iso); return d.getDate() + ' de ' + MONTHS[d.getMonth()] + ' de ' + d.getFullYear(); };
-  P.fmtDay = (iso) => { const d = P.toDate(iso); return { day: d.getDate(), mon: MONTHS_SHORT[d.getMonth()] }; };
-  P.fmtMonth = (iso) => { const d = P.toDate(iso); return P.cap(MONTHS[d.getMonth()]) + ' ' + d.getFullYear(); };
-  P.fmtTime = (iso) => { const d = P.toDate(iso); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  P.fmt = (iso) => { const d = P.toDate(iso); return Number.isNaN(d.getTime()) ? 'Sin fecha' : pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); };
+  P.fmtLong = (iso) => { const d = P.toDate(iso); return Number.isNaN(d.getTime()) ? 'Sin fecha' : d.getDate() + ' de ' + MONTHS[d.getMonth()] + ' de ' + d.getFullYear(); };
+  P.fmtDay = (iso) => { const d = P.toDate(iso); return Number.isNaN(d.getTime()) ? { day: '—', mon: 'sin fecha' } : { day: d.getDate(), mon: MONTHS_SHORT[d.getMonth()] }; };
+  P.fmtMonth = (iso) => { const d = P.toDate(iso); return Number.isNaN(d.getTime()) ? 'Sin fecha' : P.cap(MONTHS[d.getMonth()]) + ' ' + d.getFullYear(); };
+  P.fmtTime = (iso) => { const d = P.toDate(iso); return Number.isNaN(d.getTime()) ? '—' : pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   P.fmtDateTime = (iso) => P.fmt(iso) + ', ' + P.fmtTime(iso) + ' h';
   P.fmtToday = () => { const d = P.TODAY; return P.cap(DAYS[d.getDay()]) + ' ' + d.getDate() + ' de ' + MONTHS[d.getMonth()]; };
   P.toISO = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());

@@ -3,7 +3,7 @@ import { extractStudies, resolveColumns, signatureOf } from '../agent/studies.js
 import type { AgentModel, GoalOutcome, TargetLocator } from '../agent/types.js';
 import { BrowserNotInstalledError, type BrowserHost } from '../browser/browser-host.js';
 import { evaluateLogin, waitForLogin } from '../browser/login-detector.js';
-import { BrowserSession, PdfDownloadError, ProviderUnavailableError, UnexpectedDomainError } from '../browser/session.js';
+import { BrowserSession, PdfDownloadError, ProviderUnavailableError, StudyReferenceMismatchError, UnexpectedDomainError } from '../browser/session.js';
 import { ProviderParserMismatchError, type RawPageSnapshot } from '../browser/types.js';
 import { sleep } from '../util.js';
 import type { HumanReason, ImportJob } from './job.js';
@@ -11,6 +11,7 @@ import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
 import { JobState } from './states.js';
 
 const S = JobState;
+const importMetadata = () => ({ importedAt: new Date().toISOString(), importedBy: 'agent' as const });
 const WORKING: ReadonlySet<JobState> = new Set([
   S.AGENT_STARTING,
   S.AGENT_OBSERVING,
@@ -220,7 +221,20 @@ export class AgentImportRunner implements JobRunner {
         job.transition(S.OPENING_STUDY, { studyId, index: i, total: studyIds.length });
         if (providerOwned) {
           this.deps.log.debug(job.id, 'provider_study_opening', { step: i + 1, count: session.openPages() });
-          const opened = await session.openStudy?.(studyId).catch(() => false);
+          let opened = false;
+          let referenceMismatch = false;
+          try {
+            opened = await session.openStudy?.(studyId) ?? false;
+          } catch (error) {
+            if (!(error instanceof StudyReferenceMismatchError)) throw error;
+            job.failures.push({ studyId, code: error.code });
+            job.push('study_failed', { studyId, code: error.code });
+            referenceMismatch = true;
+          }
+          if (referenceMismatch) {
+            await session.closeExtraPages();
+            continue;
+          }
           this.deps.log.debug(job.id, 'provider_study_opened', { step: i + 1, outcome: !!opened, count: session.openPages() });
           if (!opened) {
             job.failures.push({ studyId, code: 'STUDY_NOT_FOUND' });
@@ -243,8 +257,9 @@ export class AgentImportRunner implements JobRunner {
             job.transition(S.IMPORTING, { studyId });
             const saved = await this.deps.files.save(pdf.buffer, pdf.contentType);
             if (saved.ok) {
-              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate });
-              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate });
+              const imported = importMetadata();
+              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
+              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
             } else {
               job.failures.push({ studyId, code: 'INVALID_DOCUMENT' });
               job.push('study_failed', { studyId, code: 'INVALID_DOCUMENT' });
@@ -273,8 +288,9 @@ export class AgentImportRunner implements JobRunner {
             job.transition(S.IMPORTING, { studyId });
             const saved = await this.deps.files.save(outcome.pdf.buffer, outcome.pdf.contentType);
             if (saved.ok) {
-              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate });
-              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate });
+              const imported = importMetadata();
+              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
+              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
             } else {
               job.failures.push({ studyId, code: 'INVALID_PDF' });
               job.push('study_failed', { studyId, code: 'INVALID_PDF' });
@@ -284,10 +300,20 @@ export class AgentImportRunner implements JobRunner {
             if (!(await this.handleHuman(session, outcome.reason, studyId))) return;
             job.transition(S.OPENING_STUDY, { studyId, index: i, total: studyIds.length });
             if (providerOwned) {
-              const reopened = await session.openStudy?.(studyId).catch(() => false);
+              let reopened = false;
+              try {
+                reopened = await session.openStudy?.(studyId) ?? false;
+              } catch (error) {
+                if (!(error instanceof StudyReferenceMismatchError)) throw error;
+                job.failures.push({ studyId, code: error.code });
+                job.push('study_failed', { studyId, code: error.code });
+                done = true;
+              }
               if (!reopened) {
-                job.failures.push({ studyId, code: 'STUDY_NOT_FOUND' });
-                job.push('study_failed', { studyId, code: 'STUDY_NOT_FOUND' });
+                if (!done) {
+                  job.failures.push({ studyId, code: 'STUDY_NOT_FOUND' });
+                  job.push('study_failed', { studyId, code: 'STUDY_NOT_FOUND' });
+                }
                 done = true;
               }
             } else {
@@ -313,7 +339,7 @@ export class AgentImportRunner implements JobRunner {
       }
       job.current = undefined;
       if (job.files.length === 0) {
-        const specificPdfFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'UNEXPECTED_DOMAIN'].includes(failure.code));
+        const specificPdfFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH'].includes(failure.code));
         return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, specificPdfFailure?.code ?? 'NO_DOCUMENTS');
       }
       job.transition(S.COMPLETED, { files: job.files.length, failures: job.failures.length });

@@ -78,6 +78,14 @@ export async function startFakePortal() {
     res.send(page('Resultados', `<main><h1>RESULTADOS ONLINE</h1><div class="study-list">${rows}</div></main>`));
   });
 
+  app.get('/lwcloud/fake/resultados-reference-mismatch', (req, res) => {
+    if (!authed(req)) return void res.redirect('/lwcloud/fake/login');
+    res.send(page('Resultados', `<main><h1>RESULTADOS ONLINE</h1><div class="study-list">
+      <div class="study-row"><span data-label="Fecha">28/05/2026</span><span data-label="Protocolo">9991</span>
+      <button type="button" class="row-action" aria-label="Ver estudio" onclick="location.href='/lwcloud/fake/protocolo/9992'"><svg class="icon-eye"></svg></button></div>
+    </div></main>`));
+  });
+
   app.get('/lwcloud/fake/otp', (req, res) => {
     if (!authed(req)) return void res.redirect('/lwcloud/fake/login');
     res.send(page('Verificación', `<main><h1>Verificación de seguridad</h1><p>Ingresá el código de verificación enviado a tu teléfono.</p>
@@ -113,6 +121,12 @@ export async function startFakePortal() {
   app.get('/lwcloud/fake/protocolo/:id', (req, res) => {
     if (!authed(req)) return void res.redirect('/lwcloud/fake/login');
     const id = req.params.id;
+    const dates: Record<string, string> = {
+      '1001': '28/05/2026', '1002': '14/01/2026', '1003': '03/11/2025',
+      '1005': '01/05/2025', '1006': '01/04/2025', '1007': '01/03/2025', '1008': '01/02/2025',
+      '1009': '01/06/2025', '1010': '01/07/2025', '1011': '01/08/2025', '1012': '01/09/2025',
+      '1013': '01/10/2025', '1014': '01/11/2025', '2001': '28/05/2026', '2002': '14/01/2026', '9992': '28/05/2026',
+    };
     const action =
       id === '1001'
         ? `<a href="/lwcloud/fake/pdf/${id}?dl=1">Ver en PDF</a>`
@@ -139,7 +153,8 @@ export async function startFakePortal() {
                               : id === '1014'
                                 ? `<button type="button" onclick="location.href='/lwcloud/fake/pdf/${id}?dl=1'">Ver en PDF</button>`
           : `<button type="button" onclick="location.href='/lwcloud/fake/visor/${id}'">Ver en PDF</button>`;
-    res.send(page('Protocolo', `<h1>Protocolo ${id}</h1><p>Paciente: PEREZ JUAN</p><p>Hemoglobina 13,5 g/dL</p>${action} <a href="/lwcloud/fake/resultados">Volver</a>`));
+    res.send(page('Protocolo', `<h1>Protocolo ${id}</h1><dl><dt>Fecha</dt><dd>${dates[id] || ''}</dd><dt>Protocolo</dt><dd>${id}</dd></dl>
+      <p>Paciente: PEREZ JUAN</p><p>Hemoglobina 13,5 g/dL</p>${action} <a href="/lwcloud/fake/resultados">Volver</a>`));
   });
 
   app.get('/lwcloud/fake/visor/:id', (req, res) => {

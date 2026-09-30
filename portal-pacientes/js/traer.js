@@ -6,7 +6,7 @@
   const P = window.P;
   const ic = P.icon;
   const A = P.actions;
-  const F = (P.flow = { step: 'select', inst: null, found: [], selected: new Set(), q: '', more: false, run: 0, retried: {}, saved: [], returnTo: '#/estudios', live: null });
+  const F = (P.flow = { step: 'select', inst: null, found: [], selected: new Set(), q: '', more: false, run: 0, retried: {}, saved: [], existing: [], returnTo: '#/estudios', live: null });
 
   const STEPS = ['Institución', 'Autorización', 'Búsqueda', 'Selección'];
   const LIVE_STEPS = ['Institución', 'Inicio de sesión', 'Búsqueda', 'Descarga'];
@@ -17,7 +17,7 @@
   P.startFlow = function (query) {
     F.run++;
     liveClose(true);
-    Object.assign(F, { step: 'select', inst: null, found: [], selected: new Set(), q: '', more: false, saved: [], live: null });
+    Object.assign(F, { step: 'select', inst: null, found: [], selected: new Set(), q: '', more: false, saved: [], existing: [], live: null });
     const pre = query && query.get('inst');
     if (pre && P.inst(pre).compatible) { F.inst = pre; F.step = 'explain'; }
   };
@@ -354,18 +354,17 @@
   }
 
   function syncSelection() {
-    const n = F.found.length, k = F.selected.size;
+    const n = availableStudies().length, k = F.selected.size;
     const all = document.getElementById('res-all');
-    all.checked = k === n;
-    all.indeterminate = k > 0 && k < n;
+    if (all) { all.checked = n > 0 && k === n; all.indeterminate = k > 0 && k < n; }
     document.getElementById('sel-count').textContent = k;
     document.getElementById('sel-word').textContent = k === 1 ? 'estudio seleccionado' : 'estudios seleccionados';
     document.getElementById('res-save').disabled = !k;
     if (F.live) document.getElementById('res-save').lastChild.textContent = k === 1 ? 'Traer seleccionado' : 'Traer seleccionados';
   }
   P.changes['res-all'] = (el) => {
-    F.selected = el.checked ? new Set(F.found.map((f) => f.id)) : new Set();
-    document.querySelectorAll('[data-change="res-one"]').forEach((c) => (c.checked = el.checked));
+    F.selected = el.checked ? new Set(availableStudies().map((f) => f.id)) : new Set();
+    document.querySelectorAll('[data-change="res-one"]:not(:disabled)').forEach((c) => (c.checked = el.checked));
     syncSelection();
   };
   P.changes['res-one'] = (el) => {
@@ -393,12 +392,15 @@
   function viewSuccess() {
     const i = P.inst(F.inst);
     const n = F.saved.length;
+    const existing = F.existing || [];
+    const all = F.saved.concat(existing);
     return (
       '<div class="done-mark done-mark-lg" aria-hidden="true"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg></div>' +
-      '<h1 class="flow-title center">¡Listo! Tus estudios ya están en tu historial.</h1>' +
-      '<p class="flow-sub center"><b>' + P.plural(n, 'estudio agregado', 'estudios agregados') + '</b> desde ' + i.name + '. También los vas a encontrar en Documentos y en tu Historial.</p>' +
-      '<ul class="success-list">' + F.saved.map((s, k) =>
-        '<li style="--i:' + k + '">' + ic('check', 18) + '<span class="sl-name">' + s.name + '</span><span class="num muted">' + P.fmt(s.date) + '</span>' +
+      '<h1 class="flow-title center">' + (n ? '¡Listo! Tus estudios ya están en tu historial.' : 'Estos estudios ya estaban en tu portal.') + '</h1>' +
+      '<p class="flow-sub center">' + (n ? '<b>' + P.plural(n, 'estudio agregado', 'estudios agregados') + '</b> desde ' + i.name + '. También los vas a encontrar en Documentos y en tu Historial.' : 'No creamos copias. Podés consultarlos en Estudios y Documentos.') +
+      (existing.length ? '<br>' + P.plural(existing.length, 'Estudio que ya estaba', 'Estudios que ya estaban') + ' guardado' + (existing.length === 1 ? '' : 's') + ' en tu portal.' : '') + '</p>' +
+      '<ul class="success-list">' + all.map((s, k) =>
+        '<li style="--i:' + k + '">' + ic('check', 18) + '<span class="sl-name">' + s.name + (F.saved.includes(s) ? '' : ' · Ya estaba guardado') + '</span><span class="num muted">' + P.fmt(s.date) + '</span>' +
         (s.file ? '<button type="button" class="btn btn-secondary btn-sm sl-dl" data-action="doc-download" data-id="doc-' + s.id + '" aria-label="Descargar PDF del ' + P.fmt(s.date) + '">' + ic('download', 16) + '<span>PDF</span></button>' : '') +
         '</li>').join('') + '</ul>' +
       '<div class="flow-actions center"><a class="btn btn-secondary btn-lg" href="#/inicio">Volver al inicio</a>' +
@@ -527,7 +529,7 @@
 
   function liveBegin(jobId) {
     const L = (F.live = {
-      jobId, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], saved: [],
+      jobId, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], saved: [], existing: [],
       human: null, error: null, at: 1, completed: false, closed: false, found: null, stop: null,
     });
     L.stop = P.agent.events(jobId, (type, data) => onLiveEvent(L, type, data), () => {
@@ -702,13 +704,53 @@
 
   /* ---------- Resultados encontrados ---------- */
   function showResults(L) {
+    refreshAlreadyImported(L);
     F.found = L.studies;
     F.selected = new Set();
     go('lresults');
     if (!L.studies.length) liveClose(true);
   }
+  function storedPercambStudies() {
+    try {
+      const raw = localStorage.getItem(P.STORE_KEY);
+      const db = raw ? JSON.parse(raw) : null;
+      if (db && Array.isArray(db.studies)) return db.studies;
+    } catch (e) { /* usa el estado cargado en memoria */ }
+    return P.db.studies || [];
+  }
+  function isPercambStudy(s) {
+    return s && (s.provider === 'percamb' || (s.origin === 'agente' && s.inst === 'pc'));
+  }
+  function sameStudyMetadata(a, b) {
+    const dateA = String(a.date || '').trim();
+    const dateB = String(b.date || '').trim();
+    const protocolA = String(a.protocol || '').normalize('NFKC').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const protocolB = String(b.protocol || '').normalize('NFKC').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return !!(dateA && protocolA && dateA === dateB && protocolA === protocolB);
+  }
+  function importedMatch(external, records) {
+    return records.find((saved) => isPercambStudy(saved) &&
+      ((external.sourceKey && saved.sourceKey === external.sourceKey) || sameStudyMetadata(external, saved)));
+  }
+  function refreshAlreadyImported(L) {
+    const records = storedPercambStudies();
+    L.studies = L.studies.map((study) => {
+      const existing = importedMatch(study, records);
+      return Object.assign({}, study, existing ? { alreadyImported: true } : { alreadyImported: false });
+    });
+  }
+  function availableStudies() {
+    return F.found.filter((study) => !study.alreadyImported);
+  }
+  function selectedImportedKeys(studies) {
+    const records = storedPercambStudies();
+    return Array.from(new Set(studies
+      .filter((study) => importedMatch(study, records))
+      .map((study) => study.sourceKey)
+      .filter((key) => typeof key === 'string' && /^[a-f0-9]{64}$/.test(key))));
+  }
   function studyLabel(s) {
-    return s.date ? 'Estudio del ' + P.fmt(s.date) : 'Estudio sin fecha';
+    return 'Resultados de laboratorio' + (s.date ? ' · ' + P.fmt(s.date) : ' · Sin fecha');
   }
   function viewLiveResults() {
     const i = P.inst(F.inst);
@@ -722,35 +764,44 @@
       }) + '</div>';
     }
     const n = list.length;
+    const available = list.filter((s) => !s.alreadyImported);
     return (
       '<div class="res-head">' + P.mono(i.id, 'lg') + '<div><h1 class="flow-title">Encontramos ' + P.plural(n, 'estudio', 'estudios') + '</h1>' +
       '<p class="flow-sub">en ' + i.name + '. Elegí cuáles querés traer a tu portal.</p></div></div>' +
       '<div class="res-card">' +
-      '<label class="res-all"><input type="checkbox" id="res-all" data-change="res-all">' +
-      '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '<span class="cbox-dash"></span></span><span>Seleccionar todos <span class="muted num">(' + n + ')</span></span></label>' +
+      '<label class="res-all"><input type="checkbox" id="res-all" data-change="res-all"' + (available.length ? '' : ' disabled') + '>' +
+      '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '<span class="cbox-dash"></span></span><span>Seleccionar estudios nuevos <span class="muted num">(' + available.length + ')</span></span></label>' +
       '<ul class="res-list">' + list.map((s, k) =>
-        '<li style="--i:' + k + '"><label class="res-row"><input type="checkbox" data-change="res-one" value="' + P.esc(s.id) + '">' +
+        '<li style="--i:' + k + '"><label class="res-row' + (s.alreadyImported ? ' is-imported' : '') + '"><input type="checkbox" data-change="res-one" value="' + P.esc(s.id) + '"' + (s.alreadyImported ? ' disabled aria-label="Este estudio ya está en tu portal"' : '') + '>' +
         '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '</span>' + P.typeTile('laboratorio') +
         '<span class="res-main"><span class="res-name">' + studyLabel(s) + '</span>' +
         '<span class="res-sub">' + (s.protocol ? 'Protocolo <span class="num">' + P.esc(s.protocol) + '</span>' : 'Sin número de protocolo') +
-        (s.status ? ' · ' + P.esc(s.status) : '') + '</span></span>' +
+        (s.status ? ' · ' + P.esc(s.status) : '') + (s.alreadyImported ? ' · Ya está en tu portal' : '') + '</span></span>' +
         '<span class="res-date num">' + (s.deliveryDate ? 'Entregado ' + P.fmt(s.deliveryDate) : '') + '</span></label></li>').join('') + '</ul></div>' +
+      (available.length ? '' : '<p class="res-note">' + ic('check', 18) + '<span>Todos estos estudios ya están en tu portal. No vamos a descargar copias.</span></p><p class="flow-actions center"><a class="btn btn-accent btn-lg" href="#/estudios">Ver mis estudios ' + ic('arrow-right', 20) + '</a></p>') +
       '<p class="res-note">' + ic('info', 18) + '<span>El asistente descarga solo los que elijas. No lee ni interpreta su contenido.</span></p>' +
-      '<div class="res-bar"><div class="res-bar-in"><p class="res-count" aria-live="polite"><b class="num" id="sel-count">0</b> <span id="sel-word">estudios seleccionados</span></p>' +
-      '<button type="button" class="btn btn-accent btn-lg" id="res-save" data-action="live-import" disabled>' + ic('import', 20) + 'Traer seleccionados</button></div></div>'
+      (available.length ? '<div class="res-bar"><div class="res-bar-in"><p class="res-count" aria-live="polite"><b class="num" id="sel-count">0</b> <span id="sel-word">estudios seleccionados</span></p>' +
+      '<button type="button" class="btn btn-accent btn-lg" id="res-save" data-action="live-import" disabled>' + ic('import', 20) + 'Traer seleccionados</button></div></div>' : '')
     );
   }
 
   A['live-import'] = async (el) => {
     const L = F.live;
     if (!L || L.closed || !F.selected.size) return;
-    const ids = F.found.filter((s) => F.selected.has(s.id)).map((s) => s.id);
+    const selected = F.found.filter((s) => F.selected.has(s.id));
+    const ids = selected.map((s) => s.id);
+    const sourceKeys = selectedImportedKeys(L.studies);
     const done = P.busy(el, 'Empezando…');
     try {
-      await P.agent.importSelected(L.jobId, ids);
+      await P.agent.importSelected(L.jobId, ids, sourceKeys);
     } catch (e) {
       done();
       if (e.code === 'AGENT_OFFLINE') return liveFail(L, 'AGENT_LOST');
+      if (e.code === 'ALREADY_IMPORTED') {
+        showResults(L);
+        P.toast('Uno o más estudios ya estaban en tu portal. Actualizamos la lista para evitar duplicados.', { icon: 'check' });
+        return;
+      }
       P.toast('No pudimos empezar la descarga. Probá de nuevo.', { icon: 'alert', tone: 'danger' });
       return;
     }
@@ -770,14 +821,17 @@
 
   function dlBlock(s, phase) {
     const failed = phase === 'failed';
+    const existing = phase === 'existing';
     const cur = failed ? -2 : ORDER[phase] === undefined ? -1 : ORDER[phase];
     const st = (n) => (cur > n ? 'done' : cur === n ? 'active' : 'pending');
-    const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : failed ? P.badge('danger', 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
+    const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
     return (
       '<li class="dl-study' + (cur >= 0 && cur < 4 ? ' is-current' : '') + (failed ? ' is-failed' : '') + '">' +
       '<div class="dl-head">' + P.typeTile('laboratorio') + '<span class="dl-name">' + studyLabel(s) +
       (s.protocol ? '<small>Protocolo <span class="num">' + P.esc(s.protocol) + '</span></small>' : '') + '</span>' + head + '</div>' +
-      (failed
+      (existing
+        ? '<p class="dl-fail">El PDF coincide con un estudio que ya guardaste. No creamos otra copia.</p>'
+        : failed
         ? '<p class="dl-fail">El asistente no encontró el documento de este estudio. Podés intentarlo de nuevo más tarde.</p>'
         : '<ol class="plist plist-sm">' + DL_STEPS.map((x, n) => {
           const state = st(n);
@@ -791,7 +845,7 @@
     const i = P.inst(F.inst);
     const L = F.live;
     const chosen = L.selectedIds.map((id) => L.studies.find((s) => s.id === id)).filter(Boolean);
-    const doneN = chosen.filter((s) => L.phase[s.id] === 'stored' || L.phase[s.id] === 'failed').length;
+    const doneN = chosen.filter((s) => L.phase[s.id] === 'stored' || L.phase[s.id] === 'existing' || L.phase[s.id] === 'failed').length;
     return (
       '<h1 class="flow-title center">El asistente está trabajando por vos</h1>' +
       '<p class="flow-sub center">Está abriendo tus estudios en ' + i.name + ' y trayendo los PDF originales. No cierres la ventana del laboratorio.</p>' +
@@ -811,22 +865,34 @@
     const ext = L.studies.find((s) => s.id === d.studyId);
     try {
       const { blob, sha256 } = await P.agent.file(L.jobId, d.fileId);
-      const key = 'pdf-' + d.fileId;
-      await P.files.put(key, blob);
-      const id = 'pc-' + String((ext && (ext.protocol || ext.date)) || d.studyId).replace(/[^\w-]/g, '');
-      const prev = P.study(id);
-      if (prev && prev.file) P.files.del(prev.file.key).catch(() => {});
-      const study = {
-        id, name: 'Resultados de laboratorio', type: 'laboratorio',
-        date: (ext && ext.date) || P.TODAY_ISO, reportDate: (ext && ext.deliveryDate) || null,
-        inst: F.inst, requestedBy: 'Sin dato en el documento', protocol: (ext && ext.protocol) || '—',
-        status: 'disponible', pages: 0, images: 0, results: null, size: P.fmtBytes(blob.size),
-        importedAt: P.TODAY_ISO, isNew: true, origin: 'agente', file: { key, bytes: blob.size, sha256 },
-      };
-      if (prev) Object.assign(prev, study); else P.db.studies.push(study);
-      P.save();
-      L.phase[d.studyId] = 'stored';
-      L.saved.push(study);
+      if (!ext || !d.studyId) throw new Error('STUDY_METADATA_MISSING');
+      const duplicate = P.db.studies.find((study) => isPercambStudy(study) && sha256 && (study.file && study.file.sha256 || study.pdfSha256) === sha256);
+      if (duplicate) {
+        if (!duplicate.sourceKey && ext.sourceKey) duplicate.sourceKey = ext.sourceKey;
+        P.save();
+        L.phase[d.studyId] = 'existing';
+        L.existing.push(duplicate);
+      } else {
+        const key = 'pdf-' + d.fileId;
+        await P.files.put(key, blob);
+        const id = 'pc-' + String(d.studyId).replace(/[^\w-]/g, '');
+        const prev = P.study(id);
+        const study = {
+          id, name: 'Resultados de laboratorio', type: 'laboratorio',
+          date: ext.date || '', reportDate: ext.deliveryDate || null,
+          inst: F.inst, provider: ext.provider || 'percamb', providerDisplayName: P.inst(F.inst).name,
+          sourceKey: ext.sourceKey || undefined,
+          requestedBy: 'Sin dato en el documento', protocol: ext.protocol || '', providerStatus: ext.status || '',
+          status: 'disponible', pages: 0, images: 0, results: null, size: P.fmtBytes(blob.size),
+          importedAt: d.importedAt || new Date().toISOString(), importedBy: d.importedBy || 'agent',
+          isNew: true, origin: 'agente', file: { key, bytes: blob.size, sha256 },
+        };
+        if (prev && prev.file) P.files.del(prev.file.key).catch(() => {});
+        if (prev) Object.assign(prev, study); else P.db.studies.push(study);
+        P.save();
+        L.phase[d.studyId] = 'stored';
+        L.saved.push(study);
+      }
     } catch (e) {
       L.phase[d.studyId] = 'failed';
       L.failures.push(d.studyId);
@@ -837,16 +903,19 @@
 
   function maybeFinish(L) {
     if (!L.completed || L.closed) return;
-    const pending = L.selectedIds.some((id) => L.phase[id] !== 'stored' && L.phase[id] !== 'failed');
+    const pending = L.selectedIds.some((id) => L.phase[id] !== 'stored' && L.phase[id] !== 'existing' && L.phase[id] !== 'failed');
     if (pending) return;
     liveClose(true); // cierra el SSE y le pide al agente borrar los archivos temporales
-    if (!L.saved.length) { L.error = 'NO_DOCUMENTS'; L.at = 3; return go('lerror'); }
+    if (!L.saved.length && !L.existing.length) { L.error = 'NO_DOCUMENTS'; L.at = 3; return go('lerror'); }
     const inst = F.inst;
-    P.db.imports.unshift({ id: 'im-' + Date.now(), inst, date: P.TODAY_ISO, count: L.saved.length });
-    P.db.activity.unshift({ at: P.toISO(P.TODAY), text: 'Trajiste ' + P.plural(L.saved.length, 'estudio', 'estudios') + ' con el asistente', sub: P.inst(inst).name });
-    P.save();
+    if (L.saved.length) {
+      P.db.imports.unshift({ id: 'im-' + Date.now(), inst, date: P.TODAY_ISO, count: L.saved.length });
+      P.db.activity.unshift({ at: P.toISO(P.TODAY), text: 'Trajiste ' + P.plural(L.saved.length, 'estudio', 'estudios') + ' con el asistente', sub: P.inst(inst).name });
+      P.save();
+    }
     F.saved = L.saved;
-    P.ui.justImported = { inst, count: L.saved.length };
+    F.existing = L.existing;
+    P.ui.justImported = L.saved.length ? { inst, count: L.saved.length } : null;
     setTimeout(() => { if (F.live === L) go('success'); }, P.reducedMotion() ? 0 : 500);
   }
 

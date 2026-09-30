@@ -231,7 +231,7 @@
     const q = est.q.trim().toLowerCase();
     let list = P.studies().filter((s) =>
       (est.type === 'todos' || s.type === est.type) &&
-      (est.year === 'todos' || s.date.slice(0, 4) === est.year) &&
+      (est.year === 'todos' || (s.date || '').slice(0, 4) === est.year) &&
       (est.inst === 'todas' || s.inst === est.inst) &&
       (!q || (s.name + ' ' + P.inst(s.inst).name).toLowerCase().includes(q))
     );
@@ -263,20 +263,20 @@
     if (est.sort === 'az') return html + '<div class="card card-flush"><ul class="study-list">' + list.map(P.studyRow).join('') + '</ul></div>';
     const groups = [];
     list.forEach((s) => {
-      const y = s.date.slice(0, 4);
+      const y = (s.date || '').slice(0, 4) || 'sin-fecha';
       let g = groups.find((x) => x.y === y);
       if (!g) groups.push((g = { y, items: [] }));
       g.items.push(s);
     });
     return html + groups.map((g) =>
-      '<section class="year-group" aria-labelledby="y-' + g.y + '"><h2 class="group-h" id="y-' + g.y + '"><span class="num">' + g.y + '</span><span>' + P.plural(g.items.length, 'estudio', 'estudios') + '</span></h2>' +
+      '<section class="year-group" aria-labelledby="y-' + g.y + '"><h2 class="group-h" id="y-' + g.y + '"><span class="num">' + (g.y === 'sin-fecha' ? 'Sin fecha' : g.y) + '</span><span>' + P.plural(g.items.length, 'estudio', 'estudios') + '</span></h2>' +
       '<div class="card card-flush"><ul class="study-list">' + g.items.map(P.studyRow).join('') + '</ul></div></section>'
     ).join('');
   }
 
   S.estudios = function () {
     const all = P.studies();
-    const years = Array.from(new Set(all.map((s) => s.date.slice(0, 4)))).sort().reverse();
+    const years = Array.from(new Set(all.map((s) => (s.date || '').slice(0, 4)).filter(Boolean))).sort().reverse();
     const insts = Array.from(new Set(all.map((s) => s.inst)));
     const count = (t) => all.filter((s) => t === 'todos' || s.type === t).length;
     const types = [['todos', 'Todos'], ['laboratorio', 'Laboratorio'], ['imagenes', 'Imágenes'], ['otros', 'Otros']];
@@ -363,9 +363,10 @@
       '<dl class="dl-grid">' +
       '<div><dt>Tipo</dt><dd>' + t.label + '</dd></div>' +
       '<div><dt>Fecha de realización</dt><dd class="num">' + P.fmt(s.date) + '</dd></div>' +
-      '<div><dt>Fecha del informe</dt><dd class="num">' + (s.reportDate ? P.fmt(s.reportDate) : 'Pendiente') + '</dd></div>' +
+      '<div><dt>Fecha del informe</dt><dd class="num">' + (s.reportDate ? P.fmt(s.reportDate) : s.origin === 'agente' ? 'Sin dato' : 'Pendiente') + '</dd></div>' +
       '<div><dt>Solicitado por</dt><dd>' + P.esc(s.requestedBy) + '</dd></div>' +
-      '<div><dt>N.º de protocolo</dt><dd class="num">' + s.protocol + '</dd></div>' +
+      '<div><dt>N.º de protocolo</dt><dd class="num">' + P.esc(s.protocol || 'Sin dato') + '</dd></div>' +
+      (s.providerStatus ? '<div><dt>Estado en la institución</dt><dd>' + P.esc(s.providerStatus) + '</dd></div>' : '') +
       '<div><dt>Institución</dt><dd>' + P.instBadge(s.inst) + '</dd></div>' +
       '</dl></section>';
 
@@ -502,9 +503,9 @@
     if (!list.length) return P.empty({ icon: 'history', title: 'No hay eventos para mostrar', text: 'Probá con otra categoría.', action: '<button class="btn btn-secondary" type="button" data-action="hist-kind" data-value="todo">Ver todo</button>' });
     const groups = [];
     list.forEach((e) => {
-      const key = e.date < '2025-01-01' ? 'antes' : e.date.slice(0, 7);
+      const key = !e.date ? 'sin-fecha' : e.date < '2025-01-01' ? 'antes' : e.date.slice(0, 7);
       let g = groups.find((x) => x.key === key);
-      if (!g) groups.push((g = { key, label: key === 'antes' ? 'Antes de 2025' : P.fmtMonth(e.date), items: [] }));
+      if (!g) groups.push((g = { key, label: key === 'antes' ? 'Antes de 2025' : key === 'sin-fecha' ? 'Sin fecha' : P.fmtMonth(e.date), items: [] }));
       g.items.push(e);
     });
     return groups.map((g) =>
@@ -517,7 +518,7 @@
           ? '<button type="button" class="tl-body" data-action="doc-view" data-id="' + e.docId + '">' + inner + '</button>'
           : '<a class="tl-body" href="' + e.href + '">' + inner + '</a>';
         return '<li class="tl-item' + (e.highlight ? ' is-hl' : '') + '">' +
-          '<span class="tl-date">' + (g.key === 'antes' ? '<span class="num">' + e.date.slice(0, 4) + '</span>' : '<span class="num">' + d.day + '</span><span>' + d.mon + '</span>') + '</span>' +
+          '<span class="tl-date">' + (g.key === 'antes' ? '<span class="num">' + e.date.slice(0, 4) + '</span>' : g.key === 'sin-fecha' ? '<span class="num">—</span><span>sin fecha</span>' : '<span class="num">' + d.day + '</span><span>' + d.mon + '</span>') + '</span>' +
           '<span class="tl-dot k-' + e.kind + '" aria-hidden="true">' + ic(e.icon, 18) + '</span>' + body + '</li>';
       }).join('') + '</ol></section>'
     ).join('');

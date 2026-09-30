@@ -75,10 +75,10 @@ export class JobManager {
     return [...this.jobs.values()].filter((e) => !e.job.isTerminal).length;
   }
 
-  select(jobId: string, studyIds: unknown): string[] {
+  select(jobId: string, studyIds: unknown, importedSourceKeys?: unknown): string[] {
     const e = this.jobs.get(jobId);
     if (!e) throw new ManagerError('JOB_NOT_FOUND', 404);
-    const ids = e.job.select(studyIds, this.deps.config.maxDownloadsPerJob);
+    const ids = e.job.select(studyIds, this.deps.config.maxDownloadsPerJob, importedSourceKeys);
     void e.runner.importSelected(ids).catch(() => e.job.fail(JobState.ERROR, 'INTERNAL'));
     return ids;
   }

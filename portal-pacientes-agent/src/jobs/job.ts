@@ -5,6 +5,7 @@ import { canTransition, isTerminal, JobState, STATE_EVENT, type JobEventType } f
 /** Metadata mínima de un estudio externo. Sin nombre, DNI ni diagnósticos. */
 export interface ExternalStudy {
   id: string;
+  sourceKey?: string;
   date?: string;
   protocol?: string;
   deliveryDate?: string;
@@ -17,6 +18,8 @@ export interface JobFileInfo {
   studyId: string;
   bytes: number;
   duplicate: boolean;
+  importedAt: string;
+  importedBy: 'agent';
 }
 
 export type HumanReason =
@@ -43,7 +46,7 @@ export class IllegalTransitionError extends Error {
 }
 
 export class SelectionError extends Error {
-  constructor(readonly code: 'NOT_WAITING_SELECTION' | 'EMPTY_SELECTION' | 'UNKNOWN_STUDY' | 'DUPLICATED_STUDY' | 'TOO_MANY') {
+  constructor(readonly code: 'NOT_WAITING_SELECTION' | 'EMPTY_SELECTION' | 'UNKNOWN_STUDY' | 'DUPLICATED_STUDY' | 'TOO_MANY' | 'ALREADY_IMPORTED' | 'INVALID_SOURCE_KEYS') {
     super(code);
   }
 }
@@ -116,7 +119,7 @@ export class ImportJob extends EventEmitter {
     this.studies = studies;
   }
 
-  select(ids: unknown, max: number): string[] {
+  select(ids: unknown, max: number, importedSourceKeys?: unknown): string[] {
     if (this.state !== JobState.WAITING_SELECTION) throw new SelectionError('NOT_WAITING_SELECTION');
     if (!Array.isArray(ids) || ids.length === 0) throw new SelectionError('EMPTY_SELECTION');
     if (ids.some((id) => typeof id !== 'string')) throw new SelectionError('UNKNOWN_STUDY');
@@ -124,11 +127,22 @@ export class ImportJob extends EventEmitter {
     if (ids.length > max) throw new SelectionError('TOO_MANY');
     const known = new Set(this.studies.map((s) => s.id));
     if (!ids.every((id) => known.has(id))) throw new SelectionError('UNKNOWN_STUDY');
+    if (importedSourceKeys !== undefined) {
+      if (!Array.isArray(importedSourceKeys) || importedSourceKeys.length > 2000 || importedSourceKeys.some((key) => typeof key !== 'string' || !/^[a-f0-9]{64}$/.test(key))) {
+        throw new SelectionError('INVALID_SOURCE_KEYS');
+      }
+      const imported = new Set(importedSourceKeys as string[]);
+      if ((ids as string[]).some((id) => {
+        const sourceKey = this.studies.find((study) => study.id === id)?.sourceKey;
+        return !!sourceKey && imported.has(sourceKey);
+      })) throw new SelectionError('ALREADY_IMPORTED');
+    }
     this.selection = ids as string[];
     return this.selection;
   }
 
   addFile(info: JobFileInfo): void {
+    if (!this.selection.includes(info.studyId)) throw new Error('FILE_STUDY_MISMATCH');
     this.files.push(info);
   }
 

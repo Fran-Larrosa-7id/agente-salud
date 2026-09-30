@@ -4,6 +4,7 @@ import type { APIResponse, BrowserContext, Frame, Page, Response } from 'playwri
 import { MAX_PDF_BYTES, validatePdf, type CapturedPdf } from '../jobs/pdf.js';
 import type { ProviderConfig } from '../providers/types.js';
 import { LABWIN_EXTRACTOR_SOURCE, type LabwinExtraction, type LabwinRawStudy } from '../providers/percamb/study-extractor.js';
+import { percambSourceKey } from '../providers/percamb/source-key.js';
 import { parseDate } from '../agent/studies.js';
 import { DomainPolicy } from '../security/domain-policy.js';
 import { sleep } from '../util.js';
@@ -22,6 +23,13 @@ export class UnexpectedDomainError extends Error {
   }
 }
 
+export class StudyReferenceMismatchError extends Error {
+  readonly code = 'STUDY_REFERENCE_MISMATCH';
+  constructor() {
+    super('STUDY_REFERENCE_MISMATCH');
+  }
+}
+
 export type PdfDownloadErrorCode = 'PDF_NOT_FOUND' | 'PDF_DOWNLOAD_TIMEOUT' | 'INVALID_DOCUMENT';
 export class PdfDownloadError extends Error {
   constructor(readonly code: PdfDownloadErrorCode) {
@@ -30,6 +38,10 @@ export class PdfDownloadError extends Error {
 }
 
 const RECENT_PDF_WINDOW_MS = 10_000;
+
+function normalizeProtocol(value: string): string {
+  return value.replace(/\s+/g, '').toUpperCase();
+}
 
 /**
  * Sesión de navegador de UN job. La abre el sistema, la usa el paciente para iniciar sesión y
@@ -361,7 +373,8 @@ export class BrowserSession implements BrowserPort {
       const id = randomUUID();
       const rawStatus = row.status || '';
       const status = /^(finalizad[oa]s?|complet[oa]s?|parcial(?:es)?|pendientes?|entregad[oa]s?|en proceso|disponibles?|list[oa]s?|validada?|terminad[oa]s?|impres[oa]s?|enviad[oa]s?|en curso)$/i.test(rawStatus) ? rawStatus : '';
-      const metadata: ProviderStudyMetadata = { id, ...(date ? { date } : {}), ...(deliveryDate ? { deliveryDate } : {}), ...(status ? { status } : {}) };
+      const sourceKey = percambSourceKey(date, protocol, href);
+      const metadata: ProviderStudyMetadata = { id, ...(sourceKey ? { sourceKey } : {}), ...(date ? { date } : {}), ...(protocol ? { protocol } : {}), ...(deliveryDate ? { deliveryDate } : {}), ...(status ? { status } : {}) };
       this.providerStudies.set(id, {
         protocol,
         ...(date ? { date } : {}),
@@ -406,6 +419,50 @@ export class BrowserSession implements BrowserPort {
     return this.activeStudyId === studyId;
   }
 
+  /** Confirma solo fecha/protocolo administrativos cuando el detalle los etiqueta explícitamente. */
+  private async assertStudyReferenceMatches(studyId: string): Promise<void> {
+    const target = this.providerStudies.get(studyId);
+    if (!target) return;
+    const detail = await this.page.evaluate(() => {
+      const norm = (value: string | null | undefined) => String(value || '').replace(/\s+/g, ' ').trim();
+      const fold = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+      const visible = (el: Element) => {
+        const style = getComputedStyle(el);
+        return !!el.getClientRects().length && style.visibility !== 'hidden' && style.display !== 'none';
+      };
+      let date = '';
+      let protocol = '';
+      const nodes = Array.from(document.querySelectorAll('dt,th,[data-label],[data-field]')).slice(0, 300);
+      for (const node of nodes) {
+        if (!visible(node)) continue;
+        const explicitLabel = node.getAttribute('data-label') || node.getAttribute('data-field');
+        const label = fold(norm(explicitLabel || node.textContent));
+        const sibling = node.tagName === 'DT' || node.tagName === 'TH' ? node.nextElementSibling : null;
+        const value = norm(explicitLabel ? node.textContent : sibling?.textContent);
+        if (!value) continue;
+        if (!date && /^(FECHA|FECHA DEL ESTUDIO|FECHA DE REALIZACION|REALIZACION)$/.test(label) &&
+            (/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}$/.test(value) || /^\d{4}-\d{2}-\d{2}$/.test(value))) date = value;
+        if (!protocol && /^(PROTOCOLO|NRO\.?|N[°º]\.?|NUMERO DE PROTOCOLO|ORDEN|PEDIDO)$/.test(label) &&
+            /^[A-Z]{0,5}[-\s]?\d[\d\s./-]{2,31}$/i.test(value)) protocol = value;
+      }
+      return { date, protocol };
+    }).catch(() => ({ date: '', protocol: '' }));
+    const detailDate = parseDate(detail.date);
+    if (target.date && detailDate && target.date !== detailDate) throw new StudyReferenceMismatchError();
+    const headingProtocols = await this.page.locator('h1,h2').evaluateAll((headings) => headings.slice(0, 8).flatMap((heading) => {
+      const style = getComputedStyle(heading);
+      if (!heading.getClientRects().length || style.visibility === 'hidden' || style.display === 'none') return [];
+      const value = String(heading.textContent || '').replace(/\s+/g, ' ').trim();
+      const match = value.match(/^PROTOCOLO\s*[:#º°-]?\s*([A-Z]{0,5}[-\s]?\d[\d\s./-]{2,31})$/i);
+      return match ? [match[1]] : [];
+    })).catch(() => []);
+    const headingProtocol = headingProtocols[0];
+    const detailProtocol = detail.protocol || headingProtocol || '';
+    if (target.protocol && detailProtocol && normalizeProtocol(target.protocol) !== normalizeProtocol(detailProtocol)) {
+      throw new StudyReferenceMismatchError();
+    }
+  }
+
   hasStudy(studyId: string): boolean {
     return this.providerStudies.has(studyId);
   }
@@ -414,6 +471,7 @@ export class BrowserSession implements BrowserPort {
   async openStudy(studyId: string): Promise<boolean> {
     const target = this.providerStudies.get(studyId);
     if (!target || this.provider.studyExtractor !== 'labwin') return false;
+    this.activeStudyId = null;
     if (this.page.url() !== target.listUrl) {
       if (!this.policy.isAllowedNavigation(target.listUrl)) throw new UnexpectedDomainError();
       await this.navigate(target.listUrl);
@@ -421,6 +479,7 @@ export class BrowserSession implements BrowserPort {
     if (target.href && /ver_resultado/i.test(new URL(target.href).pathname)) {
       if (!this.policy.isAllowedNavigation(target.href)) throw new UnexpectedDomainError();
       await this.navigate(target.href);
+      await this.assertStudyReferenceMatches(studyId);
       this.activeStudyId = studyId;
       return true;
     }
@@ -487,6 +546,7 @@ export class BrowserSession implements BrowserPort {
       inPasswordForm: false, isSubmit: detail.isSubmit,
     };
     await this.click(item);
+    await this.assertStudyReferenceMatches(studyId);
     this.activeStudyId = studyId;
     return true;
   }

@@ -61,10 +61,51 @@ test('Portal: Traer mis estudios desde Pérez Cambet con el asistente (simulado)
 
       await page.click('[data-action=see-imported]');
       await page.waitForSelector('.notice');
-      await page.goto(base + '/index.html#/estudios/pc-00012345');
+      const importedStudyId = await page.evaluate(() => {
+        const db = JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}');
+        return db.studies?.find((study: { origin?: string; id?: string }) => study.origin === 'agente')?.id;
+      });
+      assert.ok(importedStudyId && importedStudyId.startsWith('pc-') && !importedStudyId.includes('00012345'), 'el id local deriva del studyId opaco, no del protocolo');
+      const importedStudy = await page.evaluate((id) => {
+        const db = JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}');
+        return db.studies?.find((study: { id?: string }) => study.id === id);
+      }, importedStudyId);
+      assert.equal(importedStudy.date, '2026-05-28', 'la fecha principal es la fecha real del estudio');
+      assert.ok(importedStudy.importedAt.includes('T'), 'la importación se guarda como timestamp separado');
+      assert.notEqual(importedStudy.date, importedStudy.importedAt.slice(0, 10));
+      assert.equal(importedStudy.protocol, '00012345');
+      assert.equal(importedStudy.provider, 'percamb');
+      assert.equal(importedStudy.providerDisplayName, 'Pérez Cambet');
+      assert.equal(importedStudy.providerStatus, 'Finalizado');
+      assert.equal(importedStudy.importedBy, 'agent');
+      assert.match(importedStudy.sourceKey, /^[a-f0-9]{64}$/, 'la clave estable se conserva en el registro local');
+
+      // Una nueva ejecución reconoce la misma fuente y no permite volver a seleccionar esos estudios.
+      await page.goto(base + '/index.html#/traer?inst=pc');
+      await page.click('[data-action=live-open]');
+      await page.waitForSelector('.res-list', { timeout: 20_000 });
+      assert.equal(await page.locator('.res-list li:first-child input').isDisabled(), true);
+      assert.match(await page.locator('.res-list li:first-child').innerText(), /ya está en tu portal/i);
+      assert.equal(await page.locator('.res-list li:nth-child(2) input').isDisabled(), false, 'mantiene seleccionables los estudios nuevos');
+      assert.equal(await page.locator('#res-save').count(), 1, 'permite traer los resultados todavía no guardados');
+      await page.click('.flow-exit');
+      await page.click('.ov [data-confirm]');
+      await page.waitForFunction(() => !location.hash.startsWith('#/traer'));
+
+      await page.goto(base + '/index.html#/estudios/' + encodeURIComponent(importedStudyId));
       await page.click('.doc-card .btn-row [data-action=doc-view]');
       await page.waitForSelector('iframe.pdf-frame');
       await page.keyboard.press('Escape');
+
+      await page.evaluate((id) => {
+        const db = JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}');
+        const study = db.studies?.find((item: { id?: string }) => item.id === id);
+        study.date = '';
+        localStorage.setItem('portal_pacientes_v1', JSON.stringify(db));
+      }, importedStudyId);
+      await page.reload();
+      await page.waitForSelector('.dl-grid');
+      assert.match(await page.locator('.dl-grid').innerText(), /Fecha de realización\s+Sin fecha/);
 
       // Cancelar a mitad de camino cierra el job del lado del agente.
       await page.goto(base + '/index.html#/traer?inst=pc');

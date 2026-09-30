@@ -3,7 +3,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { after, before, test } from 'node:test';
 import { BrowserHost } from '../../src/browser/browser-host.js';
-import { BrowserSession } from '../../src/browser/session.js';
+import { BrowserSession, StudyReferenceMismatchError } from '../../src/browser/session.js';
 import { ProviderParserMismatchError } from '../../src/browser/types.js';
 import { validateHumanActionEvidence } from '../../src/agent/tools/validate.js';
 import { testBrowserChannel } from '../browser-channel.js';
@@ -39,7 +39,7 @@ async function openResults(pathname: string) {
   return session;
 }
 
-test('extrae filas DIV con ícono ojo sin abrirlas; expone solo metadata mínima y abre el ID elegido', { timeout: 60_000 }, async () => {
+test('extrae metadata administrativa de filas DIV sin leer contenido clínico y abre el ID elegido', { timeout: 60_000 }, async () => {
   const session = await openResults('/lwcloud/fake/resultados-div?count=2');
   const listUrl = session.currentUrl();
   const traces: string[] = [];
@@ -48,10 +48,14 @@ test('extrae filas DIV con ícono ojo sin abrirlas; expone solo metadata mínima
   assert.ok(result);
   assert.equal(result.studies.length, 2);
   assert.deepEqual(result.studies.map((study) => study.date), ['2026-05-28', '2026-01-14']);
+  assert.deepEqual(result.studies.map((study) => study.protocol), ['2001', '2002']);
+  assert.deepEqual(result.studies.map((study) => study.deliveryDate), ['2026-05-30', '2026-01-16']);
+  assert.deepEqual(result.studies.map((study) => study.status), ['Finalizado', 'Finalizado']);
+  assert.ok(result.studies.every((study) => /^[a-f0-9]{64}$/.test(study.sourceKey || '')), 'cada estudio publicable tiene una clave de origen irreversible');
   assert.equal(session.currentUrl(), listUrl, 'la detección no navega ni hace clic en los ojos');
   assert.equal(await session.activePage().evaluate(() => (window as any).__studyOpens || 0), 0);
   const publicData = JSON.stringify(result);
-  for (const privateValue of ['PEREZ', FAKE_USER.usuario, 'Dra. Ejemplo', 'Hemoglobina', '13,5', '1980', 'protocol', 'href']) {
+  for (const privateValue of ['PEREZ', FAKE_USER.usuario, 'Dra. Ejemplo', 'Hemoglobina', '13,5', '1980', 'href']) {
     assert.ok(!publicData.includes(privateValue), `metadata pública filtró ${privateValue}`);
   }
   assert.deepEqual(traces, [
@@ -77,14 +81,35 @@ test('prioriza links ver_resultado y conserva estudios aunque falte metadata', {
   assert.equal(result.studies.length, 2);
   assert.equal(result.studies[0].date, '2026-05-28');
   assert.equal(result.studies[1].date, undefined, 'el segundo link se conserva como estudio mínimo');
-  assert.equal(session.currentUrl(), listUrl);
+  assert.equal(result.studies[0].protocol, undefined);
+  assert.equal(result.studies[1].protocol, undefined);
+  assert.equal(result.studies[1].deliveryDate, undefined);
+  assert.equal(result.studies[1].status, undefined);
+  assert.ok(result.studies.every((study) => /^[a-f0-9]{64}$/.test(study.sourceKey || '')), 'los href estables generan clave aunque falte metadata');
   assert.deepEqual(traces, [
     'percamb_result_links:2', 'percamb_result_actions:2', 'percamb_candidate_rows:2',
-    'percamb_metadata_complete:1', 'percamb_parsed_studies:2',
+    'percamb_metadata_complete:0', 'percamb_parsed_studies:2',
   ]);
+  traces.length = 0;
+  const repeated = await session.listStudies();
+  assert.deepEqual(repeated?.studies.map((study) => study.sourceKey), result.studies.map((study) => study.sourceKey), 'la clave no depende del UUID temporal del job');
+  assert.equal(session.currentUrl(), listUrl);
   assert.equal(await session.openStudy(result.studies[1].id), true);
   assert.match(session.currentUrl(), /\/lwcloud\/fake\/ver_resultado\/4002$/);
   assert.ok(!JSON.stringify(result).includes('ver_resultado'), 'el href interno no se publica');
+});
+
+test('rechaza abrir un detalle cuyo protocolo contradice al de la fila original', { timeout: 60_000 }, async () => {
+  const session = await openResults('/lwcloud/fake/resultados-reference-mismatch');
+  const result = await session.listStudies();
+  assert.ok(result);
+  assert.equal(result.studies[0].protocol, '9991');
+  let mismatch: unknown;
+  try { await session.openStudy(result.studies[0].id); } catch (error) { mismatch = error; }
+  assert.match(session.currentUrl(), /\/lwcloud\/fake\/protocolo\/9992$/);
+  assert.deepEqual(await session.activePage().locator('dt,dd').allTextContents(), ['Fecha', '28/05/2026', 'Protocolo', '9992']);
+  assert.ok(mismatch instanceof StudyReferenceMismatchError && mismatch.code === 'STUDY_REFERENCE_MISMATCH', 'no validó el detalle: ' + String(mismatch));
+  assert.equal(session.isStudyOpen(result.studies[0].id), false, 'no habilita la descarga luego del mismatch');
 });
 
 test('detecta uno o ningún link ver_resultado sin depender del icono', { timeout: 60_000 }, async () => {

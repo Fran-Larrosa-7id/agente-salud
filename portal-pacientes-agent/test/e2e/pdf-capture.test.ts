@@ -39,7 +39,7 @@ async function loginAndExtract(pdfDownloadTimeoutMs?: number) {
   const result = await current.listStudies();
   assert.ok(result);
   assert.equal(result.studies.length, 13, 'incluye todas las filas visibles del fixture extendido');
-  assert.ok(result.studies.every((s) => !('protocol' in s)));
+  assert.ok(result.studies.every((s) => !!s.protocol));
   assert.ok(!JSON.stringify(result).includes('PEREZ'));
   assert.ok(!JSON.stringify(result).includes(FAKE_USER.usuario));
   return result.studies;
@@ -94,6 +94,28 @@ test('prioriza context.request para href directo y redirect interno; fallback ca
   assert.ok(download.pdfTrace.some((line) => line.includes('download_event')));
   const data = await importStudy(byDate.get('2025-04-01')!);
   assert.equal(data.pdf.via, 'fetch');
+});
+
+test('el orden invertido conserva la asociación opaca entre estudio y PDF', { timeout: 60_000 }, async () => {
+  const studies = await loginAndExtract();
+  const selectedInReverse = [
+    studies.find((study) => study.protocol === '1002')!,
+    studies.find((study) => study.protocol === '1001')!,
+  ];
+  const associations: { studyId: string; protocolFromFixturePdf: string }[] = [];
+  for (const study of selectedInReverse) {
+    assert.equal(await session!.openStudy(study.id), true);
+    const pdf = await session!.downloadCurrentStudyPdf();
+    assert.ok(pdf);
+    const source = pdf.buffer.toString('latin1');
+    associations.push({
+      studyId: study.id,
+      protocolFromFixturePdf: ['1001', '1002'].find((protocol) => source.includes(`Protocolo ${protocol}`)) || '',
+    });
+    await session!.closeExtraPages();
+  }
+  assert.deepEqual(associations.map((association) => association.protocolFromFixturePdf), ['1002', '1001']);
+  assert.deepEqual(associations.map((association) => association.studyId), selectedInReverse.map((study) => study.id));
 });
 
 test('rechaza redirect externo, HTML anunciado como PDF y reporta un timeout específico', { timeout: 90_000 }, async () => {

@@ -46,7 +46,7 @@
     health: () => call('GET', '/api/health'),
     start: (provider) => call('POST', '/api/imports/' + encodeURIComponent(provider)),
     job: (id) => call('GET', '/api/imports/' + id),
-    importSelected: (id, studyIds) => call('POST', '/api/imports/' + id + '/import', { studyIds }),
+    importSelected: (id, studyIds, importedSourceKeys) => call('POST', '/api/imports/' + id + '/import', { studyIds, importedSourceKeys }),
     retryDiscovery: (id) => call('POST', '/api/imports/' + id + '/retry-discovery'),
     cancel: (id) => call('DELETE', '/api/imports/' + id).catch(() => null),
     /* Suscripción SSE. Devuelve una función para cerrarla. */

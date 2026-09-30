@@ -66,7 +66,8 @@ test('fail guarda el código y emite un evento error', () => {
 
 test('selección: solo estudios conocidos, sin duplicados, con límite y en el estado correcto', () => {
   const job = new ImportJob('percamb', 'Pérez Cambet');
-  job.setStudies([{ id: 'a', provider: 'percamb' }, { id: 'b', provider: 'percamb' }, { id: 'c', provider: 'percamb' }]);
+  const importedKey = 'a'.repeat(64);
+  job.setStudies([{ id: 'a', provider: 'percamb', sourceKey: importedKey }, { id: 'b', provider: 'percamb' }, { id: 'c', provider: 'percamb' }]);
   assert.throws(() => job.select(['a'], 10), (e: SelectionError) => e.code === 'NOT_WAITING_SELECTION');
   for (const s of [S.OPENING_PROVIDER, S.WAITING_FOR_USER_LOGIN, S.AUTHENTICATED, S.AGENT_STARTING, S.SEARCHING_STUDIES, S.STUDIES_FOUND, S.WAITING_SELECTION]) job.transition(s);
   assert.throws(() => job.select([], 10), (e: SelectionError) => e.code === 'EMPTY_SELECTION');
@@ -74,7 +75,26 @@ test('selección: solo estudios conocidos, sin duplicados, con límite y en el e
   assert.throws(() => job.select(['zz'], 10), (e: SelectionError) => e.code === 'UNKNOWN_STUDY');
   assert.throws(() => job.select(['a', 'a'], 10), (e: SelectionError) => e.code === 'DUPLICATED_STUDY');
   assert.throws(() => job.select(['a', 'b', 'c'], 2), (e: SelectionError) => e.code === 'TOO_MANY');
+  assert.throws(() => job.select(['a'], 10, [importedKey]), (e: SelectionError) => e.code === 'ALREADY_IMPORTED');
+  assert.throws(() => job.select(['a'], 10, ['not-a-sha256']), (e: SelectionError) => e.code === 'INVALID_SOURCE_KEYS');
   assert.deepEqual(job.select(['c', 'a'], 10), ['c', 'a']);
+});
+
+test('cada archivo importado conserva el studyId explícito, aunque se seleccione en orden inverso', () => {
+  const job = new ImportJob('percamb', 'Pérez Cambet');
+  job.setStudies([
+    { id: 'study-a', date: '2026-05-28', protocol: '3-78308', provider: 'percamb' },
+    { id: 'study-b', date: '2026-01-14', protocol: '3-71298', provider: 'percamb' },
+  ]);
+  for (const state of [S.OPENING_PROVIDER, S.WAITING_FOR_USER_LOGIN, S.AUTHENTICATED, S.AGENT_STARTING, S.AGENT_OBSERVING, S.SEARCHING_STUDIES, S.STUDIES_FOUND, S.WAITING_SELECTION]) job.transition(state);
+  job.select(['study-b', 'study-a'], 10);
+  job.addFile({ id: 'pdf-b', studyId: 'study-b', bytes: 100, duplicate: false, importedAt: '2026-09-29T12:00:00.000Z', importedBy: 'agent' });
+  job.addFile({ id: 'pdf-a', studyId: 'study-a', bytes: 120, duplicate: false, importedAt: '2026-09-29T12:00:01.000Z', importedBy: 'agent' });
+  assert.deepEqual(job.files.map(({ id, studyId }) => ({ id, studyId })), [
+    { id: 'pdf-b', studyId: 'study-b' },
+    { id: 'pdf-a', studyId: 'study-a' },
+  ]);
+  assert.throws(() => job.addFile({ id: 'orphan', studyId: 'other', bytes: 5, duplicate: false, importedAt: '2026-09-29T12:00:02.000Z', importedBy: 'agent' }), /FILE_STUDY_MISMATCH/);
 });
 
 test('el snapshot público no expone internos', () => {

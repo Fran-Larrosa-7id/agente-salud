@@ -52,10 +52,13 @@ export interface RawPageSnapshot {
   pageType?: 'results_list' | 'result_detail' | 'unknown';
 }
 
-/** Datos mínimos entregados al frontend; nunca incluye protocolo ni contenido clínico. */
+/** Metadata administrativa del listado; `date` es la fecha real del estudio en el modelo actual del portal. */
 export interface ProviderStudyMetadata {
   id: string;
+  /** SHA-256 de una referencia estable del proveedor o de sus metadatos; nunca expone la URL original. */
+  sourceKey?: string;
   date?: string;
+  protocol?: string;
   deliveryDate?: string;
   status?: string;
 }

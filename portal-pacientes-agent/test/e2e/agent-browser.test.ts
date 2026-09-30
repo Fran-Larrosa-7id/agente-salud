@@ -61,7 +61,7 @@ test('el paciente inicia sesión, el agente descubre y trae los 3 PDF', { timeou
   await waitFor(() => job.state === S.WAITING_SELECTION || job.isTerminal, 30_000);
   assert.equal(job.state, S.WAITING_SELECTION, `estado ${job.state} ${job.errorCode}`);
   assert.ok(job.studies.every((s) => /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(s.id)), 'ids opacos UUID');
-  assert.ok(job.studies.every((s) => !('protocol' in s)), 'protocolo no se expone al frontend');
+  assert.ok(job.studies.every((s) => !!s.protocol), 'el protocolo administrativo se expone para la UI');
   assert.equal(job.studies.length, 3, 'el extractor devuelve todas las filas visibles sin abrir ninguna');
   assert.deepEqual(job.studies.map((s) => s.date), ['2026-05-28', '2026-01-14', '2025-11-03']);
 
@@ -71,6 +71,8 @@ test('el paciente inicia sesión, el agente descubre y trae los 3 PDF', { timeou
   });
   assert.equal(job.state, S.COMPLETED, `estado ${job.state} ${job.errorCode} fallas ${JSON.stringify(job.failures)} logs ${logs.join('\n')}`);
   assert.equal(job.files.length, 3);
+  assert.ok(job.files.every((file) => file.importedBy === 'agent' && /^\d{4}-\d{2}-\d{2}T/.test(file.importedAt)));
+  assert.ok(job.files.every((file) => job.studies.some((study) => study.id === file.studyId)), 'cada PDF refiere a un studyId conocido');
   assert.equal(model.seen.length, 0, 'Percamb resuelve descubrimiento y descarga sin pasos LLM');
   assert.ok(events.some((event) => JSON.stringify(event).includes('searching_studies')));
   for (const f of job.files) {

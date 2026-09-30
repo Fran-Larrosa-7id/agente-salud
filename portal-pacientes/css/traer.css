@@ -204,6 +204,8 @@
 .res-list li + li { border-top: 1px solid var(--border); }
 .res-row { position: relative; display: grid; grid-template-columns: 24px 48px minmax(0, 1fr) auto; align-items: center; gap: 16px; min-height: 76px; padding: 12px 20px; cursor: pointer; transition: background-color var(--t-fast); }
 .res-row:hover { background: var(--surface-alt); }
+.res-row.is-imported { cursor: default; background: var(--surface-alt); }
+.res-row.is-imported:hover { background: var(--surface-alt); }
 .res-row:has(input:checked) { background: var(--mint-soft); }
 .res-main { display: flex; flex-direction: column; min-width: 0; }
 .res-name { font-weight: 600; color: var(--navy); font-size: 1.0625rem; }

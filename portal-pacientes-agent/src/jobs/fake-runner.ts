@@ -1,5 +1,6 @@
 import { sleep } from '../util.js';
 import { percambSourceKey } from '../providers/percamb/source-key.js';
+import { centroDmSourceKey } from '../providers/centrodm/source-key.js';
 import type { ExternalStudy, ImportJob } from './job.js';
 import { makeDemoPdf } from './pdf.js';
 import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
@@ -19,6 +20,11 @@ export interface FakeOptions {
 export const FAKE_STUDIES: Omit<ExternalStudy, 'provider'>[] = [
   { id: 'st_fake00000001', date: '2026-05-28', protocol: '00012345', deliveryDate: '2026-05-30', status: 'Finalizado' },
   { id: 'st_fake00000002', date: '2026-01-14', protocol: '00009876', deliveryDate: '2026-01-16', status: 'Finalizado' },
+];
+
+export const FAKE_CENTRODM_STUDIES: Omit<ExternalStudy, 'provider'>[] = [
+  { id: 'st_cdm_fake000001', date: '2024-04-08', title: 'Reconstrucción 3D', modality: 'SC', sourceKey: centroDmSourceKey('2024-04-08', 'Reconstrucción 3D', 'SC') },
+  { id: 'st_cdm_fake000002', date: '2024-04-10', title: 'Tomografía de tórax', modality: 'CT', sourceKey: centroDmSourceKey('2024-04-10', 'Tomografía de tórax', 'CT') },
 ];
 
 /**
@@ -76,7 +82,8 @@ export class FakeProviderAgent implements JobRunner {
         job.transition(S.PROVIDER_PARSER_MISMATCH, { code: 'PROVIDER_PARSER_MISMATCH' });
         return;
       }
-      const studies = this.scenario === 'empty' ? [] : FAKE_STUDIES.map((s) => ({
+      const demoStudies = job.provider === 'centrodm' ? FAKE_CENTRODM_STUDIES : FAKE_STUDIES;
+      const studies = this.scenario === 'empty' ? [] : demoStudies.map((s) => ({
         ...s,
         ...(job.provider === 'percamb' ? { sourceKey: percambSourceKey(s.date, s.protocol) } : {}),
         provider: job.provider,
@@ -98,7 +105,8 @@ export class FakeProviderAgent implements JobRunner {
       job.transition(S.AGENT_OBSERVING);
       job.transition(S.SEARCHING_STUDIES);
       await this.pause(this.step);
-      const studies = FAKE_STUDIES.map((s) => ({ ...s, provider: job.provider }));
+      const demoStudies = job.provider === 'centrodm' ? FAKE_CENTRODM_STUDIES : FAKE_STUDIES;
+      const studies = demoStudies.map((s) => ({ ...s, provider: job.provider }));
       job.setStudies(studies);
       job.transition(S.STUDIES_FOUND, { count: studies.length });
       job.transition(S.WAITING_SELECTION, { studies });
@@ -126,6 +134,16 @@ export class FakeProviderAgent implements JobRunner {
           continue;
         }
         job.transition(S.IMPORTING, { studyId });
+        if (job.provider === 'centrodm') {
+          const zip = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x10, 0x20, 0x30, 0x40]);
+          const saved = await this.deps.files.save(zip, 'application/zip', 'DICOM_ZIP');
+          if (!saved.ok) throw new Error(saved.reason);
+          const imported = { importedAt: new Date().toISOString(), importedBy: 'agent' as const };
+          job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, sha256: saved.file.sha256, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+          job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+          await this.pause(this.step / 2);
+          continue;
+        }
         const pdf = makeDemoPdf([
           'Documento de prueba - FakeProviderAgent',
           'Este PDF lo genero el modo simulado del Portal de Pacientes.',
@@ -136,8 +154,8 @@ export class FakeProviderAgent implements JobRunner {
         const saved = await this.deps.files.save(pdf, 'application/pdf');
         if (!saved.ok) throw new Error(saved.reason);
         const imported = { importedAt: new Date().toISOString(), importedBy: 'agent' as const };
-        job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
-        job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
+        job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, sha256: saved.file.sha256, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+        job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
         await this.pause(this.step / 2);
       }
       job.current = undefined;

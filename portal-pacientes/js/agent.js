@@ -37,7 +37,7 @@
   }
 
   const EVENTS = ['snapshot', 'provider_opening', 'provider_opened', 'waiting_user_login', 'authenticated', 'agent_started', 'agent_observing',
-    'searching_studies', 'studies_found', 'waiting_selection', 'opening_study', 'finding_document', 'downloading', 'importing',
+    'searching_studies', 'studies_found', 'waiting_selection', 'opening_study', 'viewer_ready', 'finding_document', 'downloading', 'importing',
     'file_ready', 'study_failed', 'human_action_required', 'provider_parser_mismatch', 'completed', 'error'];
 
   P.agent = {
@@ -70,10 +70,15 @@
       try { res = await fetch(base() + '/api/imports/' + id + '/files/' + fileId); } catch (e) { throw new AgentError('AGENT_OFFLINE'); }
       if (!res.ok) throw new AgentError('FILE_NOT_FOUND', res.status);
       const blob = await res.blob();
-      if (blob.type && !/pdf/.test(blob.type)) throw new AgentError('NOT_PDF');
+      const kind = res.headers.get('x-artifact-kind') || 'PDF';
       const head = new Uint8Array(await blob.slice(0, 1024).arrayBuffer());
-      if (!String.fromCharCode.apply(null, head).includes('%PDF-')) throw new AgentError('NOT_PDF');
-      return { blob, sha256: res.headers.get('x-content-sha256') || '' };
+      if (kind === 'DICOM_ZIP') {
+        const zipMagic = head.length >= 4 && head[0] === 0x50 && head[1] === 0x4b && [0x03, 0x05, 0x07].includes(head[2]) && [0x04, 0x06, 0x08].includes(head[3]);
+        if (!zipMagic || (blob.type && !/(?:application.*zip|application.*octet-stream)/i.test(blob.type))) throw new AgentError('INVALID_MEDICAL_ARCHIVE');
+      } else if (kind === 'PDF') {
+        if ((blob.type && !/pdf|octet-stream/i.test(blob.type)) || !String.fromCharCode.apply(null, head).includes('%PDF-')) throw new AgentError('NOT_PDF');
+      } else throw new AgentError('UNKNOWN_ARTIFACT');
+      return { blob, kind, mimeType: blob.type, sha256: res.headers.get('x-content-sha256') || '' };
     },
   };
 

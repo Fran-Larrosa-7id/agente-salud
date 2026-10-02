@@ -14,6 +14,7 @@ import { createApp } from './app.js';
 loadDotEnv();
 const config = loadConfig();
 const log = createLogger(config.logLevel);
+log.info(null, 'pixeon_debug_config', { keepViewerOpen: config.pixeonDebugKeepViewerOpen, ttlMs: config.pixeonDebugKeepViewerOpenMs });
 
 // Restos de una ejecución anterior (p. ej. si el proceso se cortó): se borran al iniciar.
 await rm(config.tmpDir, { recursive: true, force: true });

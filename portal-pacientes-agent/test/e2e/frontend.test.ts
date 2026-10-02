@@ -128,6 +128,76 @@ test('Portal: Traer mis estudios desde Pérez Cambet con el asistente (simulado)
   }
 });
 
+test('Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imágenes y deduplica', { timeout: 60_000 }, async () => {
+  const cfg = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes') });
+  const manager = new JobManager({ config: cfg, providers: PROVIDERS, runnerFactory: fakeRunnerFactory({ loginDelayMs: 30, stepMs: 30 }), log: silentLogger });
+  const app = createApp({ config: cfg, manager, providers: PROVIDERS, info: { runner: 'fake', model: 'fake', modelReady: true } });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
+  const errors: string[] = [];
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.addInitScript(`try { localStorage.setItem('pp_agent_url', ${JSON.stringify(base)}); } catch (e) {}`);
+    await page.goto(base + '/index.html#/login');
+    await page.fill('#dni', '32456789');
+    await page.fill('#pass', 'demo1234');
+    await page.click('#login-form [type=submit]');
+    await page.waitForSelector('.home-head');
+
+    await page.goto(base + '/index.html#/traer?inst=cdm');
+    await page.waitForSelector('.fv-explain');
+    assert.ok((await page.locator('.fv-explain').innerText()).includes('Centro DM'));
+    await page.click('[data-action=live-open]');
+    await page.waitForSelector('.res-list', { timeout: 10_000 });
+    assert.equal(await page.locator('.res-list li').count(), 2);
+    assert.match(await page.locator('.res-list').innerText(), /Reconstrucción 3D[\s\S]*Modalidad SC[\s\S]*DICOM ZIP[\s\S]*08\/04\/2024/);
+    await page.click('.res-list li:first-child .res-row');
+    await page.click('#res-save');
+    await page.waitForSelector('.fv-success', { timeout: 10_000 });
+    const study = await page.evaluate(() => {
+      const db = JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}');
+      return db.studies?.find((item: { provider?: string }) => item.provider === 'centrodm');
+    });
+    assert.equal(study.type, 'imagenes');
+    assert.equal(study.name, 'Reconstrucción 3D');
+    assert.equal(study.modality, 'SC');
+    assert.equal(study.artifactKind, 'DICOM_ZIP');
+    assert.equal(study.file.kind, 'DICOM_ZIP');
+    assert.match(study.sourceKey, /^[a-f0-9]{64}$/);
+
+    const download = page.waitForEvent('download');
+    await page.click('.success-list [data-action=doc-download]');
+    assert.match((await download).suggestedFilename(), /\.zip$/);
+    await page.goto(base + '/index.html#/estudios/' + encodeURIComponent(study.id));
+    await page.waitForSelector('.detail-head');
+    const detail = await page.locator('.detail-grid').innerText();
+    assert.match(detail, /Archivo original DICOM/);
+    assert.match(detail, /ZIP DICOM/);
+    assert.match(detail, /no tiene visor DICOM/i);
+    assert.doesNotMatch(detail, /Ver documento|PDF original/);
+
+    await page.goto(base + '/index.html#/traer?inst=cdm');
+    await page.click('[data-action=live-open]');
+    await page.waitForSelector('.res-list', { timeout: 10_000 });
+    assert.equal(await page.locator('.res-list li:first-child input').isDisabled(), true);
+    assert.match(await page.locator('.res-list li:first-child').innerText(), /ya está en tu portal/i);
+    assert.equal(await page.locator('.res-list li:nth-child(2) input').isDisabled(), false, 'conserva seleccionables los estudios todavía no importados');
+    assert.equal(await page.locator('#res-all').isDisabled(), false);
+    await page.click('.flow-exit');
+    await page.click('.ov [data-confirm]');
+    await page.waitForFunction(() => !location.hash.startsWith('#/traer'));
+    assert.deepEqual(errors, []);
+    assert.equal(manager.activeCount(), 0);
+  } finally {
+    await browser.close();
+    server.close();
+    await manager.shutdown();
+  }
+});
+
 test('Portal: parser mismatch deja de cargar y reintenta en la misma importación', { timeout: 45_000 }, async () => {
   const cfg = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes') });
   const manager = new JobManager({ config: cfg, providers: PROVIDERS, runnerFactory: fakeRunnerFactory({ scenario: 'parser_mismatch', loginDelayMs: 10, stepMs: 10 }), log: silentLogger });

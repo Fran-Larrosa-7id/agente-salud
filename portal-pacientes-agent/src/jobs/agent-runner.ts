@@ -3,7 +3,7 @@ import { extractStudies, resolveColumns, signatureOf } from '../agent/studies.js
 import type { AgentModel, GoalOutcome, TargetLocator } from '../agent/types.js';
 import { BrowserNotInstalledError, type BrowserHost } from '../browser/browser-host.js';
 import { evaluateLogin, waitForLogin } from '../browser/login-detector.js';
-import { BrowserSession, PdfDownloadError, ProviderUnavailableError, StudyReferenceMismatchError, UnexpectedDomainError } from '../browser/session.js';
+import { BrowserSession, MedicalArchiveError, PdfDownloadError, ProviderUnavailableError, StudyReferenceMismatchError, UnexpectedDomainError } from '../browser/session.js';
 import { ProviderParserMismatchError, type RawPageSnapshot } from '../browser/types.js';
 import { sleep } from '../util.js';
 import type { HumanReason, ImportJob } from './job.js';
@@ -78,7 +78,13 @@ export class AgentImportRunner implements JobRunner {
     const { provider, config, log } = this.deps;
     try {
       job.transition(S.OPENING_PROVIDER);
-      const session = await BrowserSession.open(this.opts.host, provider, config.headless, config.maxPdfBytes, config.providerDebugStructure, config.pdfDownloadTimeoutMs);
+      const session = await BrowserSession.open(
+        this.opts.host, provider, config.headless, config.maxPdfBytes, config.providerDebugStructure,
+        config.pdfDownloadTimeoutMs, config.maxMedicalArchiveBytes,
+        provider.id === 'centrodm' ? config.centroDmAllowedOrigins : [],
+        provider.id === 'centrodm' ? config.pixeonViewerReadyTimeoutMs : undefined,
+        provider.id === 'centrodm' ? config.pixeonToolbarTimeoutMs : undefined,
+      );
       this.session = session;
       if (this.signal.aborted) return void (await this.dispose());
       // Durante el login, el paciente navega: un enlace externo se bloquea en silencio.
@@ -86,14 +92,31 @@ export class AgentImportRunner implements JobRunner {
       session.onUnexpectedDomain = () => {
         if (WORKING.has(job.state)) job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'UNEXPECTED_DOMAIN');
       };
-      session.onNavigationBlocked = ({ scheme, host }) => log.warn(job.id, 'navigation_blocked', { scheme, host });
+      session.onNavigationBlocked = ({ scheme, host, port }) => provider.id === 'centrodm'
+        ? log.warn(job.id, 'navigation_guard', { provider: provider.id, originAllowed: false, scheme, host, port })
+        : log.warn(job.id, 'navigation_blocked', { scheme, host, port });
+      session.onCentroDmViewerOriginAllowed = ({ host, port }) => log.info(job.id, 'centrodm_viewer_origin', {
+        provider: provider.id, allowed: true, host, port,
+      });
+      session.onCentroDmViewerOpened = ({ popup }) => log.info(job.id, 'centrodm_viewer_opened', {
+        provider: provider.id, popup,
+      });
+      session.onCentroDmViewerReady = ({ host, port }) => log.info(job.id, 'centrodm_viewer_detected', {
+        provider: provider.id, host, port,
+      });
+      session.onCentroDmDownloadStarting = () => {
+        if (job.state === S.FINDING_DOCUMENT) job.transition(S.DOWNLOADING, { studyId: job.current?.studyId });
+      };
       session.onPdfTrace = ({ stage, ...fields }) => {
         log.debug(job.id, stage, fields);
         if (stage === 'pdf_download_started' && job.state === S.FINDING_DOCUMENT) job.transition(S.DOWNLOADING, { studyId: job.current?.studyId });
       };
-      session.onProviderStructure = ({ event, count, index, depth, tag, links, textNodes, siblings, classType, hrefMatch }) => event === 'percamb_page'
+      const ALWAYS_LOG_PIXEON = new Set(['pixeon_download_probe_start', 'pixeon_download_probe_end', 'pixeon_download_probe', 'pixeon_download_fastpath', 'pixeon_download_click', 'pixeon_download_options', 'pixeon_frames', 'pixeon_frame', 'pixeon_text_exact', 'pixeon_text_partial', 'pixeon_attr_candidates', 'pixeon_dom_candidate', 'pixeon_clickable_ancestor', 'pixeon_structural_fallback', 'pixeon_toolbar_candidates', 'toolbar_candidate', 'pixeon_toolbar_detected', 'pixeon_download_structural_candidate', 'pixeon_download_text_matches', 'pixeon_download_role_matches', 'pixeon_download_attr_matches', 'pixeon_download_candidate', 'pixeon_download_button', 'pixeon_download_menu', 'pixeon_download_menu_options', 'pixeon_download_choice', 'centrodm_find_document_enter', 'find_document_dispatch']);
+      session.onProviderStructure = ({ event, ...fields }) => event === 'percamb_page'
         ? log.debug(job.id, event, { provider: provider.id, type: 'results_list' })
-        : log.debug(job.id, event, { provider: provider.id, count, index, depth, tag, links, textNodes, siblings, classType, hrefMatch });
+        : ALWAYS_LOG_PIXEON.has(event)
+          ? log.info(job.id, event, { provider: provider.id, ...fields })
+        : log.debug(job.id, event, { provider: provider.id, ...fields });
       session.onUserClosed = () => job.fail(S.CANCELLED, 'WINDOW_CLOSED');
       await session.gotoLogin();
       job.push('provider_opened');
@@ -115,6 +138,30 @@ export class AgentImportRunner implements JobRunner {
 
   private async discover(session: BrowserSession): Promise<void> {
     const { job } = this;
+    if (session.provider.studyExtractor === 'centrodm') {
+      if (job.state !== S.SEARCHING_STUDIES) job.transition(S.SEARCHING_STUDIES);
+      try {
+        const result = await session.listStudies();
+        if (!result) {
+          if (await session.isCentroDmResultsPage?.()) throw new ProviderParserMismatchError(0, 0);
+          job.fail(S.PROVIDER_CHANGED, 'PROVIDER_CHANGED');
+          return;
+        }
+        const studies = result.studies.map((study) => ({ ...study, provider: this.deps.provider.id }));
+        job.setStudies(studies);
+        this.deps.log.info(job.id, 'studies_found', { provider: this.deps.provider.id, count: studies.length });
+        job.transition(S.STUDIES_FOUND, { count: studies.length });
+        job.transition(S.WAITING_SELECTION, { studies });
+        return;
+      } catch (error) {
+        if (error instanceof ProviderParserMismatchError) {
+          this.deps.log.warn(job.id, 'centrodm_parser_mismatch', { provider: this.deps.provider.id, resultActions: error.resultActions, candidateRows: error.candidateRows, parsedStudies: error.parsedStudies });
+          job.transition(S.PROVIDER_PARSER_MISMATCH, { code: 'PROVIDER_PARSER_MISMATCH' });
+          return;
+        }
+        throw error;
+      }
+    }
     if (await session.isPercambResultsPage()) {
       if (job.state !== S.SEARCHING_STUDIES) job.transition(S.SEARCHING_STUDIES);
       try {
@@ -208,46 +255,96 @@ export class AgentImportRunner implements JobRunner {
     const { job } = this;
     const session = this.session;
     if (!session) return void job.fail(S.ERROR, 'NO_SESSION');
+    const isCentroDm = session.provider.studyExtractor === 'centrodm';
+    if (isCentroDm) {
+      this.deps.log.info(job.id, 'import_dispatch', { provider: this.deps.provider.id, selectedCount: studyIds.length });
+      this.deps.log.info(job.id, 'centrodm_import_queue', { count: studyIds.length });
+    }
     try {
       for (let i = 0; i < studyIds.length; i++) {
         const studyId = studyIds[i];
-        const providerOwned = session.hasStudy?.(studyId) === true;
-        const target = this.locators.get(studyId) ?? (providerOwned ? { studyId } : undefined);
+        // CentroDM resuelve sus referencias dentro de BrowserSession y no crea TargetLocators
+        // genéricos. El despacho del proveedor debe ocurrir antes de validar esos locators.
+        const providerOwned = isCentroDm || session.hasStudy?.(studyId) === true;
+        const target = isCentroDm ? { studyId } : this.locators.get(studyId) ?? (providerOwned ? { studyId } : undefined);
         if (!target) {
           job.failures.push({ studyId, code: 'UNKNOWN_STUDY' });
           continue;
         }
         job.current = { studyId, index: i, total: studyIds.length };
+        if (isCentroDm) this.deps.log.info(job.id, 'centrodm_study_start', { index: i + 1, count: studyIds.length });
         job.transition(S.OPENING_STUDY, { studyId, index: i, total: studyIds.length });
         if (providerOwned) {
           this.deps.log.debug(job.id, 'provider_study_opening', { step: i + 1, count: session.openPages() });
           let opened = false;
-          let referenceMismatch = false;
+          let openingFailure: string | null = null;
           try {
             opened = await session.openStudy?.(studyId) ?? false;
           } catch (error) {
-            if (!(error instanceof StudyReferenceMismatchError)) throw error;
-            job.failures.push({ studyId, code: error.code });
-            job.push('study_failed', { studyId, code: error.code });
-            referenceMismatch = true;
+            if (job.isTerminal) return;
+            if (error instanceof StudyReferenceMismatchError) openingFailure = error.code;
+            else if (isCentroDm && error instanceof MedicalArchiveError) openingFailure = error.code;
+            else if (isCentroDm && error instanceof UnexpectedDomainError) openingFailure = 'UNEXPECTED_DOMAIN';
+            else throw error;
           }
-          if (referenceMismatch) {
+          if (openingFailure) {
+            this.retainFailedViewer(session, openingFailure);
+            job.failures.push({ studyId, code: openingFailure });
+            job.push('study_failed', { studyId, code: openingFailure });
+            if (isCentroDm) this.deps.log.warn(job.id, 'centrodm_study_failed', { index: i + 1, errorCode: openingFailure });
             await session.closeExtraPages();
             continue;
           }
           this.deps.log.debug(job.id, 'provider_study_opened', { step: i + 1, outcome: !!opened, count: session.openPages() });
           if (!opened) {
-            job.failures.push({ studyId, code: 'STUDY_NOT_FOUND' });
-            job.push('study_failed', { studyId, code: 'STUDY_NOT_FOUND' });
+            const code = isCentroDm ? 'VIEWER_OPEN_TIMEOUT' : 'STUDY_NOT_FOUND';
+            job.failures.push({ studyId, code });
+            job.push('study_failed', { studyId, code });
+            if (isCentroDm) this.deps.log.warn(job.id, 'centrodm_study_failed', { index: i + 1, errorCode: code });
+            await session.closeExtraPages();
             continue;
           }
-          if (job.state === S.OPENING_STUDY) job.transition(S.FINDING_DOCUMENT, { studyId });
+          if (job.state === S.OPENING_STUDY) {
+            if (isCentroDm) {
+              job.transition(S.VIEWER_READY, { studyId });
+              job.transition(S.FINDING_DOCUMENT, { studyId });
+            } else {
+              job.transition(S.FINDING_DOCUMENT, { studyId });
+            }
+          }
         } else {
           await this.returnToList(session, target);
         }
 
         let done = false;
-        if (providerOwned && session.provider.studyExtractor === 'labwin') {
+        if (providerOwned && session.provider.studyExtractor === 'centrodm') {
+          try {
+            session.onProviderStructure?.({ event: 'find_document_dispatch', strategy: 'pixeon' });
+            if (this.downloads.used >= this.deps.config.maxDownloadsPerJob) throw new MedicalArchiveError('DICOM_DOWNLOAD_TIMEOUT');
+            this.downloads.used++;
+            const archive = await session.downloadFullDicomStudy?.(this.deps.config.medicalArchiveDownloadTimeoutMs);
+            if (!archive) throw new MedicalArchiveError('DICOM_DOWNLOAD_TIMEOUT');
+            job.transition(S.IMPORTING, { studyId });
+            const saved = await this.deps.files.save(archive.buffer, archive.contentType, 'DICOM_ZIP');
+            if (saved.ok) {
+              const imported = importMetadata();
+              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, sha256: saved.file.sha256, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+              this.deps.log.info(job.id, 'centrodm_study_complete', { index: i + 1, bytes: saved.file.bytes });
+            } else {
+              job.failures.push({ studyId, code: 'INVALID_MEDICAL_ARCHIVE' });
+              job.push('study_failed', { studyId, code: 'INVALID_MEDICAL_ARCHIVE' });
+            }
+          } catch (error) {
+            if (job.isTerminal) return;
+            const code = error instanceof MedicalArchiveError ? error.code : error instanceof UnexpectedDomainError ? 'UNEXPECTED_DOMAIN' : 'DICOM_DOWNLOAD_TIMEOUT';
+            this.retainFailedViewer(session, code);
+            job.failures.push({ studyId, code });
+            job.push('study_failed', { studyId, code });
+            this.deps.log.warn(job.id, 'centrodm_study_failed', { index: i + 1, errorCode: code });
+          }
+          done = true;
+        } else if (providerOwned && session.provider.studyExtractor === 'labwin') {
           try {
             if (this.downloads.used >= this.deps.config.maxDownloadsPerJob) throw new PdfDownloadError('PDF_NOT_FOUND');
             this.downloads.used++;
@@ -258,8 +355,8 @@ export class AgentImportRunner implements JobRunner {
             const saved = await this.deps.files.save(pdf.buffer, pdf.contentType);
             if (saved.ok) {
               const imported = importMetadata();
-              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
-              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
+              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, sha256: saved.file.sha256, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
             } else {
               job.failures.push({ studyId, code: 'INVALID_DOCUMENT' });
               job.push('study_failed', { studyId, code: 'INVALID_DOCUMENT' });
@@ -289,8 +386,8 @@ export class AgentImportRunner implements JobRunner {
             const saved = await this.deps.files.save(outcome.pdf.buffer, outcome.pdf.contentType);
             if (saved.ok) {
               const imported = importMetadata();
-              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
-              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, duplicate: saved.duplicate, ...imported });
+              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, sha256: saved.file.sha256, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
             } else {
               job.failures.push({ studyId, code: 'INVALID_PDF' });
               job.push('study_failed', { studyId, code: 'INVALID_PDF' });
@@ -339,8 +436,8 @@ export class AgentImportRunner implements JobRunner {
       }
       job.current = undefined;
       if (job.files.length === 0) {
-        const specificPdfFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH'].includes(failure.code));
-        return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, specificPdfFailure?.code ?? 'NO_DOCUMENTS');
+        const specificFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH', 'STUDY_NOT_FOUND', 'STUDY_REFERENCE_MISSING', 'VIEWER_NOT_READY', 'VIEWER_OPEN_TIMEOUT', 'VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND', 'DICOM_DOWNLOAD_TIMEOUT', 'INVALID_MEDICAL_ARCHIVE'].includes(failure.code));
+        return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, specificFailure?.code ?? (isCentroDm ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS'));
       }
       job.transition(S.COMPLETED, { files: job.files.length, failures: job.failures.length });
     } catch (e) {
@@ -416,6 +513,14 @@ export class AgentImportRunner implements JobRunner {
       if (process.env.AGENT_DEBUG_ERRORS === 'true') console.error(e);
       this.deps.log.warn(this.job.id, 'runner_error', { state: this.job.state, errorCode: 'INTERNAL' });
       this.job.fail(S.ERROR, 'INTERNAL');
+    }
+  }
+
+  get debugViewerRetentionMs(): number { return this.session?.debugViewerRetentionMs || 0; }
+
+  private retainFailedViewer(session: BrowserSession, code: string): void {
+    if (this.deps.config.pixeonDebugKeepViewerOpen && ['VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(code)) {
+      session.retainPixeonViewerForDebug(this.deps.config.pixeonDebugKeepViewerOpenMs);
     }
   }
 

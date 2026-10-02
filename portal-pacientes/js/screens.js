@@ -334,6 +334,7 @@
     const inst = P.inst(s.inst);
     const available = s.status === 'disponible';
     const doc = P.doc('doc-' + s.id);
+    const isDicomZip = !!(s.file && s.file.kind === 'DICOM_ZIP');
     const shares = P.db.shares.filter((x) => x.studyId === s.id && P.shareStatus(x) === 'activo');
 
     let main = '';
@@ -342,10 +343,13 @@
         '<p>' + inst.name + ' está procesando este estudio. Cuando esté disponible lo vas a ver acá y en Documentos.</p>' +
         '<p class="muted mt-2">Fecha estimada: <b class="num">' + P.fmt(s.expected) + '</b></p></div></div></section>';
     } else if (s.file) {
-      main += '<section class="card" aria-labelledby="h-orig">' + cardHead('Documento original', null, 'h-orig') +
-        '<p>Trajimos el PDF original tal como lo emitió ' + inst.name + '. El Portal lo guarda sin leerlo ni interpretarlo.</p>' +
-        '<div class="btn-row mt-4"><button type="button" class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">' + ic('eye', 18) + 'Ver documento</button></div>' +
-        '<p class="disclaimer">' + ic('info', 18) + '<span>Si tenés dudas sobre los resultados, consultá con tu profesional de salud.</span></p></section>';
+      main += '<section class="card" aria-labelledby="h-orig">' + cardHead(isDicomZip ? 'Estudio de imágenes' : 'Documento original', null, 'h-orig') +
+        (isDicomZip
+          ? '<p>Archivo original DICOM en formato ZIP' + (s.size ? ' · ' + P.esc(s.size) : '') + '. Este estudio contiene imágenes médicas; el Portal todavía no tiene visor DICOM.</p>' +
+            '<div class="btn-row mt-4"><button type="button" class="btn btn-primary" data-action="doc-download" data-id="doc-' + s.id + '">' + ic('download', 18) + 'Descargar estudio original</button></div>'
+          : '<p>Trajimos el PDF original tal como lo emitió ' + inst.name + '. El Portal lo guarda sin leerlo ni interpretarlo.</p>' +
+            '<div class="btn-row mt-4"><button type="button" class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">' + ic('eye', 18) + 'Ver documento</button></div>' +
+            '<p class="disclaimer">' + ic('info', 18) + '<span>Si tenés dudas sobre los resultados, consultá con tu profesional de salud.</span></p>') + '</section>';
     } else if (s.results) {
       main += '<section class="card" aria-labelledby="h-res">' + cardHead('Resultados', null, 'h-res') +
         '<p class="muted">Valores tal como los informó ' + inst.name + '.</p>' +
@@ -378,7 +382,12 @@
 
     const side =
       (available && doc
-        ? '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Documento original', null, 'h-doc') +
+        ? isDicomZip
+          ? '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Archivo original DICOM', null, 'h-doc') +
+            '<p class="file-meta">' + ic('file', 18) + '<span>' + P.fileMeta(s) + '</span></p>' +
+            '<p class="muted">El Portal conserva el ZIP original y no interpreta ni muestra sus imágenes.</p>' +
+            '<div class="btn-row"><button type="button" class="btn btn-secondary" data-action="doc-download" data-id="' + doc.id + '">' + ic('download', 18) + 'Descargar estudio original</button></div></section>'
+          : '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Documento original', null, 'h-doc') +
           '<button type="button" class="doc-preview" data-action="doc-view" data-id="' + doc.id + '" aria-label="Ver documento original">' + P.paper(doc, true) + '<span class="doc-preview-cta">' + ic('eye', 18) + 'Ver documento</span></button>' +
           '<p class="file-meta">' + ic('file', 18) + '<span>' + P.fileMeta(s) + '</span></p>' +
           '<div class="btn-row"><button type="button" class="btn btn-secondary" data-action="doc-view" data-id="' + doc.id + '">' + ic('eye', 18) + 'Ver documento</button>' +
@@ -439,14 +448,16 @@
       headActions:
         '<div class="ov-head-actions"><button type="button" class="btn btn-secondary btn-sm" data-act="dl">' + ic('download', 18) + '<span>Descargar</span></button>' +
         (d.studyId ? '<button type="button" class="btn btn-accent btn-sm" data-act="share">' + ic('share', 18) + '<span>Compartir</span></button>' : '') + '</div>',
-      body: d.file
+      body: d.file && d.file.kind === 'DICOM_ZIP'
+        ? '<div class="viewer"><div class="pending-row">' + ic('scan', 24) + '<div><h2 class="card-title">Estudio de imágenes DICOM</h2><p>El archivo original se conserva como ZIP. Este Portal todavía no cuenta con visor DICOM; descargalo para abrirlo con una herramienta compatible.</p><p class="viewer-foot">' + P.fileMeta(d) + '</p></div></div></div>'
+        : d.file
         ? '<div class="viewer viewer-pdf" id="pdf-host"><p class="pdf-loading"><span class="spin" aria-hidden="true"></span>Abriendo el documento…</p></div>' +
           '<p class="viewer-foot">' + P.fileMeta(d) + ' · Documento original de ' + P.esc(P.inst(d.inst).name) + '</p>'
         : '<div class="viewer">' + P.sheet(d) + '</div><p class="viewer-foot">' + P.fileMeta(d) + '</p>',
       onClose: () => { if (url) URL.revokeObjectURL(url); },
     });
     let url = null;
-    if (d.file) {
+    if (d.file && d.file.kind !== 'DICOM_ZIP') {
       const host = h.el.querySelector('#pdf-host');
       P.files.get(d.file.key).then((blob) => {
         if (!blob) throw new Error('missing');

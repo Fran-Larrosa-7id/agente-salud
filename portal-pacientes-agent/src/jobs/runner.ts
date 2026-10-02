@@ -14,6 +14,8 @@ export interface JobRunner {
   importSelected(studyIds: string[]): Promise<void>;
   /** Cierra navegador, pestañas y handles. Idempotente. */
   dispose(): Promise<void>;
+  /** Retención temporal DEV solicitada por un fallo recuperable de Pixeon. */
+  readonly debugViewerRetentionMs?: number;
 }
 
 export interface RunnerDeps {

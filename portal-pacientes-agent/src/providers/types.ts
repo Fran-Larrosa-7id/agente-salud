@@ -8,6 +8,9 @@ export interface ProviderConfig {
   loginUrl: string;
   /** Hosts donde el navegador puede navegar. Una navegación fuera de esta lista detiene al agente. */
   allowedHosts: string[];
+  /** Orígenes HTTPS adicionales, fijados completos (incluido puerto), para viewers externos. */
+  allowedOrigins?: string[];
+  requireHttps?: boolean;
   /** Hosts de recursos estáticos (fuentes) que el sitio carga. Nunca se navega a ellos. */
   staticHosts: string[];
   /** La URL de ingreso coincide con este patrón. */
@@ -21,5 +24,5 @@ export interface ProviderConfig {
   /** Nota breve para el agente sobre el portal (sin datos de pacientes). */
   agentNotes: string;
   /** Extractor DOM de solo lectura, habilitado solo para portales relevados y cubiertos por tests. */
-  studyExtractor?: 'labwin';
+  studyExtractor?: 'labwin' | 'centrodm';
 }

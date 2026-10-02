@@ -25,6 +25,13 @@ export interface Config {
   maxDownloadsPerJob: number;
   maxPdfBytes: number;
   pdfDownloadTimeoutMs: number;
+  maxMedicalArchiveBytes: number;
+  medicalArchiveDownloadTimeoutMs: number;
+  pixeonViewerReadyTimeoutMs: number;
+  pixeonToolbarTimeoutMs: number;
+  pixeonDebugKeepViewerOpen: boolean;
+  pixeonDebugKeepViewerOpenMs: number;
+  centroDmAllowedOrigins: string[];
   providerDebugStructure: boolean;
   maxConcurrentJobs: number;
   tmpDir: string;
@@ -59,6 +66,17 @@ function bool(env: Env, key: string, fallback: boolean): boolean {
   const raw = env[key];
   if (raw === undefined || raw === '') return fallback;
   return /^(1|true|yes|si|sí)$/i.test(raw.trim());
+}
+
+function httpsOrigins(env: Env, key: string): string[] {
+  return (env[key] || '').split(',').map((raw) => raw.trim()).filter(Boolean).map((raw) => {
+    let url: URL;
+    try { url = new URL(raw); } catch { throw new Error(`Variable ${key} inválida: se esperan orígenes HTTPS explícitos.`); }
+    if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash || raw.includes('*')) {
+      throw new Error(`Variable ${key} inválida: se esperan orígenes HTTPS explícitos, sin rutas ni comodines.`);
+    }
+    return url.origin;
+  });
 }
 
 /** Carga .env (si existe) sin dependencias externas. Las variables ya definidas tienen prioridad. */
@@ -100,6 +118,13 @@ export function loadConfig(env: Env = process.env, argv: string[] = process.argv
     maxDownloadsPerJob: int(env, 'MAX_DOWNLOADS_PER_JOB', 10),
     maxPdfBytes: int(env, 'MAX_PDF_BYTES', 40 * 1024 * 1024),
     pdfDownloadTimeoutMs: int(env, 'PDF_DOWNLOAD_TIMEOUT_MS', 60_000),
+    maxMedicalArchiveBytes: int(env, 'MAX_MEDICAL_ARCHIVE_BYTES', 512 * 1024 * 1024),
+    medicalArchiveDownloadTimeoutMs: int(env, 'MEDICAL_ARCHIVE_DOWNLOAD_TIMEOUT_MS', 120_000),
+    pixeonViewerReadyTimeoutMs: int(env, 'PIXEON_VIEWER_READY_TIMEOUT_MS', 30_000),
+    pixeonToolbarTimeoutMs: int(env, 'PIXEON_TOOLBAR_TIMEOUT_MS', 30_000),
+    pixeonDebugKeepViewerOpen: env.NODE_ENV !== 'production' && bool(env, 'PIXEON_DEBUG_KEEP_VIEWER_OPEN', false),
+    pixeonDebugKeepViewerOpenMs: env.NODE_ENV !== 'production' ? Math.min(120_000, int(env, 'PIXEON_DEBUG_KEEP_VIEWER_OPEN_MS', 120_000)) : 0,
+    centroDmAllowedOrigins: httpsOrigins(env, 'CENTRODM_ALLOWED_ORIGINS'),
     providerDebugStructure: bool(env, 'PROVIDER_DEBUG_STRUCTURE', false),
     maxConcurrentJobs: int(env, 'MAX_CONCURRENT_JOBS', 2),
     tmpDir: path.resolve(AGENT_ROOT, env.TMP_DIR || 'tmp/import-jobs'),

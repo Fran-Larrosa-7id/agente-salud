@@ -401,7 +401,7 @@
       (existing.length ? '<br>' + P.plural(existing.length, 'Estudio que ya estaba', 'Estudios que ya estaban') + ' guardado' + (existing.length === 1 ? '' : 's') + ' en tu portal.' : '') + '</p>' +
       '<ul class="success-list">' + all.map((s, k) =>
         '<li style="--i:' + k + '">' + ic('check', 18) + '<span class="sl-name">' + s.name + (F.saved.includes(s) ? '' : ' · Ya estaba guardado') + '</span><span class="num muted">' + P.fmt(s.date) + '</span>' +
-        (s.file ? '<button type="button" class="btn btn-secondary btn-sm sl-dl" data-action="doc-download" data-id="doc-' + s.id + '" aria-label="Descargar PDF del ' + P.fmt(s.date) + '">' + ic('download', 16) + '<span>PDF</span></button>' : '') +
+        (s.file ? '<button type="button" class="btn btn-secondary btn-sm sl-dl" data-action="doc-download" data-id="doc-' + s.id + '" aria-label="Descargar ' + (s.file.kind === 'DICOM_ZIP' ? 'estudio DICOM' : 'PDF') + ' del ' + P.fmt(s.date) + '">' + ic('download', 16) + '<span>' + (s.file.kind === 'DICOM_ZIP' ? 'ZIP DICOM' : 'PDF') + '</span></button>' : '') +
         '</li>').join('') + '</ul>' +
       '<div class="flow-actions center"><a class="btn btn-secondary btn-lg" href="#/inicio">Volver al inicio</a>' +
       '<a class="btn btn-accent btn-lg" href="#/estudios" data-action="see-imported">Ver estudios' + ic('arrow-right', 20) + '</a></div>' +
@@ -553,8 +553,8 @@
   }
 
   const SEARCH_EVENTS = ['authenticated', 'agent_started', 'agent_observing', 'searching_studies', 'studies_found'];
-  const DOWNLOAD_EVENTS = ['opening_study', 'finding_document', 'downloading', 'importing'];
-  const PHASE_OF = { opening_study: 'opening', finding_document: 'finding', downloading: 'downloading', importing: 'importing' };
+  const DOWNLOAD_EVENTS = ['opening_study', 'viewer_ready', 'finding_document', 'downloading', 'importing'];
+  const PHASE_OF = { opening_study: 'opening', viewer_ready: 'finding', finding_document: 'finding', downloading: 'downloading', importing: 'importing' };
 
   function onLiveEvent(L, type, d) {
     if (L !== F.live || L.closed) return;
@@ -710,7 +710,7 @@
     go('lresults');
     if (!L.studies.length) liveClose(true);
   }
-  function storedPercambStudies() {
+  function storedAgentStudies() {
     try {
       const raw = localStorage.getItem(P.STORE_KEY);
       const db = raw ? JSON.parse(raw) : null;
@@ -718,22 +718,33 @@
     } catch (e) { /* usa el estado cargado en memoria */ }
     return P.db.studies || [];
   }
-  function isPercambStudy(s) {
-    return s && (s.provider === 'percamb' || (s.origin === 'agente' && s.inst === 'pc'));
+  function isAgentStudyFromProvider(s, providerId) {
+    if (!s || !providerId) return false;
+    if (s.provider === providerId) return true;
+    const institution = P.INSTITUTIONS.find((item) => item.live === providerId);
+    return !!institution && s.origin === 'agente' && s.inst === institution.id;
   }
-  function sameStudyMetadata(a, b) {
+  function sameStudyMetadata(a, b, providerId) {
     const dateA = String(a.date || '').trim();
     const dateB = String(b.date || '').trim();
+    if (providerId === 'centrodm') {
+      const titleA = String(a.title || a.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+      const titleB = String(b.title || b.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+      const modeA = String(a.modality || '').trim().toUpperCase();
+      const modeB = String(b.modality || '').trim().toUpperCase();
+      return !!(dateA && titleA && dateA === dateB && titleA === titleB && modeA === modeB);
+    }
     const protocolA = String(a.protocol || '').normalize('NFKC').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const protocolB = String(b.protocol || '').normalize('NFKC').toUpperCase().replace(/[^A-Z0-9]/g, '');
     return !!(dateA && protocolA && dateA === dateB && protocolA === protocolB);
   }
   function importedMatch(external, records) {
-    return records.find((saved) => isPercambStudy(saved) &&
-      ((external.sourceKey && saved.sourceKey === external.sourceKey) || sameStudyMetadata(external, saved)));
+    const providerId = external.provider || P.inst(F.inst).live;
+    return records.find((saved) => isAgentStudyFromProvider(saved, providerId) &&
+      ((external.sourceKey && saved.sourceKey === external.sourceKey) || sameStudyMetadata(external, saved, providerId)));
   }
   function refreshAlreadyImported(L) {
-    const records = storedPercambStudies();
+    const records = storedAgentStudies();
     L.studies = L.studies.map((study) => {
       const existing = importedMatch(study, records);
       return Object.assign({}, study, existing ? { alreadyImported: true } : { alreadyImported: false });
@@ -743,14 +754,16 @@
     return F.found.filter((study) => !study.alreadyImported);
   }
   function selectedImportedKeys(studies) {
-    const records = storedPercambStudies();
+    const records = storedAgentStudies();
     return Array.from(new Set(studies
       .filter((study) => importedMatch(study, records))
       .map((study) => study.sourceKey)
       .filter((key) => typeof key === 'string' && /^[a-f0-9]{64}$/.test(key))));
   }
   function studyLabel(s) {
-    return 'Resultados de laboratorio' + (s.date ? ' · ' + P.fmt(s.date) : ' · Sin fecha');
+    return s.provider === 'centrodm'
+      ? P.esc(s.title || 'Estudio de imágenes')
+      : 'Resultados de laboratorio' + (s.date ? ' · ' + P.fmt(s.date) : ' · Sin fecha');
   }
   function viewLiveResults() {
     const i = P.inst(F.inst);
@@ -773,11 +786,13 @@
       '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '<span class="cbox-dash"></span></span><span>Seleccionar estudios nuevos <span class="muted num">(' + available.length + ')</span></span></label>' +
       '<ul class="res-list">' + list.map((s, k) =>
         '<li style="--i:' + k + '"><label class="res-row' + (s.alreadyImported ? ' is-imported' : '') + '"><input type="checkbox" data-change="res-one" value="' + P.esc(s.id) + '"' + (s.alreadyImported ? ' disabled aria-label="Este estudio ya está en tu portal"' : '') + '>' +
-        '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '</span>' + P.typeTile('laboratorio') +
+        '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '</span>' + P.typeTile(s.provider === 'centrodm' ? 'imagenes' : 'laboratorio') +
         '<span class="res-main"><span class="res-name">' + studyLabel(s) + '</span>' +
-        '<span class="res-sub">' + (s.protocol ? 'Protocolo <span class="num">' + P.esc(s.protocol) + '</span>' : 'Sin número de protocolo') +
+        '<span class="res-sub">' + (s.provider === 'centrodm'
+          ? 'Imágenes' + (s.modality ? ' · Modalidad ' + P.esc(s.modality) : '') + ' · Archivo DICOM ZIP'
+          : (s.protocol ? 'Protocolo <span class="num">' + P.esc(s.protocol) + '</span>' : 'Sin número de protocolo')) +
         (s.status ? ' · ' + P.esc(s.status) : '') + (s.alreadyImported ? ' · Ya está en tu portal' : '') + '</span></span>' +
-        '<span class="res-date num">' + (s.deliveryDate ? 'Entregado ' + P.fmt(s.deliveryDate) : '') + '</span></label></li>').join('') + '</ul></div>' +
+        '<span class="res-date num">' + (s.date ? P.fmt(s.date) : s.deliveryDate ? 'Entregado ' + P.fmt(s.deliveryDate) : '') + '</span></label></li>').join('') + '</ul></div>' +
       (available.length ? '' : '<p class="res-note">' + ic('check', 18) + '<span>Todos estos estudios ya están en tu portal. No vamos a descargar copias.</span></p><p class="flow-actions center"><a class="btn btn-accent btn-lg" href="#/estudios">Ver mis estudios ' + ic('arrow-right', 20) + '</a></p>') +
       '<p class="res-note">' + ic('info', 18) + '<span>El asistente descarga solo los que elijas. No lee ni interpreta su contenido.</span></p>' +
       (available.length ? '<div class="res-bar"><div class="res-bar-in"><p class="res-count" aria-live="polite"><b class="num" id="sel-count">0</b> <span id="sel-word">estudios seleccionados</span></p>' +
@@ -814,7 +829,7 @@
   const DL_STEPS = [
     ['opening', (s) => 'Abriendo tu ' + (s.date ? 'estudio del ' + P.fmt(s.date) : 'estudio'), (s) => 'Abrí tu ' + (s.date ? 'estudio del ' + P.fmt(s.date) : 'estudio')],
     ['finding', () => 'Buscando el documento original', () => 'Encontré el documento original'],
-    ['downloading', () => 'Descargando el PDF', () => 'PDF descargado'],
+    ['downloading', (s) => s.provider === 'centrodm' ? 'Descargando el estudio DICOM ZIP' : 'Descargando el PDF', (s) => s.provider === 'centrodm' ? 'Estudio DICOM ZIP descargado' : 'PDF descargado'],
     ['importing', () => 'Agregándolo a tu portal', () => 'Agregado a tu portal'],
   ];
   const ORDER = { queued: -1, opening: 0, finding: 1, downloading: 2, importing: 3, stored: 4 };
@@ -827,10 +842,10 @@
     const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
     return (
       '<li class="dl-study' + (cur >= 0 && cur < 4 ? ' is-current' : '') + (failed ? ' is-failed' : '') + '">' +
-      '<div class="dl-head">' + P.typeTile('laboratorio') + '<span class="dl-name">' + studyLabel(s) +
-      (s.protocol ? '<small>Protocolo <span class="num">' + P.esc(s.protocol) + '</span></small>' : '') + '</span>' + head + '</div>' +
+      '<div class="dl-head">' + P.typeTile(s.provider === 'centrodm' ? 'imagenes' : 'laboratorio') + '<span class="dl-name">' + studyLabel(s) +
+      (s.provider === 'centrodm' ? (s.modality ? '<small>Modalidad ' + P.esc(s.modality) + '</small>' : '') : s.protocol ? '<small>Protocolo <span class="num">' + P.esc(s.protocol) + '</span></small>' : '') + '</span>' + head + '</div>' +
       (existing
-        ? '<p class="dl-fail">El PDF coincide con un estudio que ya guardaste. No creamos otra copia.</p>'
+        ? '<p class="dl-fail">Este estudio ya está en tu portal. No creamos otra copia.</p>'
         : failed
         ? '<p class="dl-fail">El asistente no encontró el documento de este estudio. Podés intentarlo de nuevo más tarde.</p>'
         : '<ol class="plist plist-sm">' + DL_STEPS.map((x, n) => {
@@ -848,7 +863,7 @@
     const doneN = chosen.filter((s) => L.phase[s.id] === 'stored' || L.phase[s.id] === 'existing' || L.phase[s.id] === 'failed').length;
     return (
       '<h1 class="flow-title center">El asistente está trabajando por vos</h1>' +
-      '<p class="flow-sub center">Está abriendo tus estudios en ' + i.name + ' y trayendo los PDF originales. No cierres la ventana del laboratorio.</p>' +
+      '<p class="flow-sub center">Está abriendo tus estudios en ' + i.name + ' y trayendo los archivos originales. No cierres la ventana de la institución.</p>' +
       '<p class="dl-count center" id="dl-count" aria-live="polite"><b class="num">' + doneN + '</b> de <span class="num">' + chosen.length + '</span> ' + (chosen.length === 1 ? 'estudio' : 'estudios') + '</p>' +
       '<ul class="dl-list" id="dl-list">' + chosen.map((s) => dlBlock(s, L.phase[s.id])).join('') + '</ul>'
     );
@@ -864,28 +879,31 @@
     refreshDownload();
     const ext = L.studies.find((s) => s.id === d.studyId);
     try {
-      const { blob, sha256 } = await P.agent.file(L.jobId, d.fileId);
+      const { blob, sha256, kind, mimeType } = await P.agent.file(L.jobId, d.fileId);
       if (!ext || !d.studyId) throw new Error('STUDY_METADATA_MISSING');
-      const duplicate = P.db.studies.find((study) => isPercambStudy(study) && sha256 && (study.file && study.file.sha256 || study.pdfSha256) === sha256);
+      const providerId = ext.provider || P.inst(F.inst).live;
+      const duplicate = P.db.studies.find((study) => isAgentStudyFromProvider(study, providerId) && sha256 && (study.file && study.file.sha256 || study.pdfSha256) === sha256);
       if (duplicate) {
         if (!duplicate.sourceKey && ext.sourceKey) duplicate.sourceKey = ext.sourceKey;
         P.save();
         L.phase[d.studyId] = 'existing';
         L.existing.push(duplicate);
       } else {
-        const key = 'pdf-' + d.fileId;
+        const key = (kind === 'DICOM_ZIP' ? 'dicom-' : 'pdf-') + d.fileId;
         await P.files.put(key, blob);
-        const id = 'pc-' + String(d.studyId).replace(/[^\w-]/g, '');
+        const id = (providerId === 'centrodm' ? 'cdm-' : 'pc-') + String(d.studyId).replace(/[^\w-]/g, '');
         const prev = P.study(id);
+        const isImage = providerId === 'centrodm' || kind === 'DICOM_ZIP';
         const study = {
-          id, name: 'Resultados de laboratorio', type: 'laboratorio',
+          id, name: isImage ? (ext.title || 'Estudio de imágenes') : 'Resultados de laboratorio', type: isImage ? 'imagenes' : 'laboratorio',
           date: ext.date || '', reportDate: ext.deliveryDate || null,
-          inst: F.inst, provider: ext.provider || 'percamb', providerDisplayName: P.inst(F.inst).name,
+          inst: F.inst, provider: providerId, providerDisplayName: P.inst(F.inst).name,
           sourceKey: ext.sourceKey || undefined,
+          modality: ext.modality || '', artifactKind: kind,
           requestedBy: 'Sin dato en el documento', protocol: ext.protocol || '', providerStatus: ext.status || '',
           status: 'disponible', pages: 0, images: 0, results: null, size: P.fmtBytes(blob.size),
           importedAt: d.importedAt || new Date().toISOString(), importedBy: d.importedBy || 'agent',
-          isNew: true, origin: 'agente', file: { key, bytes: blob.size, sha256 },
+          isNew: true, origin: 'agente', file: { key, bytes: blob.size, sha256, kind, mimeType },
         };
         if (prev && prev.file) P.files.del(prev.file.key).catch(() => {});
         if (prev) Object.assign(prev, study); else P.db.studies.push(study);
@@ -929,6 +947,8 @@
     PROVIDER_CHANGED: ['El sitio del laboratorio cambió', 'El asistente no reconoce cómo está organizado ahora y prefirió no adivinar. No se guardó ningún dato de esta búsqueda.', 'alert'],
     UNEXPECTED_DOMAIN: ['El asistente se detuvo por seguridad', 'El sitio intentó llevarlo a una dirección que no es la del laboratorio. No se guardó ningún dato de esta búsqueda.', 'shield'],
     NO_DOCUMENTS: ['No pudimos traer los documentos', 'El asistente no encontró el PDF de los estudios elegidos. Podés intentarlo de nuevo más tarde.', 'file'],
+    NO_ARTIFACTS_IMPORTED: ['No pudimos importar los estudios', 'No se logró descargar ningún archivo de los estudios seleccionados. Podés volver a intentarlo más tarde.', 'file'],
+    STUDY_REFERENCE_MISSING: ['No pudimos abrir el estudio seleccionado', 'Se perdió la referencia temporal del estudio en el laboratorio. Volvé a cargar el listado y probá otra vez.', 'alert'],
     LLM_NOT_CONFIGURED: ['El asistente no está disponible', 'Falta configurar el modelo de IA del asistente.', 'alert'],
     BROWSER_NOT_INSTALLED: ['El asistente no está disponible', 'Falta instalar el navegador del asistente (npx playwright install chromium).', 'alert'],
     MODEL_ERROR: ['El asistente no está disponible', 'No pudimos comunicarnos con el modelo de IA. Probá de nuevo en unos minutos.', 'alert'],

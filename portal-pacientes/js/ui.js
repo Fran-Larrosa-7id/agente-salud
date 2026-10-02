@@ -290,10 +290,16 @@
   P.instSub = (i) => i.kind + (i.city ? ' · ' + i.city : '');
 
   /* Metadatos del archivo: los PDF traídos por el agente no traen cantidad de páginas. */
-  P.fileMeta = (d) => 'PDF' + (d.pages ? ' · ' + P.plural(d.pages, 'página', 'páginas') : '') + (d.size ? ' · ' + d.size : '');
+  P.fileMeta = (d) => {
+    const kind = d.file && d.file.kind || d.artifactKind;
+    const label = kind === 'DICOM_ZIP' ? 'ZIP DICOM' : 'PDF';
+    return label + (d.pages ? ' · ' + P.plural(d.pages, 'página', 'páginas') : '') + (d.size ? ' · ' + d.size : '');
+  };
 
   P.download = function (d) {
-    const name = d.title.replace(/[^\wÁÉÍÓÚáéíóúñÑ ]+/g, '').trim().replace(/\s+/g, '_') + '_' + P.fmt(d.date).replace(/\//g, '-') + '.pdf';
+    const kind = d.file && d.file.kind || d.artifactKind;
+    const extension = kind === 'DICOM_ZIP' ? '.zip' : '.pdf';
+    const name = d.title.replace(/[^\wÁÉÍÓÚáéíóúñÑ ]+/g, '').trim().replace(/\s+/g, '_') + '_' + P.fmt(d.date).replace(/\//g, '-') + extension;
     if (!d.file) {
       P.toast('Descarga iniciada · <span class="num">' + P.esc(name) + '</span>', { icon: 'download' });
       return;

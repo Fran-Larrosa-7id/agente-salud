@@ -70,6 +70,21 @@ test('el logger solo acepta campos de la lista blanca y valores con forma de ide
   assert.equal(line, '[72abcdef] studies_found provider=percamb state=STUDIES_FOUND count=2 errorCode=[redacted]');
 });
 
+test('los diagnósticos estructurales Centro DM permiten forma, no destino ni query', () => {
+  const fields = {
+    provider: 'centrodm',
+    index: 0,
+    tag: 'a',
+    hrefPresent: true,
+    hrefKind: 'llamadoURL',
+    ancestorTr: true,
+    url: 'https://estudios.centrodm.com.ar/funcion/llamadoURL.php?studyId=patient-secret',
+  } as unknown as Parameters<typeof formatLine>[2];
+  const line = formatLine('72abcdef-0000', 'centrodm_action', fields);
+  assert.equal(line, '[72abcdef] centrodm_action provider=centrodm index=0 tag=a hrefPresent=true hrefKind=llamadoURL ancestorTr=true');
+  assert.ok(!line.includes('patient-secret'));
+});
+
 test('allowlist de dominios', () => {
   const p = new DomainPolicy(['biodatasa.com.ar', 'www.biodatasa.com.ar'], ['fonts.gstatic.com']);
   assert.ok(p.isAllowedNavigation('https://www.biodatasa.com.ar/lwcloud/percamb/login'));

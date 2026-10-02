@@ -15,8 +15,74 @@ import type { Config } from '../../src/config.js';
 const FAST: FakeOptions = { loginDelayMs: 30, stepMs: 10 };
 const providers = { fake: testProvider() };
 
+for (const cancel of [false, true]) {
+  test(`Pixeon debug: retención temporal y cierre por ${cancel ? 'cancelación' : 'timeout'}`, async () => {
+    let disposed = false;
+    const m = new JobManager({
+      config: testConfig({ pixeonDebugKeepViewerOpen: true }),
+      providers: { centrodm: { ...testProvider(), id: 'centrodm' } },
+      log: silentLogger,
+      runnerFactory: job => ({
+        debugViewerRetentionMs: 150,
+        start: async () => { job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'DOWNLOAD_ACTION_NOT_FOUND'); },
+        importSelected: async () => {},
+        dispose: async () => { disposed = true; },
+      }),
+    });
+    try {
+      const job = m.create('centrodm');
+      assert.equal(disposed, false, 'terminal no cierra inmediatamente');
+      if (cancel) await m.cancel(job.id);
+      else await waitFor(() => disposed, 2000);
+      assert.equal(disposed, true);
+    } finally { await m.shutdown(); }
+  });
+}
+
+test('Pixeon debug: no registra job_closed antes del TTL y lo registra al terminar', async () => {
+  let disposed = false;
+  const logs: string[] = [];
+  const m = new JobManager({
+    config: testConfig({ pixeonDebugKeepViewerOpen: true, pixeonDebugKeepViewerOpenMs: 120 }),
+    providers: { centrodm: { ...testProvider(), id: 'centrodm' } },
+    log: { info: (_id, message, fields) => logs.push(`${message} ${JSON.stringify(fields || {})}`), debug: () => {}, warn: () => {} },
+    runnerFactory: job => ({
+      debugViewerRetentionMs: 120,
+      start: async () => { job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'DOWNLOAD_ACTION_NOT_FOUND'); },
+      importSelected: async () => {},
+      dispose: async () => { disposed = true; },
+    }),
+  });
+  try {
+    m.create('centrodm');
+    assert.equal(disposed, false);
+    assert.ok(logs.some(line => line.startsWith('pixeon_debug_hold') && line.includes('ttlMs')));
+    assert.ok(!logs.some(line => line.startsWith('job_closed')));
+    await waitFor(() => disposed && logs.some(line => line.startsWith('job_closed')), 2_000);
+  } finally { await m.shutdown(); }
+});
+
 function manager(cfg: Config, opts: FakeOptions = FAST) {
   return new JobManager({ config: cfg, providers, runnerFactory: fakeRunnerFactory(opts), log: silentLogger });
+}
+
+for (const [enabled, code] of [[false, 'DOWNLOAD_ACTION_NOT_FOUND'], [true, 'INVALID_MEDICAL_ARCHIVE']] as const) {
+  test(`Pixeon: cleanup inmediato con debug=${enabled} y error=${code}`, async () => {
+    let disposed = false;
+    const m = new JobManager({
+      config: testConfig({ pixeonDebugKeepViewerOpen: enabled }),
+      providers: { centrodm: { ...testProvider(), id: 'centrodm' } },
+      log: silentLogger,
+      runnerFactory: job => ({
+        debugViewerRetentionMs: 90_000,
+        start: async () => { job.fail(S.AGENT_UNABLE_TO_CONTINUE, code); },
+        importSelected: async () => {},
+        dispose: async () => { disposed = true; },
+      }),
+    });
+    try { m.create('centrodm'); assert.equal(disposed, true); }
+    finally { await m.shutdown(); }
+  });
 }
 
 test('flujo completo con FakeProviderAgent: selección, archivos y limpieza al entregar', async () => {

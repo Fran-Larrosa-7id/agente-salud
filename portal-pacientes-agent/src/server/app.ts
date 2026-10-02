@@ -33,6 +33,7 @@ export function createApp({ config, manager, providers, info }: AppDeps) {
       res.setHeader('vary', 'Origin');
       res.setHeader('access-control-allow-methods', 'GET,POST,DELETE,OPTIONS');
       res.setHeader('access-control-allow-headers', 'content-type');
+      res.setHeader('access-control-expose-headers', 'x-content-sha256, x-artifact-kind');
       res.setHeader('access-control-max-age', '600');
     }
     if (req.method === 'OPTIONS') return void res.status(204).end();
@@ -123,10 +124,13 @@ export function createApp({ config, manager, providers, info }: AppDeps) {
     if (!job) return;
     const file = manager.file(job.id, String(req.params.fileId));
     if (!file || !existsSync(file.path)) return void res.status(404).json({ error: 'FILE_NOT_FOUND' });
-    res.setHeader('content-type', 'application/pdf');
+    res.setHeader('content-type', file.mimeType);
     res.setHeader('content-length', String(file.bytes));
-    res.setHeader('content-disposition', 'inline; filename="estudio.pdf"');
+    res.setHeader('content-disposition', file.kind === 'PDF'
+      ? 'inline; filename="estudio.pdf"'
+      : 'attachment; filename="estudio-dicom.zip"');
     res.setHeader('x-content-sha256', file.sha256);
+    res.setHeader('x-artifact-kind', file.kind);
     const stream = createReadStream(file.path);
     stream.on('error', () => res.destroy());
     res.on('finish', () => void manager.markDelivered(job.id, file.id));

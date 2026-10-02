@@ -21,6 +21,7 @@ interface Entry {
   files: JobFileStore;
   delivered: Set<string>;
   timers: NodeJS.Timeout[];
+  debugDisposeTimer?: NodeJS.Timeout;
 }
 
 export interface ManagerDeps {
@@ -35,7 +36,7 @@ export interface ManagerDeps {
 /**
  * Crea, sigue y limpia jobs. Garantías:
  * - TTL por job (JOB_TTL): al vencer, EXPIRED y limpieza completa.
- * - Al terminar (cualquier estado terminal) se cierra el navegador del job.
+ * - Al terminar se cierra el navegador, salvo retención DEV temporal de un fallo recuperable Pixeon.
  * - Si no terminó en COMPLETED, se borran sus archivos en el acto.
  * - Si terminó en COMPLETED, los PDF se borran cuando el frontend los retira todos, al cancelar,
  *   o al vencer FILE_RETENTION (lo que ocurra primero).
@@ -54,7 +55,7 @@ export class JobManager {
     if (this.activeCount() >= config.maxConcurrentJobs) throw new ManagerError('TOO_MANY_JOBS', 429);
 
     const job = new ImportJob(provider.id, provider.name);
-    const files = new JobFileStore(config.tmpDir, job.id, config.maxPdfBytes);
+    const files = new JobFileStore(config.tmpDir, job.id, config.maxPdfBytes, config.maxMedicalArchiveBytes);
     const runner = this.deps.runnerFactory(job, { config, provider, files, log });
     const entry: Entry = { job, runner, files, delivered: new Set(), timers: [] };
     this.jobs.set(job.id, entry);
@@ -72,7 +73,7 @@ export class JobManager {
   }
 
   activeCount(): number {
-    return [...this.jobs.values()].filter((e) => !e.job.isTerminal).length;
+    return [...this.jobs.values()].filter((e) => !e.job.isTerminal || (e.runner.debugViewerRetentionMs || 0) > 0).length;
   }
 
   select(jobId: string, studyIds: unknown, importedSourceKeys?: unknown): string[] {
@@ -110,6 +111,7 @@ export class JobManager {
   async cancel(jobId: string): Promise<ImportJob> {
     const e = this.jobs.get(jobId);
     if (!e) throw new ManagerError('JOB_NOT_FOUND', 404);
+    if (e.debugDisposeTimer) clearTimeout(e.debugDisposeTimer);
     if (!e.job.fail(JobState.CANCELLED, 'CANCELLED_BY_USER')) {
       // Ya había terminado (p. ej. COMPLETED): el frontend avisa que terminó de retirar los archivos.
       await e.files.cleanup();
@@ -118,28 +120,44 @@ export class JobManager {
     return e.job;
   }
 
-  private timer(e: Entry, ms: number, fn: () => void): void {
+  private timer(e: Entry, ms: number, fn: () => void): NodeJS.Timeout {
     const t = setTimeout(fn, ms);
     t.unref();
     e.timers.push(t);
+    return t;
   }
 
   private async onTerminal(e: Entry, state: JobState): Promise<void> {
     const { config, log } = this.deps;
-    await e.runner.dispose().catch(() => {});
+    const recoverable = ['VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(e.job.errorCode || '');
+    const hold = recoverable && state === JobState.AGENT_UNABLE_TO_CONTINUE && config.pixeonDebugKeepViewerOpen && e.job.provider === 'centrodm'
+      ? Math.min(config.pixeonDebugKeepViewerOpenMs, e.runner.debugViewerRetentionMs || 0) : 0;
+    if (hold > 0) {
+      log.info(e.job.id, 'pixeon_debug_hold', { viewer: true, reason: e.job.errorCode, ttlMs: hold });
+      log.info(e.job.id, 'pixeon_debug_viewer_held', { durationMs: hold, errorCode: e.job.errorCode });
+      e.debugDisposeTimer = this.timer(e, hold, () => void e.runner.dispose().catch(() => {}).then(() => {
+        log.info(e.job.id, 'pixeon_debug_viewer_closed');
+        log.info(e.job.id, 'job_closed', { provider: e.job.provider, state, errorCode: e.job.errorCode, files: e.job.files.length });
+      }));
+    } else await e.runner.dispose().catch(() => {});
     if (state !== JobState.COMPLETED) await e.files.cleanup();
     else this.timer(e, config.fileRetentionMs, () => void e.files.cleanup());
-    log.info(e.job.id, 'job_closed', { provider: e.job.provider, state, errorCode: e.job.errorCode, files: e.job.files.length });
+    if (hold === 0) log.info(e.job.id, 'job_closed', { provider: e.job.provider, state, errorCode: e.job.errorCode, files: e.job.files.length });
     const keep = state === JobState.COMPLETED ? Math.max(config.jobRetentionMs, config.fileRetentionMs) : config.jobRetentionMs;
-    this.timer(e, keep, () => void this.forget(e));
+    this.timer(e, keep + hold, () => void this.forget(e));
   }
 
   private async expire(e: Entry): Promise<void> {
-    if (!e.job.fail(JobState.EXPIRED, 'JOB_TTL')) await e.files.cleanup();
+    if (e.debugDisposeTimer) clearTimeout(e.debugDisposeTimer);
+    if (!e.job.fail(JobState.EXPIRED, 'JOB_TTL')) {
+      await e.runner.dispose().catch(() => {});
+      await e.files.cleanup();
+    }
   }
 
   private async forget(e: Entry): Promise<void> {
     e.timers.forEach(clearTimeout);
+    await e.runner.dispose().catch(() => {});
     await e.files.cleanup();
     e.job.removeAllListeners();
     this.jobs.delete(e.job.id);

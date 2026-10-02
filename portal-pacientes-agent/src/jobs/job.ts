@@ -10,6 +10,8 @@ export interface ExternalStudy {
   protocol?: string;
   deliveryDate?: string;
   status?: string;
+  title?: string;
+  modality?: string;
   provider: string;
 }
 
@@ -17,6 +19,9 @@ export interface JobFileInfo {
   id: string;
   studyId: string;
   bytes: number;
+  sha256: string;
+  kind: 'PDF' | 'DICOM_ZIP';
+  mimeType: 'application/pdf' | 'application/zip';
   duplicate: boolean;
   importedAt: string;
   importedBy: 'agent';

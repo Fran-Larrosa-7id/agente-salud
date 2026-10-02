@@ -6,7 +6,7 @@ import { canTransition, isTerminal, JobState as S, TERMINAL_STATES } from '../..
 test('camino feliz completo de la máquina de estados', () => {
   const path = [
     S.OPENING_PROVIDER, S.WAITING_FOR_USER_LOGIN, S.AUTHENTICATED, S.AGENT_STARTING, S.AGENT_OBSERVING,
-    S.SEARCHING_STUDIES, S.STUDIES_FOUND, S.WAITING_SELECTION, S.OPENING_STUDY, S.FINDING_DOCUMENT,
+    S.SEARCHING_STUDIES, S.STUDIES_FOUND, S.WAITING_SELECTION, S.OPENING_STUDY, S.VIEWER_READY, S.FINDING_DOCUMENT,
     S.DOWNLOADING, S.IMPORTING, S.OPENING_STUDY, S.DOWNLOADING, S.IMPORTING, S.COMPLETED,
   ];
   const job = new ImportJob('percamb', 'Pérez Cambet');
@@ -88,13 +88,13 @@ test('cada archivo importado conserva el studyId explícito, aunque se seleccion
   ]);
   for (const state of [S.OPENING_PROVIDER, S.WAITING_FOR_USER_LOGIN, S.AUTHENTICATED, S.AGENT_STARTING, S.AGENT_OBSERVING, S.SEARCHING_STUDIES, S.STUDIES_FOUND, S.WAITING_SELECTION]) job.transition(state);
   job.select(['study-b', 'study-a'], 10);
-  job.addFile({ id: 'pdf-b', studyId: 'study-b', bytes: 100, duplicate: false, importedAt: '2026-09-29T12:00:00.000Z', importedBy: 'agent' });
-  job.addFile({ id: 'pdf-a', studyId: 'study-a', bytes: 120, duplicate: false, importedAt: '2026-09-29T12:00:01.000Z', importedBy: 'agent' });
+  job.addFile({ id: 'pdf-b', studyId: 'study-b', bytes: 100, sha256: 'b'.repeat(64), kind: 'PDF', mimeType: 'application/pdf', duplicate: false, importedAt: '2026-09-29T12:00:00.000Z', importedBy: 'agent' });
+  job.addFile({ id: 'pdf-a', studyId: 'study-a', bytes: 120, sha256: 'a'.repeat(64), kind: 'PDF', mimeType: 'application/pdf', duplicate: false, importedAt: '2026-09-29T12:00:01.000Z', importedBy: 'agent' });
   assert.deepEqual(job.files.map(({ id, studyId }) => ({ id, studyId })), [
     { id: 'pdf-b', studyId: 'study-b' },
     { id: 'pdf-a', studyId: 'study-a' },
   ]);
-  assert.throws(() => job.addFile({ id: 'orphan', studyId: 'other', bytes: 5, duplicate: false, importedAt: '2026-09-29T12:00:02.000Z', importedBy: 'agent' }), /FILE_STUDY_MISMATCH/);
+  assert.throws(() => job.addFile({ id: 'orphan', studyId: 'other', bytes: 5, sha256: '0'.repeat(64), kind: 'PDF', mimeType: 'application/pdf', duplicate: false, importedAt: '2026-09-29T12:00:02.000Z', importedBy: 'agent' }), /FILE_STUDY_MISMATCH/);
 });
 
 test('el snapshot público no expone internos', () => {

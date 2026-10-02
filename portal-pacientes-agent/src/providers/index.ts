@@ -1,9 +1,11 @@
 import { percamb } from './percamb/percamb.provider.js';
+import { centroDm } from './centrodm/centrodm.provider.js';
 import type { ProviderConfig } from './types.js';
 
-/** Alcance del MVP: solo Pérez Cambet. */
+/** Providers conocidos. Los orígenes del viewer Pixeon se agregan solo por configuración explícita. */
 export const PROVIDERS: Record<string, ProviderConfig> = {
   [percamb.id]: percamb,
+  [centroDm.id]: centroDm,
 };
 
 export type { ProviderConfig } from './types.js';

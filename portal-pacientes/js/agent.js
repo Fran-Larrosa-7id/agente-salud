@@ -47,6 +47,16 @@
     start: (provider) => call('POST', '/api/imports/' + encodeURIComponent(provider)),
     job: (id) => call('GET', '/api/imports/' + id),
     importSelected: (id, studyIds, importedSourceKeys) => call('POST', '/api/imports/' + id + '/import', { studyIds, importedSourceKeys }),
+    async acknowledgePortalImport(id, fileId, studyId, persisted) {
+      const path = '/api/imports/' + id + '/files/' + fileId + '/ack';
+      const body = { studyId, persisted };
+      try { return await call('POST', path, body); }
+      catch (error) {
+        if (error instanceof AgentError && error.status) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        return call('POST', path, body); // idempotente: cubre una respuesta perdida después del acuse.
+      }
+    },
     retryDiscovery: (id) => call('POST', '/api/imports/' + id + '/retry-discovery'),
     cancel: (id) => call('DELETE', '/api/imports/' + id).catch(() => null),
     /* Suscripción SSE. Devuelve una función para cerrarla. */
@@ -105,15 +115,15 @@
       const r = fn(t.objectStore(STORE));
       t.oncomplete = () => resolve(r && 'result' in r ? r.result : undefined);
       t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('IDB_TX_ABORTED'));
     }));
   }
-  // El Blob queda también en memoria: si IndexedDB no está disponible (ventana privada, sin cuota),
-  // el PDF se puede ver y descargar igual durante la sesión.
+  // La memoria solo acelera lecturas. Una importación se confirma únicamente cuando IndexedDB
+  // confirmó la escritura, para que el archivo siga disponible después de cerrar o recargar el Portal.
   const mem = new Map();
   P.files = {
     put(key, blob) {
-      mem.set(key, blob);
-      return tx('readwrite', (s) => s.put(blob, key)).then(() => true, () => false);
+      return tx('readwrite', (s) => s.put(blob, key)).then(() => { mem.set(key, blob); return true; }, () => false);
     },
     get(key) {
       if (mem.has(key)) return Promise.resolve(mem.get(key));

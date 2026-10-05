@@ -20,6 +20,8 @@ interface Entry {
   runner: JobRunner;
   files: JobFileStore;
   delivered: Set<string>;
+  portalAcks: Set<string>;
+  importFinished: boolean;
   timers: NodeJS.Timeout[];
   debugDisposeTimer?: NodeJS.Timeout;
 }
@@ -38,8 +40,9 @@ export interface ManagerDeps {
  * - TTL por job (JOB_TTL): al vencer, EXPIRED y limpieza completa.
  * - Al terminar se cierra el navegador, salvo retención DEV temporal de un fallo recuperable Pixeon.
  * - Si no terminó en COMPLETED, se borran sus archivos en el acto.
- * - Si terminó en COMPLETED, los PDF se borran cuando el frontend los retira todos, al cancelar,
- *   o al vencer FILE_RETENTION (lo que ocurra primero).
+ * - COMPLETED solo se emite tras el acuse del Portal por cada artifact/estudio persistido.
+ * - Los temporales se borran tras completar todos los acuses y entregar los bytes, al cancelar,
+ *   al fallar la importación o al vencer la retención.
  */
 export class JobManager {
   private readonly jobs = new Map<string, Entry>();
@@ -57,7 +60,7 @@ export class JobManager {
     const job = new ImportJob(provider.id, provider.name);
     const files = new JobFileStore(config.tmpDir, job.id, config.maxPdfBytes, config.maxMedicalArchiveBytes);
     const runner = this.deps.runnerFactory(job, { config, provider, files, log });
-    const entry: Entry = { job, runner, files, delivered: new Set(), timers: [] };
+    const entry: Entry = { job, runner, files, delivered: new Set(), portalAcks: new Set(), importFinished: false, timers: [] };
     this.jobs.set(job.id, entry);
 
     job.on('event', (ev: { type: string }) => log.info(job.id, 'job_event', { provider: provider.id, state: job.state, event: ev.type }));
@@ -80,7 +83,9 @@ export class JobManager {
     const e = this.jobs.get(jobId);
     if (!e) throw new ManagerError('JOB_NOT_FOUND', 404);
     const ids = e.job.select(studyIds, this.deps.config.maxDownloadsPerJob, importedSourceKeys);
-    void e.runner.importSelected(ids).catch(() => e.job.fail(JobState.ERROR, 'INTERNAL'));
+    void e.runner.importSelected(ids)
+      .then(() => this.importWorkFinished(e))
+      .catch(() => e.job.fail(JobState.ERROR, 'INTERNAL'));
     return ids;
   }
 
@@ -100,12 +105,60 @@ export class JobManager {
     return e.files.get(fileId);
   }
 
-  /** El frontend ya guardó el archivo: si están todos entregados y el job terminó, se borran. */
+  /** El navegador del Portal recibió los bytes; esto por sí solo no significa que ya los persistió. */
   async markDelivered(jobId: string, fileId: string): Promise<void> {
     const e = this.jobs.get(jobId);
     if (!e) return;
     e.delivered.add(fileId);
     if (e.job.state === JobState.COMPLETED && e.delivered.size >= e.files.count) await e.files.cleanup();
+  }
+
+  /** El Portal confirma un archivo solo después de persistir su Blob y el estudio asociado. */
+  async acknowledgePortalImport(jobId: string, fileId: string, studyId: string, persisted: boolean): Promise<ImportJob> {
+    const e = this.jobs.get(jobId);
+    if (!e) throw new ManagerError('JOB_NOT_FOUND', 404);
+    const ackKey = `${fileId}:${studyId}`;
+    if (e.portalAcks.has(ackKey)) return e.job;
+    const record = e.job.files.find((file) => file.id === fileId && file.studyId === studyId);
+    if (!record || !e.files.get(fileId)) throw new ManagerError('FILE_NOT_FOUND', 404);
+    if (e.job.isTerminal) throw new ManagerError('JOB_TERMINAL', 409);
+
+    if (!persisted) {
+      this.deps.log.warn(jobId, 'portal_artifact_import_failed', { provider: e.job.provider, errorCode: 'ARTIFACT_IMPORT_FAILED' });
+      e.job.fail(JobState.AGENT_UNABLE_TO_CONTINUE, 'ARTIFACT_IMPORT_FAILED');
+      return e.job;
+    }
+
+    e.portalAcks.add(ackKey);
+    if (e.job.provider === 'centrodm') {
+      this.deps.log.info(jobId, 'centrodm_artifact_persisted', { fileIdPresent: true });
+      this.deps.log.info(jobId, 'centrodm_study_persisted', { studyPersisted: true });
+    }
+    this.completeIfPersisted(e);
+    return e.job;
+  }
+
+  private importWorkFinished(e: Entry): void {
+    if (e.job.isTerminal) return;
+    if (e.job.files.length === 0) {
+      e.job.fail(JobState.AGENT_UNABLE_TO_CONTINUE, e.job.provider === 'centrodm' ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS');
+      return;
+    }
+    e.importFinished = true;
+    // Un estudio anterior pudo producir un archivo y el último seleccionado fallar antes de
+    // descargarlo. Aun así, el Portal necesita confirmar la persistencia del archivo existente.
+    if (e.job.state !== JobState.IMPORTING) e.job.transition(JobState.IMPORTING, { files: e.job.files.length });
+    this.completeIfPersisted(e);
+  }
+
+  private completeIfPersisted(e: Entry): void {
+    if (!e.importFinished || e.job.isTerminal || e.job.files.length === 0) return;
+    const expected = new Set(e.job.files.map((file) => `${file.id}:${file.studyId}`));
+    if ([...expected].some((key) => !e.portalAcks.has(key))) return;
+    e.job.transition(JobState.COMPLETED, { files: e.job.files.length, failures: e.job.failures.length });
+    if (e.job.provider === 'centrodm') this.deps.log.info(e.job.id, 'centrodm_import_complete', { files: e.job.files.length, failures: e.job.failures.length });
+    // El endpoint de archivos ya entregó los bytes antes de que el Portal pudiera acusar recibo.
+    if (e.delivered.size >= e.files.count) void e.files.cleanup();
   }
 
   async cancel(jobId: string): Promise<ImportJob> {

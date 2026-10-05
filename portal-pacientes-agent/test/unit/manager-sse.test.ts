@@ -92,13 +92,33 @@ test('flujo completo con FakeProviderAgent: selección, archivos y limpieza al e
   await waitFor(() => job.state === S.WAITING_SELECTION);
   assert.equal(job.studies.length, 2);
   m.select(job.id, [job.studies[0].id]);
-  await waitFor(() => job.state === S.COMPLETED);
+  await waitFor(() => job.state === S.IMPORTING && job.files.length === 1);
+  assert.equal(job.isTerminal, false, 'el ZIP/PDF en storage temporal no completa por sí solo el job');
   assert.equal(job.files.length, 1, 'solo el estudio elegido');
   const f = m.file(job.id, job.files[0].id)!;
   assert.ok(existsSync(f.path));
   assert.equal(path.basename(path.dirname(f.path)), job.id);
   await m.markDelivered(job.id, f.id);
+  assert.ok(existsSync(f.path), 'recibir el archivo no lo limpia antes del acuse de persistencia');
+  await m.acknowledgePortalImport(job.id, f.id, job.files[0].studyId, true);
+  await waitFor(() => job.state === S.COMPLETED);
   assert.equal(existsSync(path.join(cfg.tmpDir, job.id)), false, 'entregados todos, se borran');
+  await m.shutdown();
+});
+
+test('fallo de persistencia del Portal termina con ARTIFACT_IMPORT_FAILED, nunca COMPLETED', async () => {
+  const cfg = testConfig();
+  const m = manager(cfg);
+  const job = m.create('fake');
+  await waitFor(() => job.state === S.WAITING_SELECTION);
+  m.select(job.id, [job.studies[0].id]);
+  await waitFor(() => job.state === S.IMPORTING && job.files.length === 1);
+  const file = job.files[0];
+  await m.acknowledgePortalImport(job.id, file.id, file.studyId, false);
+  assert.equal(job.state, S.AGENT_UNABLE_TO_CONTINUE);
+  assert.equal(job.errorCode, 'ARTIFACT_IMPORT_FAILED');
+  assert.equal(job.eventsSince(0).some((event) => event.type === 'completed'), false);
+  await waitFor(() => !existsSync(path.join(cfg.tmpDir, job.id)));
   await m.shutdown();
 });
 
@@ -177,8 +197,28 @@ test('API + SSE: eventos en orden, importación y descarga del PDF', async () =>
       buf += dec.decode(value, { stream: true });
       // Lo anterior a la conexión llega dentro del snapshot (según cuánto tardó en conectarse).
       if (buf.includes('"state":"WAITING_SELECTION"') && !events.includes('waiting_selection')) events.push('waiting_selection');
-      for (const m of buf.matchAll(/event: (\w+)/g)) if (!events.includes(m[1]) || m[1].startsWith('file')) events.push(m[1]);
-      buf = buf.slice(buf.lastIndexOf('\n\n') + 2);
+      let boundary;
+      while ((boundary = buf.indexOf('\n\n')) >= 0) {
+        const frame = buf.slice(0, boundary);
+        buf = buf.slice(boundary + 2);
+        const eventType = frame.match(/^event: (\w+)$/m)?.[1];
+        if (!eventType) continue;
+        if (!events.includes(eventType) || eventType === 'file_ready') events.push(eventType);
+        if (eventType === 'file_ready') {
+          const dataLine = frame.match(/^data: (.+)$/m)?.[1];
+          assert.ok(dataLine, 'file_ready incluye metadata para confirmar el artifact');
+          const artifact = JSON.parse(dataLine) as { fileId: string; studyId: string };
+          const downloaded = await fetch(`${base}/api/imports/${jobId}/files/${artifact.fileId}`);
+          assert.equal(downloaded.status, 200);
+          assert.equal(downloaded.headers.get('content-type'), 'application/pdf');
+          assert.ok(Buffer.from(await downloaded.arrayBuffer()).subarray(0, 5).toString() === '%PDF-');
+          const ack = await fetch(`${base}/api/imports/${jobId}/files/${artifact.fileId}/ack`, {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ studyId: artifact.studyId, persisted: true }),
+          });
+          assert.equal(ack.status, 202);
+        }
+      }
       if (!imported && events.includes('waiting_selection')) {
         imported = true;
         const studies = (await (await fetch(`${base}/api/imports/${jobId}/studies`)).json()) as { studies: { id: string }[] };
@@ -204,9 +244,6 @@ test('API + SSE: eventos en orden, importación y descarga del PDF', async () =>
 
     const snap = (await (await fetch(`${base}/api/imports/${jobId}`)).json()) as { files: { id: string }[] };
     assert.equal(snap.files.length, 2);
-    const pdf = await fetch(`${base}/api/imports/${jobId}/files/${snap.files[0].id}`);
-    assert.equal(pdf.headers.get('content-type'), 'application/pdf');
-    assert.ok(Buffer.from(await pdf.arrayBuffer()).subarray(0, 5).toString() === '%PDF-');
 
     const del = await fetch(`${base}/api/imports/${jobId}`, { method: 'DELETE' });
     assert.equal(del.status, 200);

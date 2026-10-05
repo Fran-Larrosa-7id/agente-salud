@@ -236,7 +236,7 @@
   }
   P.db = load();
   P.save = function () {
-    try { localStorage.setItem(P.STORE_KEY, JSON.stringify(P.db)); } catch (e) { /* noop */ }
+    try { localStorage.setItem(P.STORE_KEY, JSON.stringify(P.db)); return true; } catch (e) { return false; }
   };
   P.resetDemo = function () {
     const session = P.db.session;

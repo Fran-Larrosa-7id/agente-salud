@@ -155,12 +155,17 @@ test('Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imáge
     assert.equal(await page.locator('.res-list li').count(), 2);
     assert.match(await page.locator('.res-list').innerText(), /Reconstrucción 3D[\s\S]*Modalidad SC[\s\S]*DICOM ZIP[\s\S]*08\/04\/2024/);
     await page.click('.res-list li:first-child .res-row');
+    await page.click('.res-list li:nth-child(2) .res-row');
     await page.click('#res-save');
     await page.waitForSelector('.fv-success', { timeout: 10_000 });
-    const study = await page.evaluate(() => {
+    const studies = await page.evaluate(() => {
       const db = JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}');
-      return db.studies?.find((item: { provider?: string }) => item.provider === 'centrodm');
+      return db.studies?.filter((item: { provider?: string }) => item.provider === 'centrodm');
     });
+    assert.equal(studies.length, 2, 'cada estudio conserva su ficha incluso cuando comparte el mismo ZIP');
+    const study = studies.find((item: { name?: string }) => item.name === 'Reconstrucción 3D');
+    assert.equal(studies[0].file.key, studies[1].file.key, 'los estudios con el mismo SHA comparten un solo Blob persistido');
+    assert.equal(studies[0].file.sha256, studies[1].file.sha256);
     assert.equal(study.type, 'imagenes');
     assert.equal(study.name, 'Reconstrucción 3D');
     assert.equal(study.modality, 'SC');
@@ -171,26 +176,77 @@ test('Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imáge
     const download = page.waitForEvent('download');
     await page.click('.success-list [data-action=doc-download]');
     assert.match((await download).suggestedFilename(), /\.zip$/);
-    await page.goto(base + '/index.html#/estudios/' + encodeURIComponent(study.id));
+    await page.goto(base + '/index.html?persist-check=1#/estudios/' + encodeURIComponent(study.id));
     await page.waitForSelector('.detail-head');
+    const persistedSize = await page.evaluate(async (key: string) => (await (window as any).P.files.get(key))?.size || 0, study.file.key);
+    assert.ok(persistedSize > 0, 'el ZIP sigue en IndexedDB después de cargar de nuevo el Portal');
     const detail = await page.locator('.detail-grid').innerText();
     assert.match(detail, /Archivo original DICOM/);
     assert.match(detail, /ZIP DICOM/);
     assert.match(detail, /no tiene visor DICOM/i);
     assert.doesNotMatch(detail, /Ver documento|PDF original/);
+    const refreshedDownload = page.waitForEvent('download');
+    await page.click('.detail-actions [data-action=doc-download]');
+    assert.match((await refreshedDownload).suggestedFilename(), /\.zip$/);
 
     await page.goto(base + '/index.html#/traer?inst=cdm');
     await page.click('[data-action=live-open]');
     await page.waitForSelector('.res-list', { timeout: 10_000 });
     assert.equal(await page.locator('.res-list li:first-child input').isDisabled(), true);
     assert.match(await page.locator('.res-list li:first-child').innerText(), /ya está en tu portal/i);
-    assert.equal(await page.locator('.res-list li:nth-child(2) input').isDisabled(), false, 'conserva seleccionables los estudios todavía no importados');
-    assert.equal(await page.locator('#res-all').isDisabled(), false);
+    assert.equal(await page.locator('.res-list li:nth-child(2) input').isDisabled(), true, 'el segundo estudio también conserva su ficha y no se importa de nuevo');
+    assert.equal(await page.locator('#res-all').isDisabled(), true);
     await page.click('.flow-exit');
     await page.click('.ov [data-confirm]');
     await page.waitForFunction(() => !location.hash.startsWith('#/traer'));
     assert.deepEqual(errors, []);
     assert.equal(manager.activeCount(), 0);
+  } finally {
+    await browser.close();
+    server.close();
+    await manager.shutdown();
+  }
+});
+
+test('Portal: no confirma la importación si no puede persistir el ZIP o sus metadatos', { timeout: 60_000 }, async () => {
+  const cfg = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes') });
+  const manager = new JobManager({ config: cfg, providers: PROVIDERS, runnerFactory: fakeRunnerFactory({ loginDelayMs: 20, stepMs: 20 }), log: silentLogger });
+  const app = createApp({ config: cfg, manager, providers: PROVIDERS, info: { runner: 'fake', model: 'fake', modelReady: true } });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
+  try {
+    for (const persistenceFailure of ['indexeddb', 'metadata'] as const) {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+      await page.addInitScript(`
+        localStorage.setItem('pp_agent_url', ${JSON.stringify(base)});
+        ${persistenceFailure === 'indexeddb'
+          ? "Object.defineProperty(IDBFactory.prototype, 'open', { configurable: true, value() { throw new DOMException('blocked', 'SecurityError'); } });"
+          : "const setItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'portal_pacientes_v1') throw new DOMException('quota', 'QuotaExceededError'); return setItem.call(this, key, value); };"}
+      `);
+      await page.goto(base + '/index.html#/login');
+      await page.fill('#dni', '32456789');
+      await page.fill('#pass', 'demo1234');
+      await page.click('#login-form [type=submit]');
+      await page.waitForSelector('.home-head');
+      await page.goto(base + '/index.html#/traer?inst=cdm');
+      const startResponse = page.waitForResponse((response) => response.request().method() === 'POST' && /\/api\/imports\/centrodm$/.test(response.url()));
+      await page.click('[data-action=live-open]');
+      const { jobId } = await (await startResponse).json() as { jobId: string };
+      await page.waitForSelector('.res-list', { timeout: 10_000 });
+      await page.click('.res-list li:first-child .res-row');
+      await page.click('#res-save');
+      await page.getByRole('heading', { name: 'No pudimos guardar los estudios en tu Portal' }).waitFor({ timeout: 15_000 });
+      assert.equal(await page.locator('.fv-success').count(), 0, `${persistenceFailure}: no muestra éxito sin persistencia`);
+      assert.match(await page.locator('.live-error').innerText(), /no confirmamos la importación/i);
+      const portalStudies = await page.evaluate(() => (window as any).P.db.studies.filter((item: { provider?: string }) => item.provider === 'centrodm').length);
+      assert.equal(portalStudies, 0, `${persistenceFailure}: no deja metadatos de un archivo que no se guardó`);
+      const failedJob = manager.get(jobId)!;
+      assert.equal(failedJob.errorCode, 'ARTIFACT_IMPORT_FAILED');
+      assert.equal(failedJob.eventsSince(0).some((event) => event.type === 'completed'), false, `${persistenceFailure}: el agente tampoco emite completed`);
+      await page.close();
+    }
   } finally {
     await browser.close();
     server.close();

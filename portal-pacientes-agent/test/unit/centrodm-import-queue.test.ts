@@ -61,7 +61,8 @@ test('Centro DM procesa la cola secuencialmente y continúa tras un fallo recupe
     'open:study-b', 'close:study-b',
     'open:study-c', 'download:study-c', 'close:study-c',
   ]);
-  assert.equal(job.state, S.COMPLETED);
+  assert.equal(job.state, S.IMPORTING, 'el runner descarga y valida; el Portal todavía debe acusar persistencia');
+  assert.equal(job.isTerminal, false);
   assert.deepEqual(job.files.map((file) => file.studyId), ['study-a', 'study-c']);
   assert.deepEqual(job.failures, [{ studyId: 'study-b', code: 'VIEWER_NOT_RECOGNIZED' }]);
   await files.cleanup();
@@ -114,16 +115,18 @@ test('Centro DM despacha sin documentos genéricos y reporta una referencia de e
 
   await runner.importSelected([studyId]);
 
-  assert.deepEqual(trace.slice(0, 5), [
+  assert.deepEqual(trace.slice(0, 6), [
     'log:import_dispatch',
     'log:centrodm_import_queue',
+    'log:centrodm_import_start',
     'log:centrodm_study_start',
     'state:OPENING_STUDY',
     'openStudy',
   ]);
   assert.match(logLines[0], /import_dispatch provider=centrodm selectedCount=1$/);
   assert.match(logLines[1], /centrodm_import_queue count=1$/);
-  assert.match(logLines[2], /centrodm_study_start index=1 count=1$/);
+  assert.match(logLines[2], /centrodm_import_start count=1$/);
+  assert.match(logLines[3], /centrodm_study_start index=1 count=1$/);
   assert.equal(job.state, S.AGENT_UNABLE_TO_CONTINUE);
   assert.equal(job.errorCode, 'STUDY_REFERENCE_MISSING');
   assert.deepEqual(job.failures, [{ studyId, code: 'STUDY_REFERENCE_MISSING' }]);

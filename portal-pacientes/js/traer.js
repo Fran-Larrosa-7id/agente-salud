@@ -529,7 +529,7 @@
 
   function liveBegin(jobId) {
     const L = (F.live = {
-      jobId, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], saved: [], existing: [],
+      jobId, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], importFailures: [], saved: [], existing: [],
       human: null, error: null, at: 1, completed: false, closed: false, found: null, stop: null,
     });
     L.stop = P.agent.events(jobId, (type, data) => onLiveEvent(L, type, data), () => {
@@ -837,9 +837,10 @@
   function dlBlock(s, phase) {
     const failed = phase === 'failed';
     const existing = phase === 'existing';
+    const importFailed = failed && F.live && F.live.importFailures.includes(s.id);
     const cur = failed ? -2 : ORDER[phase] === undefined ? -1 : ORDER[phase];
     const st = (n) => (cur > n ? 'done' : cur === n ? 'active' : 'pending');
-    const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
+    const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', importFailed ? 'No se guardó' : 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
     return (
       '<li class="dl-study' + (cur >= 0 && cur < 4 ? ' is-current' : '') + (failed ? ' is-failed' : '') + '">' +
       '<div class="dl-head">' + P.typeTile(s.provider === 'centrodm' ? 'imagenes' : 'laboratorio') + '<span class="dl-name">' + studyLabel(s) +
@@ -847,7 +848,7 @@
       (existing
         ? '<p class="dl-fail">Este estudio ya está en tu portal. No creamos otra copia.</p>'
         : failed
-        ? '<p class="dl-fail">El asistente no encontró el documento de este estudio. Podés intentarlo de nuevo más tarde.</p>'
+        ? '<p class="dl-fail">' + (importFailed ? 'No pudimos guardar el archivo original junto con su estudio en el Portal.' : 'El asistente no encontró el documento de este estudio. Podés intentarlo de nuevo más tarde.') + '</p>'
         : '<ol class="plist plist-sm">' + DL_STEPS.map((x, n) => {
           const state = st(n);
           return '<li class="pl" data-state="' + state + '"><span class="pl-icon" aria-hidden="true"><span class="pl-spin"></span>' + ic('check', 14) + ic('x', 14) + '</span>' +
@@ -874,46 +875,93 @@
     if (v) v.innerHTML = viewDownload();
   }
 
+  function persistedStudyArtifact(id, key, sha256) {
+    try {
+      const raw = localStorage.getItem(P.STORE_KEY);
+      const savedDb = raw && JSON.parse(raw);
+      const savedStudy = savedDb && Array.isArray(savedDb.studies) && savedDb.studies.find((item) => item.id === id);
+      return !!savedStudy && !!savedStudy.file && savedStudy.file.key === key && savedStudy.file.sha256 === sha256;
+    } catch (e) { return false; }
+  }
+
+  function deletePortalFileIfUnused(key) {
+    if (P.db.studies.some((study) => study.file && study.file.key === key)) return Promise.resolve();
+    return P.files.del(key).catch(() => {});
+  }
+
   async function storeLiveFile(L, d) {
     L.phase[d.studyId] = 'importing';
     refreshDownload();
     const ext = L.studies.find((s) => s.id === d.studyId);
+    let fileKey = null;
+    let fileStored = false;
+    let targetStudy = null;
+    let previous = null;
+    let metadataChanged = false;
+    let committed = false;
+    const rollback = async () => {
+      if (metadataChanged && targetStudy) {
+        if (previous) Object.assign(targetStudy, previous);
+        else P.db.studies = P.db.studies.filter((item) => item !== targetStudy);
+        P.save();
+        metadataChanged = false;
+      }
+      if (fileStored && fileKey) {
+        await deletePortalFileIfUnused(fileKey);
+        fileStored = false;
+      }
+    };
     try {
       const { blob, sha256, kind, mimeType } = await P.agent.file(L.jobId, d.fileId);
       if (!ext || !d.studyId) throw new Error('STUDY_METADATA_MISSING');
       const providerId = ext.provider || P.inst(F.inst).live;
       const duplicate = P.db.studies.find((study) => isAgentStudyFromProvider(study, providerId) && sha256 && (study.file && study.file.sha256 || study.pdfSha256) === sha256);
-      if (duplicate) {
-        if (!duplicate.sourceKey && ext.sourceKey) duplicate.sourceKey = ext.sourceKey;
-        P.save();
+      const sameStudy = !!(duplicate && importedMatch(ext, [duplicate], providerId));
+      const id = sameStudy ? duplicate.id : (providerId === 'centrodm' ? 'cdm-' : 'pc-') + String(d.studyId).replace(/[^\w-]/g, '');
+      const prev = P.study(id);
+      targetStudy = prev || null;
+      previous = prev ? Object.assign({}, prev) : null;
+      // Reusa una clave ya asociada al mismo hash. Si es otro estudio con bytes idénticos,
+      // queda un registro propio que comparte el Blob sin guardar una segunda copia.
+      fileKey = duplicate && duplicate.file && duplicate.file.key && duplicate.file.kind === kind
+        ? duplicate.file.key
+        : (kind === 'DICOM_ZIP' ? 'dicom-' : 'pdf-') + d.fileId;
+      fileStored = await P.files.put(fileKey, blob);
+      if (!fileStored) throw new Error('ARTIFACT_STORAGE_FAILED');
+      const isImage = providerId === 'centrodm' || kind === 'DICOM_ZIP';
+      const study = {
+        id, name: isImage ? (ext.title || 'Estudio de imágenes') : 'Resultados de laboratorio', type: isImage ? 'imagenes' : 'laboratorio',
+        date: ext.date || '', reportDate: ext.deliveryDate || null,
+        inst: F.inst, provider: providerId, providerDisplayName: P.inst(F.inst).name,
+        sourceKey: ext.sourceKey || (sameStudy && duplicate.sourceKey) || undefined,
+        modality: ext.modality || '', artifactKind: kind,
+        requestedBy: 'Sin dato en el documento', protocol: ext.protocol || '', providerStatus: ext.status || '',
+        status: 'disponible', pages: 0, images: 0, results: null, size: P.fmtBytes(blob.size),
+        importedAt: d.importedAt || new Date().toISOString(), importedBy: d.importedBy || 'agent',
+        isNew: true, origin: 'agente', file: { key: fileKey, bytes: blob.size, sha256, kind, mimeType },
+      };
+      if (prev) Object.assign(prev, study);
+      else { targetStudy = study; P.db.studies.push(study); }
+      metadataChanged = true;
+      if (!P.save() || !persistedStudyArtifact(id, fileKey, sha256)) throw new Error('STUDY_METADATA_STORAGE_FAILED');
+      await P.agent.acknowledgePortalImport(L.jobId, d.fileId, d.studyId, true);
+      committed = true;
+      if (previous && previous.file && previous.file.key !== fileKey) await deletePortalFileIfUnused(previous.file.key);
+      fileStored = false;
+      metadataChanged = false;
+      if (sameStudy) {
         L.phase[d.studyId] = 'existing';
-        L.existing.push(duplicate);
+        L.existing.push(targetStudy);
       } else {
-        const key = (kind === 'DICOM_ZIP' ? 'dicom-' : 'pdf-') + d.fileId;
-        await P.files.put(key, blob);
-        const id = (providerId === 'centrodm' ? 'cdm-' : 'pc-') + String(d.studyId).replace(/[^\w-]/g, '');
-        const prev = P.study(id);
-        const isImage = providerId === 'centrodm' || kind === 'DICOM_ZIP';
-        const study = {
-          id, name: isImage ? (ext.title || 'Estudio de imágenes') : 'Resultados de laboratorio', type: isImage ? 'imagenes' : 'laboratorio',
-          date: ext.date || '', reportDate: ext.deliveryDate || null,
-          inst: F.inst, provider: providerId, providerDisplayName: P.inst(F.inst).name,
-          sourceKey: ext.sourceKey || undefined,
-          modality: ext.modality || '', artifactKind: kind,
-          requestedBy: 'Sin dato en el documento', protocol: ext.protocol || '', providerStatus: ext.status || '',
-          status: 'disponible', pages: 0, images: 0, results: null, size: P.fmtBytes(blob.size),
-          importedAt: d.importedAt || new Date().toISOString(), importedBy: d.importedBy || 'agent',
-          isNew: true, origin: 'agente', file: { key, bytes: blob.size, sha256, kind, mimeType },
-        };
-        if (prev && prev.file) P.files.del(prev.file.key).catch(() => {});
-        if (prev) Object.assign(prev, study); else P.db.studies.push(study);
-        P.save();
         L.phase[d.studyId] = 'stored';
-        L.saved.push(study);
+        L.saved.push(targetStudy);
       }
     } catch (e) {
+      if (!committed) await rollback();
       L.phase[d.studyId] = 'failed';
       L.failures.push(d.studyId);
+      L.importFailures.push(d.studyId);
+      await P.agent.acknowledgePortalImport(L.jobId, d.fileId, d.studyId, false).catch(() => {});
     }
     refreshDownload();
     maybeFinish(L);
@@ -924,6 +972,11 @@
     const pending = L.selectedIds.some((id) => L.phase[id] !== 'stored' && L.phase[id] !== 'existing' && L.phase[id] !== 'failed');
     if (pending) return;
     liveClose(true); // cierra el SSE y le pide al agente borrar los archivos temporales
+    if (L.importFailures.length) {
+      L.error = 'ARTIFACT_IMPORT_FAILED';
+      L.at = 3;
+      return go('lerror');
+    }
     if (!L.saved.length && !L.existing.length) { L.error = 'NO_DOCUMENTS'; L.at = 3; return go('lerror'); }
     const inst = F.inst;
     if (L.saved.length) {
@@ -948,6 +1001,7 @@
     UNEXPECTED_DOMAIN: ['El asistente se detuvo por seguridad', 'El sitio intentó llevarlo a una dirección que no es la del laboratorio. No se guardó ningún dato de esta búsqueda.', 'shield'],
     NO_DOCUMENTS: ['No pudimos traer los documentos', 'El asistente no encontró el PDF de los estudios elegidos. Podés intentarlo de nuevo más tarde.', 'file'],
     NO_ARTIFACTS_IMPORTED: ['No pudimos importar los estudios', 'No se logró descargar ningún archivo de los estudios seleccionados. Podés volver a intentarlo más tarde.', 'file'],
+    ARTIFACT_IMPORT_FAILED: ['No pudimos guardar los estudios en tu Portal', 'No confirmamos la importación de los archivos que no se pudieron guardar.', 'file'],
     STUDY_REFERENCE_MISSING: ['No pudimos abrir el estudio seleccionado', 'Se perdió la referencia temporal del estudio en el laboratorio. Volvé a cargar el listado y probá otra vez.', 'alert'],
     LLM_NOT_CONFIGURED: ['El asistente no está disponible', 'Falta configurar el modelo de IA del asistente.', 'alert'],
     BROWSER_NOT_INSTALLED: ['El asistente no está disponible', 'Falta instalar el navegador del asistente (npx playwright install chromium).', 'alert'],
@@ -959,6 +1013,13 @@
   function viewLiveError() {
     const code = (F.live && F.live.error) || 'ERROR';
     const m = LIVE_ERRORS[code] || ['El asistente no pudo terminar', 'Es posible que el sitio del laboratorio haya cambiado. No se guardó ningún dato de esta búsqueda.', 'alert'];
+    if (code === 'ARTIFACT_IMPORT_FAILED' && F.live) {
+      const saved = F.live.saved.length;
+      const failed = F.live.importFailures.length;
+      m[1] = saved
+        ? 'Se guardaron ' + P.plural(saved, 'estudio', 'estudios') + ' correctamente, pero ' + P.plural(failed, 'archivo no pudo', 'archivos no pudieron') + ' guardarse junto con su estudio. Revisá Estudios antes de volver a intentarlo para evitar copias.'
+        : 'El archivo no quedó guardado junto con el estudio y no confirmamos la importación. Podés volver a intentarlo más tarde.';
+    }
     return (
       '<div class="live-error">' +
       '<div class="empty-art" aria-hidden="true">' + ic(m[2], 28) + '</div>' +

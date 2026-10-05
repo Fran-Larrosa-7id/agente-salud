@@ -66,9 +66,11 @@ test('el paciente inicia sesión, el agente descubre y trae los 3 PDF', { timeou
   assert.deepEqual(job.studies.map((s) => s.date), ['2026-05-28', '2026-01-14', '2025-11-03']);
 
   manager.select(job.id, job.studies.map((s) => s.id));
-  await waitFor(() => job.isTerminal, 40_000).catch(() => {
-    throw new Error(`el job no terminó: ${job.state} ${job.errorCode} páginas ${runner().session?.openPages()} logs ${logs.join('\n')}`);
+  await waitFor(() => job.state === S.IMPORTING, 40_000).catch(() => {
+    throw new Error(`el runner no terminó la descarga: ${job.state} ${job.errorCode} páginas ${runner().session?.openPages()} logs ${logs.join('\n')}`);
   });
+  for (const file of job.files) await manager.acknowledgePortalImport(job.id, file.id, file.studyId, true); // acuse simulado tras validar los archivos almacenados.
+  await waitFor(() => job.isTerminal, 5_000);
   assert.equal(job.state, S.COMPLETED, `estado ${job.state} ${job.errorCode} fallas ${JSON.stringify(job.failures)} logs ${logs.join('\n')}`);
   assert.equal(job.files.length, 3);
   assert.ok(job.files.every((file) => file.importedBy === 'agent' && /^\d{4}-\d{2}-\d{2}T/.test(file.importedAt)));

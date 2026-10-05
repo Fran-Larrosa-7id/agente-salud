@@ -259,6 +259,7 @@ export class AgentImportRunner implements JobRunner {
     if (isCentroDm) {
       this.deps.log.info(job.id, 'import_dispatch', { provider: this.deps.provider.id, selectedCount: studyIds.length });
       this.deps.log.info(job.id, 'centrodm_import_queue', { count: studyIds.length });
+      this.deps.log.info(job.id, 'centrodm_import_start', { count: studyIds.length });
     }
     try {
       for (let i = 0; i < studyIds.length; i++) {
@@ -322,15 +323,17 @@ export class AgentImportRunner implements JobRunner {
             session.onProviderStructure?.({ event: 'find_document_dispatch', strategy: 'pixeon' });
             if (this.downloads.used >= this.deps.config.maxDownloadsPerJob) throw new MedicalArchiveError('DICOM_DOWNLOAD_TIMEOUT');
             this.downloads.used++;
+            job.transition(S.DOWNLOADING, { studyId });
             const archive = await session.downloadFullDicomStudy?.(this.deps.config.medicalArchiveDownloadTimeoutMs);
             if (!archive) throw new MedicalArchiveError('DICOM_DOWNLOAD_TIMEOUT');
+            this.deps.log.info(job.id, 'centrodm_download_complete', { bytes: archive.buffer.length });
             job.transition(S.IMPORTING, { studyId });
             const saved = await this.deps.files.save(archive.buffer, archive.contentType, 'DICOM_ZIP');
             if (saved.ok) {
+              this.deps.log.info(job.id, 'centrodm_artifact_valid', { kind: 'DICOM_ZIP', bytes: saved.file.bytes, sha256Present: !!saved.file.sha256 });
               const imported = importMetadata();
               job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, sha256: saved.file.sha256, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
               job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
-              this.deps.log.info(job.id, 'centrodm_study_complete', { index: i + 1, bytes: saved.file.bytes });
             } else {
               job.failures.push({ studyId, code: 'INVALID_MEDICAL_ARCHIVE' });
               job.push('study_failed', { studyId, code: 'INVALID_MEDICAL_ARCHIVE' });
@@ -439,7 +442,7 @@ export class AgentImportRunner implements JobRunner {
         const specificFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH', 'STUDY_NOT_FOUND', 'STUDY_REFERENCE_MISSING', 'VIEWER_NOT_READY', 'VIEWER_OPEN_TIMEOUT', 'VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND', 'DICOM_DOWNLOAD_TIMEOUT', 'INVALID_MEDICAL_ARCHIVE'].includes(failure.code));
         return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, specificFailure?.code ?? (isCentroDm ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS'));
       }
-      job.transition(S.COMPLETED, { files: job.files.length, failures: job.failures.length });
+      // El JobManager mantiene IMPORTING hasta que el Portal confirme el Blob y la ficha persistida.
     } catch (e) {
       this.handleError(e);
     }

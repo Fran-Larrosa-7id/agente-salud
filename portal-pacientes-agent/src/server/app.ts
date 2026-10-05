@@ -119,6 +119,23 @@ export function createApp({ config, manager, providers, info }: AppDeps) {
     }
   });
 
+  app.post('/api/imports/:jobId/files/:fileId/ack', async (req, res) => {
+    const job = jobParam(req, res);
+    if (!job) return;
+    const fileId = String(req.params.fileId);
+    const body = req.body as { studyId?: unknown; persisted?: unknown } | undefined;
+    if (!isUuid(fileId) || typeof body?.studyId !== 'string' || typeof body.persisted !== 'boolean') {
+      return void res.status(400).json({ error: 'INVALID_FILE_ACK' });
+    }
+    try {
+      const updated = await manager.acknowledgePortalImport(job.id, fileId, body.studyId, body.persisted);
+      res.status(202).json({ accepted: true, state: updated.state, errorCode: updated.errorCode ?? null });
+    } catch (e) {
+      if (e instanceof ManagerError) return void res.status(e.status).json({ error: e.code });
+      throw e;
+    }
+  });
+
   app.get('/api/imports/:jobId/files/:fileId', (req, res) => {
     const job = jobParam(req, res);
     if (!job) return;

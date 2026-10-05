@@ -160,7 +160,7 @@ export class FakeProviderAgent implements JobRunner {
       }
       job.current = undefined;
       if (!job.files.length) return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'NO_DOCUMENTS');
-      job.transition(S.COMPLETED, { files: job.files.length, failures: job.failures.length });
+      // La finalización la emite JobManager después del acuse de persistencia del Portal.
     } catch {
       if (!job.isTerminal) job.fail(S.ERROR, 'INTERNAL');
     }

@@ -60,7 +60,11 @@ test('Ollama real: descubre los estudios y trae los PDF del portal falso', { ski
 
   const t1 = Date.now();
   manager.select(job.id, job.studies.map((s) => s.id));
-  await waitFor(() => job.isTerminal, 900_000, 200);
+  await waitFor(() => job.state === S.IMPORTING || job.isTerminal, 900_000, 200);
+  assert.equal(job.state, S.IMPORTING, `el agente debe esperar el acuse del Portal: ${job.state} ${job.errorCode}`);
+  // Este test manual no levanta el frontend: valida los archivos y simula su ACK al JobManager.
+  for (const file of job.files) await manager.acknowledgePortalImport(job.id, file.id, file.studyId, true);
+  await waitFor(() => job.isTerminal, 5_000);
   console.log(`descarga: ${job.files.length} PDF, fallas ${JSON.stringify(job.failures)}, ${Math.round((Date.now() - t1) / 1000)} s`);
   assert.equal(job.state, S.COMPLETED, `estado ${job.state} ${job.errorCode}`);
   assert.ok(job.files.length >= 1);

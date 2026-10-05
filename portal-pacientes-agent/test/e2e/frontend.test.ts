@@ -168,6 +168,8 @@ test('Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imáge
     assert.equal(studies[0].file.sha256, studies[1].file.sha256);
     assert.equal(study.type, 'imagenes');
     assert.equal(study.name, 'Reconstrucción 3D');
+    assert.equal(study.studyDate, '2024-04-08', 'conserva la fecha de estudio enviada por el proveedor');
+    assert.equal(study.date, '2024-04-08', 'el Portal mantiene su campo de fecha para vistas e historial');
     assert.equal(study.modality, 'SC');
     assert.equal(study.artifactKind, 'DICOM_ZIP');
     assert.equal(study.file.kind, 'DICOM_ZIP');

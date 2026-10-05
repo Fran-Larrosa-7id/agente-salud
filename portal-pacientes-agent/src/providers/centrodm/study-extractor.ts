@@ -9,6 +9,7 @@ export interface CentroDmRawAction extends CentroDmActionStructure {
   actionToken: string;
   targetBlank: boolean;
   date: string;
+  studyDate: string;
   title: string;
   modality: string;
 }
@@ -28,7 +29,33 @@ export interface CentroDmExtraction {
   resultActions: number;
   candidateRows: number;
   rowsWithAction: number;
+  metadataDatesFound: number;
   actions: CentroDmRawAction[];
+}
+
+/** Normaliza exclusivamente la fecha administrativa visible del estudio Centro DM. */
+export function normalizeCentroDmDate(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const text = value.trim();
+  let year: number;
+  let month: number;
+  let day: number;
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) {
+    year = Number(iso[1]);
+    month = Number(iso[2]);
+    day = Number(iso[3]);
+  } else {
+    const local = text.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+    if (!local) return undefined;
+    day = Number(local[1]);
+    month = Number(local[2]);
+    year = Number(local[3]);
+    if (year < 100) year += 2000;
+  }
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 export const CENTRODM_EXTRACTOR_SOURCE = String.raw`(args) => {
@@ -44,6 +71,7 @@ export const CENTRODM_EXTRACTOR_SOURCE = String.raw`(args) => {
     const match = clean(value).match(/\b\d{1,2}[/. -]\d{1,2}[/. -]\d{2,4}\b/);
     return match ? match[0] : '';
   };
+  const exactStudyDate = (value) => /^\s*\d{2}\/\d{2}\/\d{2,4}\s*$/.test(String(value || '')) ? clean(value) : '';
   const normalizeDate = (value) => {
     const match = String(value || '').match(/\b(\d{1,2})[/. -](\d{1,2})[/. -](\d{2,4})\b/);
     if (!match) return '';
@@ -148,7 +176,7 @@ export const CENTRODM_EXTRACTOR_SOURCE = String.raw`(args) => {
     const anchor = matched.node instanceof HTMLAnchorElement ? matched.node : matched.node.closest('a[href]');
     actions.push({ node: matched.node, row, href, stableId: stableIdFrom(row, matched.node, href), actionToken,
       targetBlank: ((matched.node.getAttribute('target') || (anchor && anchor.getAttribute('target')) || '').toLowerCase() === '_blank'),
-      date: '', title: '', modality: '', structure: {
+      date: '', studyDate: '', title: '', modality: '', structure: {
       index: actions.length,
       tag: matched.node.tagName.toLowerCase(),
       hrefPresent: !!href,
@@ -198,6 +226,9 @@ export const CENTRODM_EXTRACTOR_SOURCE = String.raw`(args) => {
     }
 
     if (!date) date = validDate(values.find((value) => validDate(value)) || '');
+    const classDate = row.querySelectorAll('.ns-table__text');
+    const rowStudyDate = Array.from(classDate).find((node) => visible(node) && exactStudyDate(node.textContent));
+    action.studyDate = rowStudyDate ? exactStudyDate(rowStudyDate.textContent) : exactStudyDate(date);
     if (!modality) modality = values.map(modalityCode).find(Boolean) || '';
     if (!title) {
       const start = dateIndex >= 0 ? dateIndex + 1 : 0;
@@ -220,6 +251,15 @@ export const CENTRODM_EXTRACTOR_SOURCE = String.raw`(args) => {
     action.modality = modality;
   }
 
+  // Fallback solo para la fecha visible: nunca participa en identidad ni en la referencia de apertura.
+  const studyList = document.querySelector('.ns-table') || document;
+  const dateTexts = Array.from(studyList.querySelectorAll('.ns-table__text'))
+    .filter((node) => visible(node) && exactStudyDate(node.textContent))
+    .map((node) => exactStudyDate(node.textContent));
+  if (actions.length === dateTexts.length) {
+    actions.forEach((action, index) => { if (!action.studyDate) action.studyDate = dateTexts[index]; });
+  }
+
   const bodyText = fold(document.body ? document.body.innerText : '');
   const emptyResults = /sin estudios|no se encontraron|no hay resultados|sin resultados/.test(bodyText);
   const resultText = /(?:\bestudios\b|\bexamenes\b|\bresultados\b)/.test(bodyText);
@@ -238,6 +278,7 @@ export const CENTRODM_EXTRACTOR_SOURCE = String.raw`(args) => {
     resultActions: actions.length,
     candidateRows: structuralRows.length,
     rowsWithAction: grouped.size,
+    metadataDatesFound: dateTexts.length,
     actions: actions.map((action) => ({
       ...action.structure,
       href: action.href,
@@ -245,6 +286,7 @@ export const CENTRODM_EXTRACTOR_SOURCE = String.raw`(args) => {
       actionToken: action.actionToken,
       targetBlank: action.targetBlank,
       date: action.date,
+      studyDate: action.studyDate,
       title: action.title,
       modality: action.modality,
     })),

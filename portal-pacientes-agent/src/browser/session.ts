@@ -6,7 +6,7 @@ import { MAX_MEDICAL_ARCHIVE_BYTES, validateMedicalArchive, type CapturedMedical
 import type { ProviderConfig } from '../providers/types.js';
 import { LABWIN_EXTRACTOR_SOURCE, type LabwinExtraction, type LabwinRawStudy } from '../providers/percamb/study-extractor.js';
 import { percambSourceKey } from '../providers/percamb/source-key.js';
-import { CENTRODM_EXTRACTOR_SOURCE, type CentroDmExtraction, type CentroDmRawAction } from '../providers/centrodm/study-extractor.js';
+import { CENTRODM_EXTRACTOR_SOURCE, normalizeCentroDmDate, type CentroDmExtraction, type CentroDmRawAction } from '../providers/centrodm/study-extractor.js';
 import { centroDmSourceKey } from '../providers/centrodm/source-key.js';
 import { parseDate } from '../agent/studies.js';
 import { DomainPolicy } from '../security/domain-policy.js';
@@ -540,6 +540,7 @@ export class BrowserSession implements BrowserPort {
 
   private providerStructure(event: ProviderStructureEvent['event'], count?: number, details: Partial<ProviderStructureEvent> = {}): void {
     const alwaysLog = new Set<ProviderStructureEvent['event']>([
+      'centrodm_metadata_dates_found', 'centrodm_studies_with_date', 'centrodm_study_metadata',
       'pixeon_download_probe_start', 'pixeon_download_probe_end', 'pixeon_download_probe', 'pixeon_frames',
       'pixeon_frame', 'pixeon_text_exact', 'pixeon_text_partial', 'pixeon_attr_candidates', 'pixeon_dom_candidate',
       'pixeon_clickable_ancestor', 'pixeon_download_text_matches', 'pixeon_download_role_matches',
@@ -562,6 +563,7 @@ export class BrowserSession implements BrowserPort {
       this.providerStructure('centrodm_rows', extraction.candidateRows);
       this.providerStructure('centrodm_result_actions', extraction.resultActions);
       this.providerStructure('centrodm_rows_with_action', extraction.rowsWithAction);
+      this.providerStructure('centrodm_metadata_dates_found', extraction.metadataDatesFound);
       for (const { action } of extraction.actions) {
         this.providerStructure('centrodm_action', undefined, {
           index: action.index,
@@ -575,15 +577,17 @@ export class BrowserSession implements BrowserPort {
       const listUrl = this.page.url();
       const studies: ProviderStudyMetadata[] = [];
       let metadataEnriched = 0;
+      let studiesWithDate = 0;
       for (const { action, frame } of extraction.actions) {
         const date = parseDate(action.date);
+        const studyDate = normalizeCentroDmDate(action.studyDate);
         const extractedTitle = action.title.replace(/\s+/g, ' ').trim().slice(0, 120);
         const modality = action.modality.replace(/\s+/g, ' ').trim().slice(0, 24);
         const sourceKey = centroDmSourceKey(date, extractedTitle, modality, action.stableId);
         if (!action.href || !sourceKey || !this.policy.isAllowedNavigation(action.href)) continue;
         const id = randomUUID();
         const title = extractedTitle || 'Estudio de imágenes';
-        const metadata: ProviderStudyMetadata = { id, sourceKey, title, ...(date ? { date } : {}), ...(modality ? { modality } : {}) };
+        const metadata: ProviderStudyMetadata = { id, sourceKey, title, ...(date ? { date } : {}), ...(studyDate ? { studyDate } : {}), ...(modality ? { modality } : {}) };
         this.centroDmStudies.set(id, {
           listUrl,
           openHref: action.href,
@@ -596,8 +600,11 @@ export class BrowserSession implements BrowserPort {
           ...(modality ? { modality } : {}),
         });
         studies.push(metadata);
+        if (studyDate) studiesWithDate++;
+        this.providerStructure('centrodm_study_metadata', undefined, { index: studies.length, hasDate: !!studyDate });
         if (date && extractedTitle && modality) metadataEnriched++;
       }
+      this.providerStructure('centrodm_studies_with_date', studiesWithDate);
       this.providerStructure('centrodm_minimal_studies', studies.length);
       this.providerStructure('centrodm_metadata_enriched', metadataEnriched);
       this.providerStructure('centrodm_metadata_partial', studies.length - metadataEnriched);
@@ -690,6 +697,7 @@ export class BrowserSession implements BrowserPort {
     resultActions: number;
     candidateRows: number;
     rowsWithAction: number;
+    metadataDatesFound: number;
     actions: { action: CentroDmRawAction; frame: number }[];
   }> {
     const frames = this.page.frames();
@@ -700,6 +708,7 @@ export class BrowserSession implements BrowserPort {
     let resultActions = 0;
     let candidateRows = 0;
     let rowsWithAction = 0;
+    let metadataDatesFound = 0;
     for (let frame = 0; frame < frames.length && frame < 8; frame++) {
       const f = frames[frame];
       if (!this.policy.isAllowedNavigation(f.url())) continue;
@@ -710,10 +719,11 @@ export class BrowserSession implements BrowserPort {
       tableCount += extraction.tableCount;
       candidateRows += extraction.candidateRows;
       rowsWithAction += extraction.rowsWithAction;
+      metadataDatesFound += extraction.metadataDatesFound;
       resultActions += extraction.resultActions;
       actions.push(...extraction.actions.map((action) => ({ action: { ...action, index: actions.length + action.index }, frame })));
     }
-    return { recognized, emptyResults: recognized && emptyResults, tableCount, resultActions, candidateRows, rowsWithAction, actions };
+    return { recognized, emptyResults: recognized && emptyResults, tableCount, resultActions, candidateRows, rowsWithAction, metadataDatesFound, actions };
   }
 
   isStudyOpen(studyId: string): boolean {

@@ -7,6 +7,7 @@ export interface ExternalStudy {
   id: string;
   sourceKey?: string;
   date?: string;
+  studyDate?: string;
   protocol?: string;
   deliveryDate?: string;
   status?: string;

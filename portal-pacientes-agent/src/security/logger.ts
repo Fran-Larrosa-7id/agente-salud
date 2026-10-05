@@ -24,6 +24,7 @@ const ALLOWED_FIELDS = [
   'candidateRows',
   'parsedStudies',
   'index',
+  'hasDate',
   'depth',
   'tag',
   'links',

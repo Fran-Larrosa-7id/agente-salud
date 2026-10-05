@@ -23,8 +23,8 @@ export const FAKE_STUDIES: Omit<ExternalStudy, 'provider'>[] = [
 ];
 
 export const FAKE_CENTRODM_STUDIES: Omit<ExternalStudy, 'provider'>[] = [
-  { id: 'st_cdm_fake000001', date: '2024-04-08', title: 'Reconstrucción 3D', modality: 'SC', sourceKey: centroDmSourceKey('2024-04-08', 'Reconstrucción 3D', 'SC') },
-  { id: 'st_cdm_fake000002', date: '2024-04-10', title: 'Tomografía de tórax', modality: 'CT', sourceKey: centroDmSourceKey('2024-04-10', 'Tomografía de tórax', 'CT') },
+  { id: 'st_cdm_fake000001', studyDate: '2024-04-08', title: 'Reconstrucción 3D', modality: 'SC', sourceKey: centroDmSourceKey('2024-04-08', 'Reconstrucción 3D', 'SC') },
+  { id: 'st_cdm_fake000002', studyDate: '2024-04-10', title: 'Tomografía de tórax', modality: 'CT', sourceKey: centroDmSourceKey('2024-04-10', 'Tomografía de tórax', 'CT') },
 ];
 
 /**

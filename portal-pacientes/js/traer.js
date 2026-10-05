@@ -792,7 +792,7 @@
           ? 'Imágenes' + (s.modality ? ' · Modalidad ' + P.esc(s.modality) : '') + ' · Archivo DICOM ZIP'
           : (s.protocol ? 'Protocolo <span class="num">' + P.esc(s.protocol) + '</span>' : 'Sin número de protocolo')) +
         (s.status ? ' · ' + P.esc(s.status) : '') + (s.alreadyImported ? ' · Ya está en tu portal' : '') + '</span></span>' +
-        '<span class="res-date num">' + (s.date ? P.fmt(s.date) : s.deliveryDate ? 'Entregado ' + P.fmt(s.deliveryDate) : '') + '</span></label></li>').join('') + '</ul></div>' +
+        '<span class="res-date num">' + ((s.studyDate || s.date) ? P.fmt(s.studyDate || s.date) : s.deliveryDate ? 'Entregado ' + P.fmt(s.deliveryDate) : '') + '</span></label></li>').join('') + '</ul></div>' +
       (available.length ? '' : '<p class="res-note">' + ic('check', 18) + '<span>Todos estos estudios ya están en tu portal. No vamos a descargar copias.</span></p><p class="flow-actions center"><a class="btn btn-accent btn-lg" href="#/estudios">Ver mis estudios ' + ic('arrow-right', 20) + '</a></p>') +
       '<p class="res-note">' + ic('info', 18) + '<span>El asistente descarga solo los que elijas. No lee ni interpreta su contenido.</span></p>' +
       (available.length ? '<div class="res-bar"><div class="res-bar-in"><p class="res-count" aria-live="polite"><b class="num" id="sel-count">0</b> <span id="sel-word">estudios seleccionados</span></p>' +
@@ -827,7 +827,7 @@
 
   /* ---------- Descargando ---------- */
   const DL_STEPS = [
-    ['opening', (s) => 'Abriendo tu ' + (s.date ? 'estudio del ' + P.fmt(s.date) : 'estudio'), (s) => 'Abrí tu ' + (s.date ? 'estudio del ' + P.fmt(s.date) : 'estudio')],
+    ['opening', (s) => 'Abriendo tu ' + ((s.studyDate || s.date) ? 'estudio del ' + P.fmt(s.studyDate || s.date) : 'estudio'), (s) => 'Abrí tu ' + ((s.studyDate || s.date) ? 'estudio del ' + P.fmt(s.studyDate || s.date) : 'estudio')],
     ['finding', () => 'Buscando el documento original', () => 'Encontré el documento original'],
     ['downloading', (s) => s.provider === 'centrodm' ? 'Descargando el estudio DICOM ZIP' : 'Descargando el PDF', (s) => s.provider === 'centrodm' ? 'Estudio DICOM ZIP descargado' : 'PDF descargado'],
     ['importing', () => 'Agregándolo a tu portal', () => 'Agregado a tu portal'],
@@ -931,7 +931,7 @@
       const isImage = providerId === 'centrodm' || kind === 'DICOM_ZIP';
       const study = {
         id, name: isImage ? (ext.title || 'Estudio de imágenes') : 'Resultados de laboratorio', type: isImage ? 'imagenes' : 'laboratorio',
-        date: ext.date || '', reportDate: ext.deliveryDate || null,
+        studyDate: ext.studyDate || ext.date || '', date: ext.studyDate || ext.date || '', reportDate: ext.deliveryDate || null,
         inst: F.inst, provider: providerId, providerDisplayName: P.inst(F.inst).name,
         sourceKey: ext.sourceKey || (sameStudy && duplicate.sourceKey) || undefined,
         modality: ext.modality || '', artifactKind: kind,

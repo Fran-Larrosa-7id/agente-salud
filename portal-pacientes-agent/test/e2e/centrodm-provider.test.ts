@@ -60,6 +60,20 @@ before(async () => {
         <a target="_blank" href="../funcion/llamadoURL.php?accessionnPHP=opaque-3"><i class="fas fa-image"></i></a>
       </main></body></html>`);
     }
+    if (url.pathname === '/parallel-dates') {
+      return void send(res, 'text/html; charset=utf-8', `<!doctype html><html><body><h1>Mis estudios</h1><div class="ns-table">
+        <span class="ns-table__text">23/02/26</span><a target="_blank" href="/funcion/llamadoURL.php?studyId=date-1"><img alt="abrir"></a>
+        <span class="ns-table__text">08/04/24</span><a target="_blank" href="/funcion/llamadoURL.php?studyId=date-2"><img alt="abrir"></a>
+        <span class="ns-table__text">11/12/23</span><a target="_blank" href="/funcion/llamadoURL.php?studyId=date-3"><img alt="abrir"></a>
+      </div></body></html>`);
+    }
+    if (url.pathname === '/partial-parallel-dates') {
+      return void send(res, 'text/html; charset=utf-8', `<!doctype html><html><body><h1>Mis estudios</h1><div class="ns-table">
+        <span class="ns-table__text">23/02/26</span><a target="_blank" href="/funcion/llamadoURL.php?studyId=partial-1"><img alt="abrir"></a>
+        <span class="ns-table__text">08/04/24</span><a target="_blank" href="/funcion/llamadoURL.php?studyId=partial-2"><img alt="abrir"></a>
+        <a target="_blank" href="/funcion/llamadoURL.php?studyId=partial-3"><img alt="abrir"></a>
+      </div></body></html>`);
+    }
     if (url.pathname === '/onclick') {
       return void send(res, 'text/html; charset=utf-8', `<!doctype html><html><body><h1>Mis estudios</h1>
         <div class="list"><div class="entry"><span>07/05/24</span><span>Ecografía abdominal</span><span>US</span>
@@ -130,9 +144,9 @@ before(async () => {
       <h1>Acceso pacientes</h1><input type="password" aria-label="Contraseña"><button id="enter">Ingresar</button>
       <script>document.getElementById('enter').onclick=()=>{document.querySelector('main').innerHTML=${JSON.stringify(`
         <h1>Mis estudios disponibles</h1><p>Paciente Privado de Prueba</p><table><thead><tr><th>Nacimiento</th><th>Fecha del estudio</th><th>Estudio</th><th>Médico solicitante</th><th>Modalidad</th><th>Estudio</th><th>Compartir</th></tr></thead><tbody>
-        <tr data-study-id="stable-1"><td>1980-03-04</td><td>08/04/2024</td><td data-label="Estudio">Reconstrucción 3D</td><td>Dra. Privada</td><td data-label="Modalidad">SC</td><td><a target="_blank" href="/funcion/llamadoURL.php?studyId=stable-1"><img alt="icono"></a></td><td><a href="/funcion/compartir.php?patient=must-not-log">Compartir</a></td></tr>
-        <tr data-study-id="stable-2"><td>1980-03-04</td><td>10/04/2024</td><td data-label="Estudio">Tomografía de tórax</td><td>Dr. Privado</td><td data-label="Modalidad">CT</td><td><a target="_blank" href="/funcion/llamadoURL.php?studyId=stable-2"><img alt="icono"></a></td><td><a href="/funcion/compartir.php?patient=must-not-log">Compartir</a></td></tr>
-        <tr data-study-id="stable-3"><td>1980-03-04</td><td>12/04/2024</td><td data-label="Estudio">Radiografía de tórax</td><td>Dr. Reservado</td><td data-label="Modalidad">DX</td><td><a target="_blank" href="/funcion/llamadoURL.php?studyId=stable-3"><img alt="icono"></a></td><td><a href="/funcion/compartir.php?patient=must-not-log">Compartir</a></td></tr>
+        <tr data-study-id="stable-1"><td>1980-03-04</td><td><span class="ns-table__text">08/04/2024</span></td><td data-label="Estudio">Reconstrucción 3D</td><td>Dra. Privada</td><td data-label="Modalidad">SC</td><td><a target="_blank" href="/funcion/llamadoURL.php?studyId=stable-1"><img alt="icono"></a></td><td><a href="/funcion/compartir.php?patient=must-not-log">Compartir</a></td></tr>
+        <tr data-study-id="stable-2"><td>1980-03-04</td><td><span class="ns-table__text">10/04/2024</span></td><td data-label="Estudio">Tomografía de tórax</td><td>Dr. Privado</td><td data-label="Modalidad">CT</td><td><a target="_blank" href="/funcion/llamadoURL.php?studyId=stable-2"><img alt="icono"></a></td><td><a href="/funcion/compartir.php?patient=must-not-log">Compartir</a></td></tr>
+        <tr data-study-id="stable-3"><td>1980-03-04</td><td><span class="ns-table__text">12/04/2024</span></td><td data-label="Estudio">Radiografía de tórax</td><td>Dr. Reservado</td><td data-label="Modalidad">DX</td><td><a target="_blank" href="/funcion/llamadoURL.php?studyId=stable-3"><img alt="icono"></a></td><td><a href="/funcion/compartir.php?patient=must-not-log">Compartir</a></td></tr>
         </tbody></table>`)};};</script></main></body></html>`;
     send(res, 'text/html; charset=utf-8', login);
   });
@@ -233,7 +247,7 @@ test('Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup 
   await session.activePage().waitForSelector('table tbody tr');
 
   assert.equal(await session.isCentroDmResultsPage(), true);
-  const structure: { event: string; host?: string; port?: string; popup?: boolean; count?: number; index?: number; tag?: string; role?: string; hrefPresent?: boolean; hrefKind?: string; ancestorTr?: boolean; found?: boolean; brand?: boolean; downloadCandidates?: number; toolbarCandidates?: number; readyScore?: number; textMatch?: boolean; visible?: boolean; opened?: boolean; strategy?: string; selector?: string; elapsedMs?: number }[] = [];
+  const structure: { event: string; host?: string; port?: string; popup?: boolean; count?: number; index?: number; hasDate?: boolean; tag?: string; role?: string; hrefPresent?: boolean; hrefKind?: string; ancestorTr?: boolean; found?: boolean; brand?: boolean; downloadCandidates?: number; toolbarCandidates?: number; readyScore?: number; textMatch?: boolean; visible?: boolean; opened?: boolean; strategy?: string; selector?: string; elapsedMs?: number }[] = [];
   session.onProviderStructure = (event) => structure.push(event);
   const blockedRequests: { scheme: string; host: string; port: string }[] = [];
   let fatalDomainCallback = 0;
@@ -247,10 +261,10 @@ test('Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup 
     session.openStudy('missing-centrodm-reference'),
     (error: unknown) => error instanceof MedicalArchiveError && error.code === 'STUDY_REFERENCE_MISSING',
   );
-  assert.deepEqual(first.studies.map((study) => [study.date, study.title, study.modality]), [
-    ['2024-04-08', 'Reconstrucción 3D', 'SC'],
-    ['2024-04-10', 'Tomografía de tórax', 'CT'],
-    ['2024-04-12', 'Radiografía de tórax', 'DX'],
+  assert.deepEqual(first.studies.map((study) => [study.date, study.studyDate, study.title, study.modality]), [
+    ['2024-04-08', '2024-04-08', 'Reconstrucción 3D', 'SC'],
+    ['2024-04-10', '2024-04-10', 'Tomografía de tórax', 'CT'],
+    ['2024-04-12', '2024-04-12', 'Radiografía de tórax', 'DX'],
   ]);
   assert.ok(first.studies.every((study) => /^[a-f0-9]{64}$/.test(study.sourceKey || '')));
   assert.ok(!JSON.stringify(first).includes('Paciente Privado'));
@@ -259,6 +273,9 @@ test('Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup 
   assert.ok(!JSON.stringify(first).includes('stable-1'), 'no expone el identificador de la query');
   assert.ok(structure.some((event) => event.event === 'centrodm_result_actions' && event.count === 3));
   assert.ok(structure.some((event) => event.event === 'centrodm_rows_with_action' && event.count === 3));
+  assert.ok(structure.some((event) => event.event === 'centrodm_metadata_dates_found' && event.count === 3));
+  assert.ok(structure.some((event) => event.event === 'centrodm_studies_with_date' && event.count === 3));
+  assert.deepEqual(structure.filter((event) => event.event === 'centrodm_study_metadata').map(({ index, hasDate }) => [index, hasDate]), [[1, true], [2, true], [3, true]]);
   assert.ok(structure.some((event) => event.event === 'centrodm_parsed_studies' && event.count === 3));
   assert.equal(structure.filter((event) => event.event === 'centrodm_action').length, 3);
   assert.ok(structure.filter((event) => event.event === 'centrodm_action').every((event) => event.tag === 'a' && event.hrefPresent && event.hrefKind === 'llamadoURL' && event.ancestorTr));
@@ -266,6 +283,7 @@ test('Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup 
   assert.ok(!JSON.stringify(structure).includes('must-not-log'));
   assert.ok(!JSON.stringify(structure).includes('Paciente Privado'));
   assert.ok(!JSON.stringify(structure).includes('Dra. Privada'));
+  assert.ok(!JSON.stringify(structure).includes('08/04/2024'), 'los logs no incluyen fechas reales');
   assert.ok(!JSON.stringify(structure).includes('llamadoURL.php?'));
   const repeated = await session.listStudies();
   assert.deepEqual(repeated?.studies.map((study) => study.sourceKey), first.studies.map((study) => study.sourceKey));
@@ -567,6 +585,46 @@ test('Centro DM no confunde una fila de listado vacío con un parser mismatch', 
   const result = await session.listStudies();
   assert.ok(result);
   assert.deepEqual(result.studies, []);
+});
+
+test('Centro DM asigna studyDate por orden solo si coinciden la cantidad de actions y fechas', { timeout: 60_000 }, async () => {
+  const provider = {
+    ...centroDm,
+    loginUrl: origin + '/parallel-dates',
+    allowedHosts: ['127.0.0.1'],
+    allowedOrigins: [],
+    requireHttps: false,
+    loginPathPattern: /\/parallel-dates$/,
+  };
+  const session = await BrowserSession.open(host, provider, true, undefined, true);
+  sessions.push(session);
+  await session.gotoLogin();
+  const result = await session.listStudies();
+  assert.deepEqual(result?.studies.map((study) => study.studyDate), ['2026-02-23', '2024-04-08', '2023-12-11']);
+  assert.ok(result?.studies.every((study) => !study.date), 'el fallback de fechas no modifica la metadata previa ni la sourceKey');
+  const sourceKeys = result?.studies.map((study) => study.sourceKey);
+  await session.activePage().locator('.ns-table__text').first().evaluate((node) => { node.textContent = '01/01/99'; });
+  const repeated = await session.listStudies();
+  assert.deepEqual(repeated?.studies.map((study) => study.sourceKey), sourceKeys);
+  assert.equal(repeated?.studies[0].studyDate, '2099-01-01');
+});
+
+test('Centro DM deja studyDate indefinida si no puede asociar fechas por fila ni por conteos', { timeout: 60_000 }, async () => {
+  const provider = {
+    ...centroDm,
+    loginUrl: origin + '/partial-parallel-dates',
+    allowedHosts: ['127.0.0.1'],
+    allowedOrigins: [],
+    requireHttps: false,
+    loginPathPattern: /\/partial-parallel-dates$/,
+  };
+  const session = await BrowserSession.open(host, provider, true, undefined, true);
+  sessions.push(session);
+  await session.gotoLogin();
+  const result = await session.listStudies();
+  assert.equal(result?.studies.length, 3);
+  assert.ok(result?.studies.every((study) => study.studyDate === undefined));
+  assert.ok(result?.studies.every((study) => /^[a-f0-9]{64}$/.test(study.sourceKey || '')));
 });
 
 test('Centro DM crea tres estudios mínimos por href aunque no pueda asociarlos a filas', { timeout: 60_000 }, async () => {

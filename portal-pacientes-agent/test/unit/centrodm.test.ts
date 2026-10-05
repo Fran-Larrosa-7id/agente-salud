@@ -6,6 +6,7 @@ import { loadConfig } from '../../src/config.js';
 import { JobFileStore } from '../../src/jobs/file-store.js';
 import { hasZipMagic, validateMedicalArchive } from '../../src/jobs/medical-archive.js';
 import { centroDm } from '../../src/providers/centrodm/centrodm.provider.js';
+import { normalizeCentroDmDate } from '../../src/providers/centrodm/study-extractor.js';
 import { centroDmSourceKey } from '../../src/providers/centrodm/source-key.js';
 import { percamb } from '../../src/providers/percamb/percamb.provider.js';
 import { DomainPolicy } from '../../src/security/domain-policy.js';
@@ -22,6 +23,14 @@ test('Centro DM sourceKey es estable por ID del proveedor o metadata y no public
   assert.equal(byId1, createHash('sha256').update('centrodm|study-821').digest('hex'));
   assert.ok(!byId1?.includes('study-821'));
   assert.notEqual(byId1, byMetadata1);
+});
+
+test('Centro DM normaliza fechas dd/mm/aa tomando los años de dos dígitos como 2000–2099', () => {
+  assert.equal(normalizeCentroDmDate('23/02/26'), '2026-02-23');
+  assert.equal(normalizeCentroDmDate('08/04/24'), '2024-04-08');
+  assert.equal(normalizeCentroDmDate('11/12/23'), '2023-12-11');
+  assert.equal(normalizeCentroDmDate('01/01/99'), '2099-01-01');
+  assert.equal(normalizeCentroDmDate('31/02/26'), undefined);
 });
 
 test('ZIP médico valida magic bytes y límites, no el nombre del archivo', () => {

@@ -15,6 +15,7 @@ test('configura el canal elegido y mantiene Chromium empaquetado por defecto', (
   const config = loadConfig({ LLM_PROVIDER: 'rules', BROWSER_CHANNEL: ' msedge ' }, []);
   assert.equal(config.browserChannel, 'msedge');
   assert.equal(config.pdfDownloadTimeoutMs, 60_000);
+  assert.equal(config.rdcPdfSourceTimeoutMs, 30_000);
   assert.deepEqual(browserLaunchOptions({ headless: false, channel: config.browserChannel }), {
     headless: false,
     channel: 'msedge',
@@ -24,6 +25,7 @@ test('configura el canal elegido y mantiene Chromium empaquetado por defecto', (
   const defaultConfig = loadConfig({ LLM_PROVIDER: 'rules', BROWSER_CHANNEL: '  ' }, []);
   assert.equal(defaultConfig.browserChannel, undefined);
   assert.equal(loadConfig({ LLM_PROVIDER: 'rules', PDF_DOWNLOAD_TIMEOUT_MS: '12000' }, []).pdfDownloadTimeoutMs, 12_000);
+  assert.equal(loadConfig({ LLM_PROVIDER: 'rules', RDC_PDF_SOURCE_TIMEOUT_MS: '9000' }, []).rdcPdfSourceTimeoutMs, 9_000);
   assert.deepEqual(browserLaunchOptions({ headless: true, channel: defaultConfig.browserChannel }), {
     headless: true,
     args: ['--disable-features=Translate', '--no-default-browser-check'],

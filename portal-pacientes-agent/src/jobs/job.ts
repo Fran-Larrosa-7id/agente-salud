@@ -12,6 +12,7 @@ export interface ExternalStudy {
   deliveryDate?: string;
   status?: string;
   title?: string;
+  studyType?: string;
   modality?: string;
   provider: string;
 }

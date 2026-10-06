@@ -734,6 +734,13 @@
       const modeB = String(b.modality || '').trim().toUpperCase();
       return !!(dateA && titleA && dateA === dateB && titleA === titleB && modeA === modeB);
     }
+    if (providerId === 'rdcchacabuco') {
+      const titleA = String(a.title || a.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+      const titleB = String(b.title || b.name || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+      const typeA = String(a.studyType || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+      const typeB = String(b.studyType || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+      return !!(dateA && titleA && dateA === dateB && titleA === titleB && typeA === typeB);
+    }
     const protocolA = String(a.protocol || '').normalize('NFKC').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const protocolB = String(b.protocol || '').normalize('NFKC').toUpperCase().replace(/[^A-Z0-9]/g, '');
     return !!(dateA && protocolA && dateA === dateB && protocolA === protocolB);
@@ -761,7 +768,7 @@
       .filter((key) => typeof key === 'string' && /^[a-f0-9]{64}$/.test(key))));
   }
   function studyLabel(s) {
-    return s.provider === 'centrodm'
+    return s.provider === 'centrodm' || s.provider === 'rdcchacabuco'
       ? P.esc(s.title || 'Estudio de imágenes')
       : 'Resultados de laboratorio' + (s.date ? ' · ' + P.fmt(s.date) : ' · Sin fecha');
   }
@@ -786,9 +793,11 @@
       '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '<span class="cbox-dash"></span></span><span>Seleccionar estudios nuevos <span class="muted num">(' + available.length + ')</span></span></label>' +
       '<ul class="res-list">' + list.map((s, k) =>
         '<li style="--i:' + k + '"><label class="res-row' + (s.alreadyImported ? ' is-imported' : '') + '"><input type="checkbox" data-change="res-one" value="' + P.esc(s.id) + '"' + (s.alreadyImported ? ' disabled aria-label="Este estudio ya está en tu portal"' : '') + '>' +
-        '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '</span>' + P.typeTile(s.provider === 'centrodm' ? 'imagenes' : 'laboratorio') +
+        '<span class="cbox" aria-hidden="true">' + ic('check', 16) + '</span>' + P.typeTile(s.provider === 'centrodm' || s.provider === 'rdcchacabuco' ? 'imagenes' : 'laboratorio') +
         '<span class="res-main"><span class="res-name">' + studyLabel(s) + '</span>' +
-        '<span class="res-sub">' + (s.provider === 'centrodm'
+        '<span class="res-sub">' + (s.provider === 'rdcchacabuco'
+          ? 'Imágenes' + (s.studyType ? ' · ' + P.esc(s.studyType) : '') + ' · Archivo PDF'
+          : s.provider === 'centrodm'
           ? 'Imágenes' + (s.modality ? ' · Modalidad ' + P.esc(s.modality) : '') + ' · Archivo DICOM ZIP'
           : (s.protocol ? 'Protocolo <span class="num">' + P.esc(s.protocol) + '</span>' : 'Sin número de protocolo')) +
         (s.status ? ' · ' + P.esc(s.status) : '') + (s.alreadyImported ? ' · Ya está en tu portal' : '') + '</span></span>' +
@@ -843,8 +852,8 @@
     const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', importFailed ? 'No se guardó' : 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
     return (
       '<li class="dl-study' + (cur >= 0 && cur < 4 ? ' is-current' : '') + (failed ? ' is-failed' : '') + '">' +
-      '<div class="dl-head">' + P.typeTile(s.provider === 'centrodm' ? 'imagenes' : 'laboratorio') + '<span class="dl-name">' + studyLabel(s) +
-      (s.provider === 'centrodm' ? (s.modality ? '<small>Modalidad ' + P.esc(s.modality) + '</small>' : '') : s.protocol ? '<small>Protocolo <span class="num">' + P.esc(s.protocol) + '</span></small>' : '') + '</span>' + head + '</div>' +
+      '<div class="dl-head">' + P.typeTile(s.provider === 'centrodm' || s.provider === 'rdcchacabuco' ? 'imagenes' : 'laboratorio') + '<span class="dl-name">' + studyLabel(s) +
+      (s.provider === 'rdcchacabuco' ? (s.studyType ? '<small>' + P.esc(s.studyType) + ' · Documento PDF</small>' : '<small>Documento PDF</small>') : s.provider === 'centrodm' ? (s.modality ? '<small>Modalidad ' + P.esc(s.modality) + '</small>' : '') : s.protocol ? '<small>Protocolo <span class="num">' + P.esc(s.protocol) + '</span></small>' : '') + '</span>' + head + '</div>' +
       (existing
         ? '<p class="dl-fail">Este estudio ya está en tu portal. No creamos otra copia.</p>'
         : failed
@@ -917,7 +926,7 @@
       const providerId = ext.provider || P.inst(F.inst).live;
       const duplicate = P.db.studies.find((study) => isAgentStudyFromProvider(study, providerId) && sha256 && (study.file && study.file.sha256 || study.pdfSha256) === sha256);
       const sameStudy = !!(duplicate && importedMatch(ext, [duplicate], providerId));
-      const id = sameStudy ? duplicate.id : (providerId === 'centrodm' ? 'cdm-' : 'pc-') + String(d.studyId).replace(/[^\w-]/g, '');
+      const id = sameStudy ? duplicate.id : (providerId === 'centrodm' ? 'cdm-' : providerId === 'rdcchacabuco' ? 'rdc-' : 'pc-') + String(d.studyId).replace(/[^\w-]/g, '');
       const prev = P.study(id);
       targetStudy = prev || null;
       previous = prev ? Object.assign({}, prev) : null;
@@ -928,13 +937,13 @@
         : (kind === 'DICOM_ZIP' ? 'dicom-' : 'pdf-') + d.fileId;
       fileStored = await P.files.put(fileKey, blob);
       if (!fileStored) throw new Error('ARTIFACT_STORAGE_FAILED');
-      const isImage = providerId === 'centrodm' || kind === 'DICOM_ZIP';
+      const isImage = providerId === 'centrodm' || providerId === 'rdcchacabuco' || kind === 'DICOM_ZIP';
       const study = {
         id, name: isImage ? (ext.title || 'Estudio de imágenes') : 'Resultados de laboratorio', type: isImage ? 'imagenes' : 'laboratorio',
         studyDate: ext.studyDate || ext.date || '', date: ext.studyDate || ext.date || '', reportDate: ext.deliveryDate || null,
         inst: F.inst, provider: providerId, providerDisplayName: P.inst(F.inst).name,
         sourceKey: ext.sourceKey || (sameStudy && duplicate.sourceKey) || undefined,
-        modality: ext.modality || '', artifactKind: kind,
+        modality: ext.modality || '', studyType: ext.studyType || '', artifactKind: kind,
         requestedBy: 'Sin dato en el documento', protocol: ext.protocol || '', providerStatus: ext.status || '',
         status: 'disponible', pages: 0, images: 0, results: null, size: P.fmtBytes(blob.size),
         importedAt: d.importedAt || new Date().toISOString(), importedBy: d.importedBy || 'agent',

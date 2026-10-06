@@ -64,6 +64,7 @@ export interface ProviderStudyMetadata {
   deliveryDate?: string;
   status?: string;
   title?: string;
+  studyType?: string;
   modality?: string;
 }
 
@@ -87,6 +88,19 @@ export interface CentroDmStudyReference {
   modality?: string;
 }
 
+export interface RdcChacabucoStudyReference {
+  studyId: string;
+  frame: number;
+  /** Índice del icono fa-file dentro del frame; solo sirve para relocalizarlo. */
+  actionIndex: number;
+  rowIndex: number;
+  actionCount: number;
+  /** Token efímero en el document actual; detecta navegación sin guardar URL ni query. */
+  documentToken: string;
+  iconToken: string;
+  sourceKey: string;
+}
+
 /** El proveedor mostró acciones de estudios que el extractor no pudo asociar con filas. */
 export class ProviderParserMismatchError extends Error {
   readonly code = 'PROVIDER_PARSER_MISMATCH';
@@ -98,7 +112,8 @@ export class ProviderParserMismatchError extends Error {
 export interface ProviderStructureEvent {
   event: 'percamb_page' | 'percamb_result_links' | 'percamb_result_actions' | 'percamb_candidate_rows' | 'percamb_parsed_studies' | 'percamb_metadata_complete' | 'percamb_action' | 'percamb_ancestor' |
     'centrodm_page' | 'centrodm_tables' | 'centrodm_rows' | 'centrodm_result_actions' | 'centrodm_minimal_studies' | 'centrodm_metadata_enriched' | 'centrodm_metadata_partial' | 'centrodm_metadata_dates_found' | 'centrodm_studies_with_date' | 'centrodm_study_metadata' | 'centrodm_rows_with_action' | 'centrodm_action' | 'centrodm_parsed_studies' | 'centrodm_results' | 'centrodm_study_action' | 'centrodm_viewer_opened' | 'centrodm_viewer_detected' | 'centrodm_download_button' | 'centrodm_download_options' | 'centrodm_download_choice' | 'centrodm_archive_valid' | 'viewer_opened' | 'viewer_detected' | 'viewer_detection_signals' | 'viewer_reference_check' | 'viewer_download_button' | 'viewer_download_options' | 'viewer_download_strategy' | 'medical_archive_downloaded' |
-    'pixeon_frames' | 'pixeon_frame' | 'pixeon_download_probe' | 'pixeon_download_probe_start' | 'pixeon_download_probe_end' | 'pixeon_download_fastpath' | 'pixeon_download_click' | 'pixeon_download_options' | 'pixeon_text_exact' | 'pixeon_text_partial' | 'pixeon_attr_candidates' | 'pixeon_dom_candidate' | 'pixeon_clickable_ancestor' | 'pixeon_structural_fallback' | 'pixeon_toolbar_candidates' | 'toolbar_candidate' | 'pixeon_toolbar_detected' | 'pixeon_download_structural_candidate' | 'find_document_dispatch' | 'centrodm_find_document_enter' | 'pixeon_download_text_matches' | 'pixeon_download_role_matches' | 'pixeon_download_attr_matches' | 'pixeon_download_menu_options' | 'pixeon_probe' | 'pixeon_cookie_consent' | 'pixeon_download_candidate' | 'pixeon_download_button' | 'pixeon_download_menu' | 'pixeon_download_choice';
+    'pixeon_frames' | 'pixeon_frame' | 'pixeon_download_probe' | 'pixeon_download_probe_start' | 'pixeon_download_probe_end' | 'pixeon_download_fastpath' | 'pixeon_download_click' | 'pixeon_download_options' | 'pixeon_text_exact' | 'pixeon_text_partial' | 'pixeon_attr_candidates' | 'pixeon_dom_candidate' | 'pixeon_clickable_ancestor' | 'pixeon_structural_fallback' | 'pixeon_toolbar_candidates' | 'toolbar_candidate' | 'pixeon_toolbar_detected' | 'pixeon_download_structural_candidate' | 'find_document_dispatch' | 'centrodm_find_document_enter' | 'pixeon_download_text_matches' | 'pixeon_download_role_matches' | 'pixeon_download_attr_matches' | 'pixeon_download_menu_options' | 'pixeon_probe' | 'pixeon_cookie_consent' | 'pixeon_download_candidate' | 'pixeon_download_button' | 'pixeon_download_menu' | 'pixeon_download_choice' |
+    'rdc_page' | 'rdc_rows' | 'rdc_file_icons' | 'rdc_file_icons_fallback' | 'rdc_file_icons_class_fallback' | 'rdc_file_icons_global' | 'rdc_result_actions' | 'rdc_candidate_rows' | 'rdc_parsed_studies' | 'rdc_studies_found' | 'rdc_action_build' | 'rdc_study_action' | 'rdc_study_build' | 'rdc_study_reference_saved' | 'rdc_provider_refs' | 'rdc_open_study' | 'rdc_document_listeners_ready' | 'rdc_study_action_click' | 'rdc_modal_opened' | 'rdc_frame_navigation' | 'rdc_frames' | 'rdc_frame' | 'rdc_modal_probe' | 'rdc_pdf_sources_scan' | 'rdc_pdf_dom_candidate' | 'rdc_embed_candidates' | 'rdc_embed_candidate' | 'rdc_embed_fetch' | 'rdc_nested_source_scan' | 'rdc_pdf_response' | 'rdc_pdf_candidate' | 'rdc_pdf_source' | 'rdc_pdf_full' | 'rdc_pdf_valid' | 'rdc_external_origin' | 'rdc_import_complete';
   count?: number;
   index?: number;
   hasDate?: boolean;
@@ -117,9 +132,9 @@ export interface ProviderStructureEvent {
   hrefKind?: 'llamadoURL';
   ancestorTr?: boolean;
   type?: 'results_list';
-  strategy?: 'full_dicom_zip' | 'pixeon' | 'class_fastpath';
+  strategy?: 'full_dicom_zip' | 'pixeon' | 'class_fastpath' | 'stored_reference' | 'icon' | 'clickable_ancestor' | 'ancestor_wrapper' | 'response' | 'response_full' | 'range_reassembly' | 'iframe' | 'iframe_fetch' | 'iframe_browser_fetch' | 'embed' | 'embed_fetch' | 'embed_browser_fetch' | 'nested_embed_browser_fetch' | 'object' | 'object_fetch' | 'object_browser_fetch' | 'blob' | 'blob_fetch' | 'data' | 'data_url' | 'download' | 'context_request';
   kind?: 'full_dicom_zip';
-  selector?: 'downloadToolsItem';
+  selector?: 'downloadToolsItem' | 'i.fa.fa-file.icon-size' | 'i.fa-file' | '.fa-file.icon-size' | '.fa-file';
   elapsedMs?: number;
   intercepted?: boolean;
   brand?: boolean;
@@ -154,12 +169,39 @@ export interface ProviderStructureEvent {
   viewer?: boolean;
   candidates?: number;
   reason?: string;
+  status?: number;
+  contentType?: string;
+  contentLengthPresent?: boolean;
+  contentRangePresent?: boolean;
+  acceptRangesPresent?: boolean;
+  bodyBytes?: number;
+  magic?: string;
+  rejected?: boolean;
+  attr?: 'src' | 'data' | 'href' | 'data-src' | 'data-pdf' | 'data-url';
+  iframes?: number;
+  embeds?: number;
+  objects?: number;
+  blobSources?: number;
+  dataPdfSources?: number;
+  sameOriginSources?: number;
+  sameOrigin?: boolean;
+  typePdf?: boolean;
   role?: string;
   textMatch?: boolean;
   visible?: boolean;
   detected?: boolean;
   accepted?: boolean;
   opened?: boolean;
+  studyRefFound?: boolean;
+  actionIndex?: number;
+  iconFound?: boolean;
+  locatorCount?: number;
+  hasActionIndex?: boolean;
+  hasStableSelector?: boolean;
+  clickableFound?: boolean;
+  studyCreated?: boolean;
+  refCreated?: boolean;
+  metadataEnriched?: boolean;
 }
 
 /** Puerto que usa el agente para actuar sobre el navegador. Permite testear el agente sin Playwright. */
@@ -184,10 +226,13 @@ export interface BrowserPort {
   /** Abre únicamente el estudio asociado al id opaco del job actual. */
   hasStudy?(studyId: string): boolean;
   openStudy?(studyId: string): Promise<boolean>;
+  closeRdcChacabucoModal?(): Promise<void>;
   isStudyOpen?(studyId: string): boolean;
   /** Encuentra/descarga la acción PDF del estudio que ya fue seleccionado y abierto. */
   findPdfAction?(): Promise<string | null>;
   downloadCurrentStudyPdf?(): Promise<CapturedPdf | null>;
   isCentroDmResultsPage?(): Promise<boolean>;
+  isRdcChacabucoResultsPage?(): Promise<boolean>;
+  downloadRdcChacabucoStudyPdf?(): Promise<CapturedPdf | null>;
   downloadFullDicomStudy?(timeoutMs: number): Promise<CapturedMedicalArchive>;
 }

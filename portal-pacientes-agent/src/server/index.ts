@@ -15,6 +15,7 @@ loadDotEnv();
 const config = loadConfig();
 const log = createLogger(config.logLevel);
 log.info(null, 'pixeon_debug_config', { keepViewerOpen: config.pixeonDebugKeepViewerOpen, ttlMs: config.pixeonDebugKeepViewerOpenMs });
+log.info(null, 'rdc_debug_config', { keepModalOpen: config.rdcDebugKeepModalOpen, ttlMs: config.rdcDebugKeepModalOpenMs });
 
 // Restos de una ejecución anterior (p. ej. si el proceso se cortó): se borran al iniciar.
 await rm(config.tmpDir, { recursive: true, force: true });

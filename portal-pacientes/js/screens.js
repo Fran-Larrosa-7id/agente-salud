@@ -408,7 +408,8 @@
       '<header class="detail-head">' +
       '<div class="detail-title">' + P.typeTile(s.type, 'lg') +
       '<div><p class="eyebrow">' + t.label + '</p><h1 class="page-title" tabindex="-1">' + P.esc(s.name) + '</h1>' +
-      '<p class="detail-meta"><span>' + ic('calendar', 18) + P.fmtLong(s.date) + '</span>' + P.instBadge(s.inst) + P.studyStatus(s) + '</p></div></div>' +
+      '<p class="detail-meta"><span>' + ic('calendar', 18) + P.fmtLong(s.date) + '</span>' + P.instBadge(s.inst) + P.studyStatus(s) + '</p>' +
+      (s.studyType ? '<p class="muted">' + P.esc(s.studyType) + ' · Documento PDF original</p>' : '') + '</div></div>' +
       (available
         ? '<div class="detail-actions">' +
           '<button type="button" class="btn btn-secondary" data-action="doc-download" data-id="doc-' + s.id + '">' + ic('download', 18) + '<span>Descargar</span></button>' +

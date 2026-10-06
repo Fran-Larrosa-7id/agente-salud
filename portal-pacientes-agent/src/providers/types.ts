@@ -24,5 +24,5 @@ export interface ProviderConfig {
   /** Nota breve para el agente sobre el portal (sin datos de pacientes). */
   agentNotes: string;
   /** Extractor DOM de solo lectura, habilitado solo para portales relevados y cubiertos por tests. */
-  studyExtractor?: 'labwin' | 'centrodm';
+  studyExtractor?: 'labwin' | 'centrodm' | 'rdcchacabuco';
 }

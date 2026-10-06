@@ -1,20 +1,22 @@
 import { readFile, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import type { APIResponse, BrowserContext, Frame, Page, Response, Route } from 'playwright';
-import { MAX_PDF_BYTES, validatePdf, type CapturedPdf } from '../jobs/pdf.js';
+import { MAX_PDF_BYTES, hasPdfMagic, validatePdf, type CapturedPdf } from '../jobs/pdf.js';
 import { MAX_MEDICAL_ARCHIVE_BYTES, validateMedicalArchive, type CapturedMedicalArchive } from '../jobs/medical-archive.js';
 import type { ProviderConfig } from '../providers/types.js';
 import { LABWIN_EXTRACTOR_SOURCE, type LabwinExtraction, type LabwinRawStudy } from '../providers/percamb/study-extractor.js';
 import { percambSourceKey } from '../providers/percamb/source-key.js';
 import { CENTRODM_EXTRACTOR_SOURCE, normalizeCentroDmDate, type CentroDmExtraction, type CentroDmRawAction } from '../providers/centrodm/study-extractor.js';
 import { centroDmSourceKey } from '../providers/centrodm/source-key.js';
+import { RDC_EXTRACTOR_SOURCE, normalizeRdcDate, type RdcExtraction } from '../providers/rdcchacabuco/study-extractor.js';
+import { rdcChacabucoSourceKey } from '../providers/rdcchacabuco/source-key.js';
 import { parseDate } from '../agent/studies.js';
 import { DomainPolicy } from '../security/domain-policy.js';
 import { sleep } from '../util.js';
 import type { BrowserHost } from './browser-host.js';
 import { probePixeonDownload, handlePixeonCookieConsent, clickPixeonControl } from './pixeon-download.js';
 import { COLLECTOR_SOURCE } from './collector.js';
-import { ProviderParserMismatchError, type BrowserPort, type CentroDmStudyReference, type ProviderStudyList, type ProviderStudyMetadata, type ProviderStructureEvent, type RawElement, type RawPageSnapshot } from './types.js';
+import { ProviderParserMismatchError, type BrowserPort, type CentroDmStudyReference, type RdcChacabucoStudyReference, type ProviderStudyList, type ProviderStudyMetadata, type ProviderStructureEvent, type RawElement, type RawPageSnapshot } from './types.js';
 
 export class ProviderUnavailableError extends Error {
   constructor(readonly status: number | null) {
@@ -40,6 +42,10 @@ export class PdfDownloadError extends Error {
     super(code);
   }
 }
+export type RdcChacabucoErrorCode = 'STUDY_REFERENCE_MISSING' | 'STUDY_ACTION_NOT_FOUND' | 'STUDY_MODAL_NOT_OPENED' | 'PDF_SOURCE_NOT_FOUND' | 'PDF_RANGE_REASSEMBLY_FAILED' | 'PDF_FULL_FETCH_FAILED' | 'INVALID_PDF';
+export class RdcChacabucoError extends Error {
+  constructor(readonly code: RdcChacabucoErrorCode) { super(code); }
+}
 export type MedicalArchiveErrorCode = 'STUDY_REFERENCE_MISSING' | 'VIEWER_NOT_READY' | 'VIEWER_OPEN_TIMEOUT' | 'VIEWER_NOT_RECOGNIZED' | 'DOWNLOAD_ACTION_NOT_FOUND' | 'DOWNLOAD_ACTION_NOT_CLICKABLE' | 'DOWNLOAD_MENU_NOT_FOUND' | 'DICOM_DOWNLOAD_TIMEOUT' | 'INVALID_MEDICAL_ARCHIVE';
 export class MedicalArchiveError extends Error {
   constructor(readonly code: MedicalArchiveErrorCode) { super(code); }
@@ -63,8 +69,45 @@ interface PixeonUiProbe {
   toolbarCandidates: number;
 }
 
+type RdcDomStrategy = 'iframe' | 'embed' | 'object' | 'data' | 'blob';
+interface RdcDomSource {
+  url: string;
+  strategy: RdcDomStrategy;
+  frame: Frame;
+  attr: 'src' | 'data' | 'href' | 'data-src' | 'data-pdf' | 'data-url';
+  depth: number;
+  typePdf: boolean;
+}
+interface RdcBrowserFetchResult {
+  kind: 'pdf' | 'html' | 'failed' | 'invalid';
+  status: number;
+  contentType: string;
+  bodyBytes: number;
+  magic: string;
+  data?: string;
+  reason?: string;
+  nested?: { url: string; strategy: RdcDomStrategy; attr: RdcDomSource['attr']; typePdf: boolean }[];
+}
+interface RdcModalSnapshot {
+  modal: boolean;
+  sources: RdcDomSource[];
+  pdfDocuments: string[];
+  frameCount: number;
+  iframes: number;
+  embeds: number;
+  objects: number;
+  blobSources: number;
+  dataPdfSources: number;
+  sameOriginSources: number;
+}
+
 function normalizeProtocol(value: string): string {
   return value.replace(/\s+/g, '').toUpperCase();
+}
+
+function isHtmlPayload(buffer: Buffer): boolean {
+  const prefix = buffer.subarray(0, 256).toString('latin1').replace(/^\uFEFF/, '').trimStart();
+  return /^<(?:!doctype\s+html|html\b)/i.test(prefix);
 }
 
 /**
@@ -91,12 +134,30 @@ export class BrowserSession implements BrowserPort {
     }
   }
 
+  /** Mantiene el contexto RDC abierto temporalmente para inspección manual en desarrollo. */
+  retainRdcModalForDebug(durationMs = 120_000): void {
+    if (this.provider.studyExtractor === 'rdcchacabuco' && this.rdcModalObserved && !this.mainPage.isClosed()) {
+      this.retainedViewers.set(this.mainPage, Date.now() + Math.max(1, durationMs));
+    }
+  }
+
   private pdfActionDepth = 0;
   private archiveActionDepth = 0;
   private invalidArchiveObserved = false;
   private invalidPdfObservedAt = 0;
+  private rdcInvalidPdfObservedAt = 0;
+  private rdcDocumentSignalAt = 0;
+  private readonly rdcDocumentSourceWaiters = new Set<() => void>();
+  private readonly rdcPdfCandidateUrls = new Set<string>();
+  private readonly rdcLoggedDomCandidateUrls = new Set<string>();
+  private readonly rdcLoggedEmbedCandidateUrls = new Set<string>();
+  private lastRdcProbeSignature = '';
+  private rdcModalObserved = false;
   private readonly providerStudies = new Map<string, { protocol: string; date?: string; deliveryDate?: string; status?: string; href: string; rowToken: string; actionToken: string; frame: number; listUrl: string }>();
   private readonly centroDmStudies = new Map<string, CentroDmStudyReference>();
+  private readonly rdcChacabucoStudies = new Map<string, RdcChacabucoStudyReference>();
+  private readonly rdcDocumentToken = randomUUID().replace(/-/g, '');
+  private activeRdcFrameIndex: number | null = null;
   private readonly guardedCentroDmViewerPages = new WeakSet<Page>();
   private readonly acceptedPixeonConsentPages = new WeakSet<Page>();
   private readonly centroDmRedirectCounts = new WeakMap<Page, number>();
@@ -181,6 +242,9 @@ export class BrowserSession implements BrowserPort {
       const allowed = allowedDataPdf || actionViewer || centroDmViewer || (req.isNavigationRequest() ? this.policy.isAllowedNavigation(url) : this.policy.isAllowedSubresource(url));
       if (allowed) return route.continue();
       if (!DomainPolicy.isTransientBlank(url)) {
+        if (this.provider.id === 'rdcchacabuco' && /^https?:/i.test(url)) {
+          this.providerStructure('rdc_external_origin', undefined, { host: this.safeUrlParts(url).host });
+        }
         this.onNavigationBlocked?.(this.safeUrlParts(url));
         // Un host rechazado dentro del popup seleccionado es un fallo de ese estudio, no de toda
         // la sesión. Una navegación inesperada desde la pestaña autenticada sigue siendo fatal.
@@ -281,6 +345,14 @@ export class BrowserSession implements BrowserPort {
 
   private attachPage(p: Page): void {
     this.onPdfTrace?.({ stage: 'page_opened', ...this.safeUrlParts(p.url()) });
+    if (this.provider.studyExtractor === 'rdcchacabuco') p.on('framenavigated', (frame) => {
+      if (!this.activeStudyId) return;
+      const url = frame.url();
+      this.providerStructure('rdc_frame_navigation', undefined, {
+        host: this.safeUrlParts(url).host,
+        found: this.policy.isAllowedNavigation(url),
+      });
+    });
     p.on('download', async (d) => {
       if (this.archiveActionDepth > 0) {
         try {
@@ -311,16 +383,27 @@ export class BrowserSession implements BrowserPort {
         this.onPdfTrace?.({ stage: 'download_event', ...this.safeUrlParts(d.url()) });
         const safeOrigin = this.policy.isAllowedNavigation(d.url()) || (this.pdfActionDepth > 0 && /^data:application\/pdf(?:;|,)/i.test(d.url()));
         if (!safeOrigin) return void d.cancel();
+        if (this.provider.id === 'rdcchacabuco' && this.activeStudyId) this.signalRdcDocumentSource();
         const file = await d.path();
         if (!file) return;
         if ((await stat(file)).size > this.maxPdfBytes) {
+          if (this.provider.id === 'rdcchacabuco' && this.activeStudyId) this.markRdcPdfInvalid();
           await d.cancel().catch(() => {});
           await d.delete().catch(() => {});
           return;
         }
         const buffer = await readFile(file);
         await d.delete().catch(() => {});
-        this.offer({ buffer, contentType: null, via: 'download' });
+        const pdfCheck = validatePdf(buffer, null, this.maxPdfBytes);
+        if (pdfCheck.ok) this.offer({ buffer, contentType: null, via: 'download' });
+        else if (this.provider.id === 'rdcchacabuco' && this.activeStudyId && isHtmlPayload(buffer)) {
+          this.logRdcPdfCandidate(200, {}, buffer, true, true, 'html_payload');
+        }
+        else {
+          this.invalidPdfObservedAt = Date.now();
+          if (this.provider.id === 'rdcchacabuco' && this.activeStudyId) this.markRdcPdfInvalid();
+          this.onPdfTrace?.({ stage: 'response_invalid', ...this.safeUrlParts(d.url()) });
+        }
       } catch {
         /* descarga cancelada o contexto cerrado */
       }
@@ -337,18 +420,55 @@ export class BrowserSession implements BrowserPort {
     const headers = r.headers();
     const ct = headers['content-type'] || '';
     const cd = headers['content-disposition'] || '';
-    if (!/pdf/i.test(ct) && !/\.pdf/i.test(cd)) return;
+    const status = r.status();
+    if (!/pdf/i.test(ct) && !/\.pdf/i.test(cd) && !/\.pdf(?:[?#]|$)/i.test(r.url())) return;
+    if (this.provider.id === 'rdcchacabuco') this.providerStructure('rdc_pdf_response', undefined, { found: true, host: this.safeUrlParts(r.url()).host });
     this.onPdfTrace?.({ stage: 'pdf_response', ...this.safeUrlParts(r.url()) });
-    if (r.status() >= 300 || !this.policy.isAllowedNavigation(r.url())) return;
+    if (status >= 300 || !this.policy.isAllowedNavigation(r.url())) return;
+    const isActiveRdcStudy = this.provider.id === 'rdcchacabuco' && !!this.activeStudyId;
+    const contentRange = headers['content-range'] || '';
+    const isRangeResponse = status === 206 || !!contentRange;
+    if (isActiveRdcStudy) this.signalRdcDocumentSource();
     const announcedSize = Number(headers['content-length']);
-    if (Number.isFinite(announcedSize) && announcedSize > this.maxPdfBytes) return;
+    if (Number.isFinite(announcedSize) && announcedSize > this.maxPdfBytes) {
+      if (isActiveRdcStudy) {
+        this.logRdcPdfCandidate(status, headers, null, true, true, isRangeResponse ? 'range_fragment' : 'oversized');
+        if (!isRangeResponse) this.markRdcPdfInvalid();
+      }
+      return;
+    }
     try {
       const buffer = await Promise.race([r.body(), sleep(5000).then(() => null)]);
-      if (!buffer) return;
+      if (!buffer) {
+        if (isActiveRdcStudy) this.logRdcPdfCandidate(status, headers, null, isRangeResponse, isRangeResponse, isRangeResponse ? 'range_fragment' : 'body_unavailable');
+        return;
+      }
+      if (isActiveRdcStudy && isRangeResponse) {
+        this.logRdcPdfCandidate(status, headers, buffer, true, true, 'range_fragment');
+        if (this.rdcPdfCandidateUrls.size < 8) this.rdcPdfCandidateUrls.add(r.url());
+        return;
+      }
+      if (isActiveRdcStudy && isHtmlPayload(buffer)) {
+        this.logRdcPdfCandidate(status, headers, buffer, true, true, 'html_payload');
+        return;
+      }
       this.onPdfTrace?.({ stage: 'response_body', ...this.safeUrlParts(r.url()) });
-      if (validatePdf(buffer, ct || null, this.maxPdfBytes).ok) this.offer({ buffer, contentType: ct || null, via: 'response' });
+      if (isActiveRdcStudy ? this.isRdcPdfPayload(buffer, ct || null) : validatePdf(buffer, ct || null, this.maxPdfBytes).ok) {
+        if (isActiveRdcStudy) this.logRdcPdfCandidate(status, headers, buffer, false);
+        if (isActiveRdcStudy && this.rdcPdfCandidateUrls.size < 8) this.rdcPdfCandidateUrls.add(r.url());
+        this.offer({ buffer, contentType: ct || null, via: 'response' });
+      }
       else {
+        if (isActiveRdcStudy && !/pdf/i.test(ct) && !/\.pdf/i.test(cd)) {
+          this.logRdcPdfCandidate(status, headers, buffer, true, true, 'not_pdf_payload');
+          return;
+        }
+        if (isActiveRdcStudy) {
+          this.logRdcPdfCandidate(status, headers, buffer, true, true, 'not_pdf_payload');
+          if (this.rdcPdfCandidateUrls.size < 8) this.rdcPdfCandidateUrls.add(r.url());
+        }
         this.invalidPdfObservedAt = Date.now();
+        if (isActiveRdcStudy) this.markRdcPdfInvalid();
         this.onPdfTrace?.({ stage: 'response_invalid', ...this.safeUrlParts(r.url()) });
       }
     } catch {
@@ -356,12 +476,77 @@ export class BrowserSession implements BrowserPort {
     }
   }
 
+  private logRdcPdfCandidate(
+    status: number,
+    headers: Record<string, string>,
+    buffer: Buffer | null,
+    rejected: boolean,
+    includeRejection = false,
+    reason?: string,
+  ): void {
+    this.providerStructure('rdc_pdf_candidate', undefined, {
+      status,
+      contentType: this.contentTypeKind(headers['content-type'] || ''),
+      contentLengthPresent: headers['content-length'] !== undefined,
+      contentRangePresent: headers['content-range'] !== undefined,
+      acceptRangesPresent: headers['accept-ranges'] !== undefined,
+      bodyBytes: buffer?.length ?? 0,
+      magic: buffer?.subarray(0, 8).toString('hex') || 'none',
+      rejected,
+      ...(includeRejection && reason ? { reason } : {}),
+    });
+  }
+
+  private signalRdcDocumentSource(): void {
+    this.rdcDocumentSignalAt = Date.now();
+    for (const resolve of this.rdcDocumentSourceWaiters) resolve();
+    this.rdcDocumentSourceWaiters.clear();
+  }
+
+  private markRdcPdfInvalid(): void {
+    this.rdcInvalidPdfObservedAt = Date.now();
+  }
+
+  private waitForRdcDocumentSource(signal?: AbortSignal): Promise<void> {
+    if (this.rdcDocumentSignalAt > 0 || signal?.aborted) return Promise.resolve();
+    return new Promise((resolve) => {
+      const cleanup = () => {
+        this.rdcDocumentSourceWaiters.delete(onSource);
+        signal?.removeEventListener('abort', onAbort);
+      };
+      const onSource = () => { cleanup(); resolve(); };
+      const onAbort = () => { cleanup(); resolve(); };
+      this.rdcDocumentSourceWaiters.add(onSource);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      if (signal?.aborted) onAbort();
+    });
+  }
+
+  private async waitForRdcDocumentSurface(timeoutMs: number): Promise<Awaited<ReturnType<BrowserSession['rdcModalState']>> | null> {
+    const deadline = Date.now() + timeoutMs;
+    while (!this.mainPage.isClosed() && Date.now() < deadline) {
+      const state = await this.rdcModalState();
+      if (state.modal || state.sources.length || state.pdfDocuments.length) return state;
+      await sleep(Math.min(100, Math.max(1, deadline - Date.now())));
+    }
+    return null;
+  }
+
   private offer(pdf: CapturedPdf): void {
     if (!validatePdf(pdf.buffer, pdf.contentType, this.maxPdfBytes).ok) return;
+    if (this.provider.id === 'rdcchacabuco' && this.activeStudyId && !this.isRdcPdfPayload(pdf.buffer, pdf.contentType)) {
+      this.markRdcPdfInvalid();
+      return;
+    }
     this.onPdfTrace?.({ stage: 'pdf_captured', scheme: pdf.via, host: 'none', count: this.waiters.length });
     const w = this.waiters.shift();
     if (w) w(pdf);
     else this.recent = { pdf, at: Date.now() };
+  }
+
+  private isRdcPdfPayload(buffer: Buffer, contentType: string | null): boolean {
+    return buffer.length > 0 && buffer.length <= this.maxPdfBytes &&
+      buffer.subarray(0, 4).toString('latin1') === '%PDF' && validatePdf(buffer, contentType, this.maxPdfBytes).ok;
   }
 
   private nextPdf(timeoutMs: number, signal?: AbortSignal): Promise<CapturedPdf | null> {
@@ -549,12 +734,98 @@ export class BrowserSession implements BrowserPort {
       'pixeon_structural_fallback', 'pixeon_toolbar_candidates', 'toolbar_candidate', 'pixeon_toolbar_detected', 'pixeon_download_structural_candidate',
       'pixeon_download_fastpath', 'pixeon_download_click', 'pixeon_download_options',
       'centrodm_find_document_enter', 'find_document_dispatch',
+      'rdc_page', 'rdc_rows', 'rdc_file_icons', 'rdc_file_icons_fallback', 'rdc_file_icons_class_fallback', 'rdc_file_icons_global', 'rdc_result_actions', 'rdc_candidate_rows', 'rdc_parsed_studies', 'rdc_studies_found', 'rdc_action_build', 'rdc_study_action', 'rdc_study_build', 'rdc_study_reference_saved', 'rdc_provider_refs', 'rdc_open_study', 'rdc_document_listeners_ready', 'rdc_study_action_click', 'rdc_modal_opened',
+      'rdc_frame_navigation', 'rdc_frames', 'rdc_frame', 'rdc_modal_probe', 'rdc_pdf_sources_scan', 'rdc_pdf_dom_candidate', 'rdc_embed_candidates', 'rdc_embed_candidate', 'rdc_embed_fetch', 'rdc_nested_source_scan', 'rdc_pdf_response', 'rdc_pdf_candidate', 'rdc_pdf_source', 'rdc_pdf_full', 'rdc_pdf_valid', 'rdc_external_origin', 'rdc_import_complete',
     ]);
     if (this.providerDebugStructure || alwaysLog.has(event)) this.onProviderStructure?.({ event, ...(count === undefined ? {} : { count }), ...details });
   }
 
   /** Extrae todas las filas visibles; referencias y protocolo quedan solo en memoria del job. */
   async listStudies(): Promise<ProviderStudyList | null> {
+    if (this.provider.studyExtractor === 'rdcchacabuco') {
+      const frames = await this.extractRdcFrames();
+      const recognized = frames.some(({ extraction }) => extraction.recognized);
+      if (!recognized) return null;
+      this.providerStructure('rdc_page', undefined, { type: 'results_list' });
+      const candidateRows = frames.reduce((total, item) => total + item.extraction.candidateRows, 0);
+      const resultActions = frames.reduce((total, item) => total + item.extraction.resultActions, 0);
+      this.providerStructure('rdc_rows', candidateRows);
+      this.providerStructure('rdc_file_icons', frames.reduce((total, item) => total + item.extraction.primaryFileIcons, 0), { selector: 'i.fa.fa-file.icon-size' });
+      this.providerStructure('rdc_file_icons_fallback', frames.reduce((total, item) => total + item.extraction.fallbackFileIcons, 0), { selector: 'i.fa-file' });
+      this.providerStructure('rdc_file_icons_class_fallback', frames.reduce((total, item) => total + item.extraction.fallbackClassFileIcons, 0), { selector: '.fa-file.icon-size' });
+      if (frames.every(({ extraction }) => extraction.primaryFileIcons === 0 && extraction.fallbackFileIcons === 0)) {
+        this.providerStructure('rdc_file_icons_global', frames.reduce((total, item) => total + item.extraction.broadFileIcons, 0), { selector: '.fa-file' });
+      }
+      this.providerStructure('rdc_result_actions', resultActions);
+      this.providerStructure('rdc_candidate_rows', candidateRows);
+      const studies: ProviderStudyMetadata[] = [];
+      this.rdcChacabucoStudies.clear();
+      let rowOffset = 0;
+      let actionOrdinal = 0;
+      for (const { frame, extraction } of frames) {
+        const canEnrichByRowIndex = extraction.candidateRowMetadata.length === extraction.actions.length;
+        for (let localActionIndex = 0; localActionIndex < extraction.actions.length; localActionIndex++) {
+          const action = extraction.actions[localActionIndex];
+          const buildIndex = actionOrdinal++;
+          const indexedMetadata = canEnrichByRowIndex ? extraction.candidateRowMetadata[localActionIndex] : undefined;
+          const rawTitle = String(action.title || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+          const rawStudyType = String(action.studyType || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+          const rawStudyDate = String(action.studyDate || '').replace(/\s+/g, ' ').trim();
+          const title = rawTitle || String(indexedMetadata?.title || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+          const studyType = rawStudyType || String(indexedMetadata?.studyType || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+          const studyDate = normalizeRdcDate(rawStudyDate) || normalizeRdcDate(indexedMetadata?.studyDate);
+          const metadataEnriched = !!(title || studyType || studyDate);
+          const actionIndex = localActionIndex;
+          const localRowIndex = Number.isInteger(action.rowIndex) && action.rowIndex >= 0 ? action.rowIndex : localActionIndex;
+          const rowIndex = rowOffset + localRowIndex;
+          const sourceKey = rdcChacabucoSourceKey(studyDate, studyType, title, action.stableId, rowIndex)!;
+          const id = randomUUID();
+          const study: ProviderStudyMetadata = {
+            id,
+            sourceKey,
+            ...(studyDate ? { date: studyDate, studyDate } : {}),
+            title: title || 'Estudio disponible',
+            studyType: studyType || 'Imágenes',
+          };
+          this.rdcChacabucoStudies.set(id, {
+            studyId: id,
+            frame,
+            actionIndex,
+            rowIndex,
+            actionCount: extraction.actions.length,
+            documentToken: this.rdcDocumentToken,
+            iconToken: action.iconToken,
+            sourceKey,
+          });
+          studies.push(study);
+          this.providerStructure('rdc_action_build', undefined, {
+            index: buildIndex,
+            studyCreated: true,
+            refCreated: true,
+            metadataEnriched,
+          });
+          this.providerStructure('rdc_study_build', undefined, {
+            index: buildIndex,
+            studyCreated: true,
+            refCreated: true,
+            hasActionIndex: true,
+          });
+          this.providerStructure('rdc_study_action', undefined, { index: studies.length, found: true, hasDate: !!studyDate });
+          this.providerStructure('rdc_study_reference_saved', undefined, {
+            index: studies.length,
+            actionIndex,
+            hasActionIndex: true,
+            hasStableSelector: false,
+          });
+        }
+        rowOffset += Math.max(extraction.candidateRows, extraction.actions.length);
+      }
+      this.providerStructure('rdc_parsed_studies', studies.length);
+      this.providerStructure('rdc_studies_found', studies.length);
+      this.providerStructure('rdc_provider_refs', this.rdcChacabucoStudies.size);
+      if (resultActions > 0 && studies.length === 0) throw new ProviderParserMismatchError(resultActions, candidateRows, studies.length);
+      return { recognized: true, listUrl: this.page.url(), studies };
+    }
     if (this.provider.studyExtractor === 'centrodm') {
       const extraction = await this.extractCentroDmRows();
       if (!extraction.recognized) return null;
@@ -659,6 +930,27 @@ export class BrowserSession implements BrowserPort {
     return { recognized: true, listUrl: extraction.listUrl, studies };
   }
 
+  private async extractRdcFrames(): Promise<{ frame: number; extraction: RdcExtraction }[]> {
+    const found: { frame: number; extraction: RdcExtraction }[] = [];
+    const prefix = randomUUID().replace(/-/g, '');
+    const frames = this.page.frames();
+    for (let index = 0; index < frames.length && index < 8; index++) {
+      const frame = frames[index];
+      if (index > 0 && !this.policy.isAllowedNavigation(frame.url())) continue;
+      try {
+        const extraction = await frame.evaluate(`(${RDC_EXTRACTOR_SOURCE})(${JSON.stringify({ prefix: `${prefix}-${index}`, documentToken: this.rdcDocumentToken })})`).catch(() => null) as RdcExtraction | null;
+        if (!extraction) {
+          if (index === 0) throw new Error('RDC_EXTRACTION_FAILED');
+          continue;
+        }
+        found.push({ frame: index, extraction });
+      } catch {
+        if (index === 0) throw new Error('RDC_EXTRACTION_FAILED');
+      }
+    }
+    return found;
+  }
+
   /** Señales estructurales para el fast path del proveedor; nunca retorna texto del paciente. */
   async isPercambResultsPage(): Promise<boolean> {
     if (this.provider.studyExtractor !== 'labwin') return false;
@@ -688,6 +980,17 @@ export class BrowserSession implements BrowserPort {
     });
     if (!hasPortalFrame) return false;
     return (await this.extractCentroDmRows()).recognized;
+  }
+
+  async isRdcChacabucoResultsPage(): Promise<boolean> {
+    if (this.provider.studyExtractor !== 'rdcchacabuco') return false;
+    for (const frame of this.page.frames()) {
+      const host = DomainPolicy.hostOf(frame.url());
+      if (!host || !this.provider.allowedHosts.includes(host)) continue;
+      const isAuthenticatedDocument = await frame.evaluate(() => !document.querySelector('input[type="password"]')).catch(() => false);
+      if (isAuthenticatedDocument) return true;
+    }
+    return false;
   }
 
   private async extractCentroDmRows(): Promise<{
@@ -775,11 +1078,12 @@ export class BrowserSession implements BrowserPort {
   }
 
   hasStudy(studyId: string): boolean {
-    return this.providerStudies.has(studyId) || this.centroDmStudies.has(studyId);
+    return this.providerStudies.has(studyId) || this.centroDmStudies.has(studyId) || this.rdcChacabucoStudies.has(studyId);
   }
 
   /** Resuelve el id opaco a la acción exacta detectada; no elige por posición de fila. */
   async openStudy(studyId: string): Promise<boolean> {
+    if (this.provider.studyExtractor === 'rdcchacabuco') return this.openRdcChacabucoStudy(studyId);
     if (this.provider.studyExtractor === 'centrodm') return this.openCentroDmStudy(studyId);
     const target = this.providerStudies.get(studyId);
     if (!target || this.provider.studyExtractor !== 'labwin') return false;
@@ -861,6 +1165,318 @@ export class BrowserSession implements BrowserPort {
     await this.assertStudyReferenceMatches(studyId);
     this.activeStudyId = studyId;
     return true;
+  }
+
+  private async openRdcChacabucoStudy(studyId: string): Promise<boolean> {
+    const target = this.rdcChacabucoStudies.get(studyId);
+    const studyRefFound = !!target && target.studyId === studyId;
+    this.providerStructure('rdc_open_study', undefined, { studyRefFound });
+    if (!studyRefFound || !target) throw new RdcChacabucoError('STUDY_REFERENCE_MISSING');
+    if (this.mainPage.isClosed()) throw new RdcChacabucoError('STUDY_ACTION_NOT_FOUND');
+    this.activeStudyId = null;
+    this.recent = null;
+    this.invalidPdfObservedAt = 0;
+    this.rdcInvalidPdfObservedAt = 0;
+    this.rdcDocumentSignalAt = 0;
+    this.rdcPdfCandidateUrls.clear();
+    this.rdcLoggedDomCandidateUrls.clear();
+    this.rdcLoggedEmbedCandidateUrls.clear();
+    this.lastRdcProbeSignature = '';
+    this.rdcModalObserved = false;
+    this.page = this.mainPage;
+    const frameIndex = target.frame;
+    const frame = this.mainPage.frames()[frameIndex];
+    if (!frame) throw new RdcChacabucoError('STUDY_ACTION_NOT_FOUND');
+
+    // El token de documento demuestra que seguimos en el mismo listado, sin guardar su URL/query.
+    const iconOpenToken = `rdc-open-icon-${randomUUID().replace(/-/g, '')}`;
+    const clickToken = `rdc-click-${randomUUID().replace(/-/g, '')}`;
+    const resolution = await frame.evaluate(`(() => {
+      const expectedDocument = ${JSON.stringify(target.documentToken)};
+      const iconToken = ${JSON.stringify(target.iconToken)};
+      const actionIndex = ${target.actionIndex};
+      const actionCount = ${target.actionCount};
+      const iconOpenToken = ${JSON.stringify(iconOpenToken)};
+      const currentDocument = document.documentElement?.getAttribute('data-pp-rdc-document') || '';
+      const visible = (el) => { const style = getComputedStyle(el); return !!el.getClientRects().length && style.visibility !== 'hidden' && style.display !== 'none'; };
+      const primary = Array.from(document.querySelectorAll('i.fa.fa-file.icon-size')).filter(visible);
+      const fallback = Array.from(new Set([...document.querySelectorAll('i.fa-file'), ...document.querySelectorAll('.fa-file.icon-size')])).filter(visible);
+      const broad = Array.from(document.querySelectorAll('.fa-file')).filter(visible);
+      const specific = Array.from(new Set([...primary, ...fallback]));
+      const icons = specific.length ? specific : broad;
+      const result = { sameDocument: currentDocument === expectedDocument, locatorCount: icons.length, iconFound: false };
+      if (!result.sameDocument) return result;
+      const stored = icons.find((icon) => icon.getAttribute('data-pp-rdc-icon') === iconToken);
+      const indexed = icons[actionIndex];
+      const selected = stored || (icons.length === actionCount ? indexed : null);
+      if (!selected) return result;
+      selected.setAttribute('data-pp-rdc-open-icon', iconOpenToken);
+      result.iconFound = true;
+      return result;
+    })()`).catch(() => null) as { sameDocument: boolean; locatorCount: number; iconFound: boolean } | null;
+    this.providerStructure('rdc_open_study', undefined, {
+      studyRefFound: true,
+      actionIndex: target.actionIndex,
+      ...(resolution ? { locatorCount: resolution.locatorCount, iconFound: resolution.iconFound } : { locatorCount: 0, iconFound: false }),
+      found: !!resolution?.sameDocument,
+    });
+    if (!resolution?.sameDocument || !resolution.iconFound) throw new RdcChacabucoError('STUDY_ACTION_NOT_FOUND');
+
+    const clickTargets = await frame.evaluate(`(() => {
+      const iconOpenToken = ${JSON.stringify(iconOpenToken)};
+      const clickToken = ${JSON.stringify(clickToken)};
+      const icon = document.querySelector('[data-pp-rdc-open-icon="' + iconOpenToken + '"]');
+      if (!icon) return { count: 0, clickableCount: 0 };
+      const explicit = [];
+      const wrappers = [];
+      const selector = 'a,button,[role="button"],[onclick]';
+      let parent = icon.parentElement;
+      for (let depth = 0; parent && parent !== document.body && depth < 6; depth++, parent = parent.parentElement) {
+        if (parent.matches(selector)) explicit.push(parent);
+        else wrappers.push(parent);
+      }
+      const candidates = [icon, ...explicit, ...wrappers].filter((candidate, index, all) => all.indexOf(candidate) === index);
+      candidates.forEach((candidate, index) => candidate.setAttribute('data-pp-rdc-click-target', clickToken + '-' + index));
+      return { count: candidates.length, clickableCount: explicit.length };
+    })()`).catch(() => ({ count: 0, clickableCount: 0 })) as { count: number; clickableCount: number };
+    if (clickTargets.count === 0) throw new RdcChacabucoError('STUDY_ACTION_NOT_FOUND');
+
+    const pagesBefore = new Set(this.context.pages());
+    this.activeRdcFrameIndex = frameIndex;
+    this.activeStudyId = studyId;
+    this.pdfActionDepth++;
+    let opened = false;
+    let modalOpened = false;
+    let documentSourceFound = false;
+    const sourceController = new AbortController();
+    const sourceSignal = this.waitForRdcDocumentSource(sourceController.signal).then(() => ({ kind: 'source' as const }));
+    this.providerStructure('rdc_document_listeners_ready', undefined, { found: true });
+    try {
+      for (let index = 0; index < clickTargets.count; index++) {
+        const candidate = frame.locator(`[data-pp-rdc-click-target="${clickToken}-${index}"]`).first();
+        const safe = await candidate.evaluate((node) => {
+          const el = node as HTMLElement;
+          const button = el as HTMLButtonElement;
+          const disabled = (el.tagName === 'BUTTON' && button.disabled) || el.getAttribute('aria-disabled') === 'true';
+          const isSubmit = el.tagName === 'BUTTON' && (button.type || 'submit').toLowerCase() === 'submit';
+          const inPasswordForm = !!el.closest('form')?.querySelector('input[type="password"]');
+          const hasFileIcon = el.matches('.fa-file') || !!el.querySelector('.fa-file');
+          return !!el.getClientRects().length && !disabled && !isSubmit && !inPasswordForm && hasFileIcon;
+        }).catch(() => false);
+        if (!safe) continue;
+        const strategy = index === 0 ? 'icon' : index <= clickTargets.clickableCount ? 'clickable_ancestor' : 'ancestor_wrapper';
+        this.providerStructure('rdc_study_action_click', undefined, { actionIndex: target.actionIndex, strategy });
+        await candidate.click({ timeout: 3_000, noWaitAfter: true }).catch(() => {});
+        const observation = await Promise.race([
+          sourceSignal,
+          this.waitForRdcDocumentSurface(1_200).then((state) => state
+            ? { kind: 'surface' as const, state }
+            : { kind: 'timeout' as const }),
+        ]);
+        if (observation.kind === 'source') {
+          documentSourceFound = true;
+          opened = true;
+          break;
+        }
+        if (observation.kind === 'surface') {
+          opened = true;
+          modalOpened = observation.state.modal;
+          documentSourceFound = observation.state.sources.length > 0 || observation.state.pdfDocuments.length > 0;
+          break;
+        }
+        const popupPdf = this.context.pages().some((page) => !pagesBefore.has(page) && DomainPolicy.isBrowserPdfViewer(page.url()));
+        if (popupPdf) {
+          opened = true;
+          documentSourceFound = true;
+          break;
+        }
+      }
+    } finally {
+      sourceController.abort();
+      this.pdfActionDepth = Math.max(0, this.pdfActionDepth - 1);
+      await frame.locator('[data-pp-rdc-click-target]').evaluateAll((nodes) => {
+        for (const node of nodes) node.removeAttribute('data-pp-rdc-click-target');
+      }).catch(() => {});
+      await frame.locator(`[data-pp-rdc-open-icon="${iconOpenToken}"]`).evaluate((node) => node.removeAttribute('data-pp-rdc-open-icon')).catch(() => {});
+    }
+    const popupPdf = this.context.pages().some((page) => !pagesBefore.has(page) && DomainPolicy.isBrowserPdfViewer(page.url()));
+    if (!opened && (this.rdcDocumentSignalAt > 0 || popupPdf)) {
+      opened = true;
+      documentSourceFound = true;
+    }
+    if (!opened) {
+      const finalSurface = await this.rdcModalState();
+      if (finalSurface.modal || finalSurface.sources.length || finalSurface.pdfDocuments.length) {
+        opened = true;
+        modalOpened = finalSurface.modal;
+        documentSourceFound = finalSurface.sources.length > 0 || finalSurface.pdfDocuments.length > 0;
+      }
+    }
+    this.page = this.mainPage;
+    if (!opened) {
+      this.activeStudyId = null;
+      throw new RdcChacabucoError('PDF_SOURCE_NOT_FOUND');
+    }
+    if (modalOpened) this.providerStructure('rdc_modal_opened', undefined, { opened: true });
+    if (documentSourceFound && !this.rdcDocumentSignalAt) this.signalRdcDocumentSource();
+    return true;
+  }
+
+  private async rdcModalState(): Promise<RdcModalSnapshot> {
+    const result: RdcModalSnapshot = {
+      modal: false, sources: [], pdfDocuments: [], frameCount: 0,
+      iframes: 0, embeds: 0, objects: 0, blobSources: 0, dataPdfSources: 0, sameOriginSources: 0,
+    };
+    if (this.mainPage.isClosed()) return result;
+    const pages = this.context.pages();
+    const frames = pages.flatMap((page) => page.frames().map((frame) => ({ page, frame })));
+    result.frameCount = frames.length;
+    const modalSelector = '[role="dialog"],[aria-modal="true"],.modal.show,.modal.in,[class*="modal"][class*="open" i],[class*="modal"][class*="visible" i]';
+    const seenSources = new Set<string>();
+    const scannedFrames = frames.slice(0, 12);
+
+    for (let frameIndex = 0; frameIndex < scannedFrames.length; frameIndex++) {
+      const { frame } = scannedFrames[frameIndex];
+      const frameUrl = frame.url();
+      let depth = 0;
+      for (let parent = frame.parentFrame(); parent; parent = parent.parentFrame()) depth++;
+      const frameOrigin = this.originOf(frameUrl) || (() => {
+        try { return new URL(frameUrl.slice(5)).origin; } catch { return ''; }
+      })();
+      const ownerFrame = /^(?:blob|data):/i.test(frameUrl) ? frame.parentFrame() : frame;
+      const ownerAllowed = !!ownerFrame && this.policy.isAllowedNavigation(ownerFrame.url());
+      const frameAllowed = this.policy.isAllowedNavigation(frameUrl) || (/^(?:blob|data):/i.test(frameUrl) && ownerAllowed);
+      if (!frameAllowed) continue;
+
+      if (/^https?:/i.test(frameUrl) && /\.pdf(?:[?#]|$)/i.test(frameUrl)) result.pdfDocuments.push(frameUrl);
+      else if (/^blob:/i.test(frameUrl) && frameOrigin) {
+        if (!seenSources.has(frameUrl)) {
+          seenSources.add(frameUrl);
+          result.sources.push({ url: frameUrl, strategy: 'blob', frame, attr: 'src', depth, typePdf: true });
+          result.blobSources++;
+        }
+      } else if (/^data:application\/pdf(?:;|,)/i.test(frameUrl)) {
+        if (!seenSources.has(frameUrl)) {
+          seenSources.add(frameUrl);
+          result.sources.push({ url: frameUrl, strategy: 'data', frame, attr: 'src', depth, typePdf: true });
+          result.dataPdfSources++;
+        }
+      }
+      if (!/^https?:/i.test(frameUrl)) continue;
+
+      const modalLocators = frame.locator(modalSelector);
+      const modalCount = await modalLocators.count().catch(() => 0);
+      let modalVisible = false;
+      let modalLocator = modalLocators.first();
+      for (let index = 0; index < Math.min(modalCount, 8); index++) {
+        const candidate = modalLocators.nth(index);
+        if (await candidate.isVisible().catch(() => false)) { modalVisible = true; modalLocator = candidate; break; }
+      }
+      const root = modalVisible ? modalLocator : frame.locator('body');
+      const inspected: { modal: boolean; iframes: number; embeds: number; objects: number; sources: { tag: string; attr: string; raw: string; base: string; typePdf: boolean }[] } = {
+        modal: modalVisible,
+        iframes: await root.locator('iframe').count().catch(() => 0),
+        embeds: await root.locator('embed').count().catch(() => 0),
+        objects: await root.locator('object').count().catch(() => 0),
+        sources: [],
+      };
+      const nodes = root.locator('iframe,embed,object,[data-src],[data-pdf],[data-url],a[href]');
+      const nodeCount = await nodes.count().catch(() => 0);
+      for (let nodeIndex = 0; nodeIndex < Math.min(nodeCount, 60); nodeIndex++) {
+        const node = nodes.nth(nodeIndex);
+        if (!await node.isVisible().catch(() => false)) continue;
+        const tag = await node.evaluate((el) => el.tagName.toLowerCase()).catch(() => '');
+        for (const attr of ['src', 'data', 'href', 'data-src', 'data-pdf', 'data-url'] as const) {
+          if (!['iframe', 'embed', 'object'].includes(tag) && !['data-src', 'data-pdf', 'data-url', 'href'].includes(attr)) continue;
+          const details = await node.evaluate((el, attribute) => ({
+            raw: el.getAttribute(attribute),
+            base: document.baseURI,
+            typePdf: /pdf/i.test(el.getAttribute('type') || ''),
+          }), attr).catch(() => null);
+          const raw = details?.raw;
+          if (!raw || (attr === 'href' && !/\.pdf(?:[?#]|$)/i.test(raw))) continue;
+          inspected.sources.push({ tag, attr, raw, base: details?.base || frameUrl, typePdf: details?.typePdf || false });
+        }
+      }
+
+      result.modal ||= inspected.modal;
+      result.iframes += inspected.iframes;
+      result.embeds += inspected.embeds;
+      result.objects += inspected.objects;
+      for (const candidate of inspected.sources) {
+        if (result.sources.length >= 32) break;
+        try {
+          const url = new URL(candidate.raw, candidate.base).href;
+          let strategy: RdcDomStrategy = candidate.tag === 'object' ? 'object' : candidate.tag === 'embed' ? 'embed' : 'iframe';
+          if (/^data:/i.test(url)) {
+            if (!/^data:application\/pdf(?:;|,)/i.test(url)) continue;
+            strategy = 'data';
+            result.dataPdfSources++;
+          } else if (/^blob:/i.test(url)) {
+            const blobOrigin = (() => { try { return new URL(url.slice(5)).origin; } catch { return ''; } })();
+            if (!blobOrigin || blobOrigin !== frameOrigin) continue;
+            strategy = 'blob';
+            result.blobSources++;
+          } else {
+            if (!/^https?:/i.test(url)) continue;
+            if (!this.policy.isAllowedNavigation(url)) {
+              if (!seenSources.has(url)) {
+                seenSources.add(url);
+                result.sources.push({ url, strategy, frame, attr: candidate.attr as RdcDomSource['attr'], depth, typePdf: candidate.typePdf });
+                this.providerStructure('rdc_external_origin', undefined, { host: this.safeUrlParts(url).host });
+                this.providerStructure('rdc_pdf_dom_candidate', undefined, { attr: candidate.attr as RdcDomSource['attr'], sameOrigin: false });
+                if (strategy === 'embed' && !this.rdcLoggedEmbedCandidateUrls.has(url)) {
+                  this.rdcLoggedEmbedCandidateUrls.add(url);
+                  this.providerStructure('rdc_embed_candidate', undefined, { found: true, sameOrigin: false, typePdf: candidate.typePdf, depth });
+                }
+              }
+              continue;
+            }
+            if (this.originOf(url) !== frameOrigin) continue;
+            result.sameOriginSources++;
+          }
+          if (seenSources.has(url)) continue;
+          seenSources.add(url);
+          const attr = candidate.attr as RdcDomSource['attr'];
+          const typePdf = candidate.typePdf || /\.pdf(?:[?#]|$)/i.test(url) || /^data:application\/pdf(?:;|,)/i.test(url);
+          result.sources.push({ url, strategy, frame, attr, depth, typePdf });
+          if (strategy === 'embed' && !this.rdcLoggedEmbedCandidateUrls.has(url)) {
+            this.rdcLoggedEmbedCandidateUrls.add(url);
+            this.providerStructure('rdc_embed_candidate', undefined, { found: true, sameOrigin: true, typePdf, depth });
+          }
+          if (!this.rdcLoggedDomCandidateUrls.has(url)) {
+            this.rdcLoggedDomCandidateUrls.add(url);
+            this.providerStructure('rdc_pdf_dom_candidate', undefined, { attr, sameOrigin: true });
+          }
+        } catch { /* Descarta atributos malformados; su contenido nunca se registra. */ }
+      }
+    }
+
+    if (result.modal) this.rdcModalObserved = true;
+    const probeSignature = [result.frameCount, result.modal, result.iframes, result.embeds, result.objects, result.blobSources, result.dataPdfSources, result.sameOriginSources].join(':');
+    if (probeSignature !== this.lastRdcProbeSignature) {
+      this.lastRdcProbeSignature = probeSignature;
+      this.providerStructure('rdc_frames', result.frameCount);
+      scannedFrames.forEach(({ page, frame }, index) => this.providerStructure('rdc_frame', undefined, { index, isMain: frame === page.mainFrame() }));
+      this.providerStructure('rdc_modal_probe', undefined, {
+        frames: result.frameCount, iframes: result.iframes, embeds: result.embeds, objects: result.objects,
+        blobSources: result.blobSources, dataPdfSources: result.dataPdfSources, sameOriginSources: result.sameOriginSources,
+      });
+      this.providerStructure('rdc_pdf_sources_scan', undefined, { frames: scannedFrames.length, count: result.sources.length + result.pdfDocuments.length });
+      this.providerStructure('rdc_embed_candidates', result.sources.filter((source) => source.strategy === 'embed').length);
+    }
+    return result;
+  }
+
+  async closeRdcChacabucoModal(): Promise<void> {
+    if (this.provider.studyExtractor !== 'rdcchacabuco' || this.mainPage.isClosed()) return;
+    if ((this.retainedViewers.get(this.mainPage) || 0) > Date.now()) return;
+    const frame = this.mainPage.frames()[this.activeRdcFrameIndex ?? 0] || this.mainPage.mainFrame();
+    const modal = frame.locator('[role="dialog"],[aria-modal="true"],.modal.show,.modal.in,[class*="modal"][class*="open" i],[class*="modal"][class*="visible" i]').first();
+    if (!await modal.count().catch(() => 0)) return;
+    const close = modal.locator('button[aria-label*="close" i],button[aria-label*="cerrar" i],[data-dismiss],[data-bs-dismiss],button.close,[role="button"][aria-label*="close" i]').first();
+    if (await close.count().catch(() => 0)) await close.click({ timeout: 2_000 }).catch(() => {});
+    else await frame.locator('body').press('Escape', { timeout: 1_000 }).catch(() => {});
   }
 
   private async openCentroDmStudy(studyId: string): Promise<boolean> {
@@ -1249,6 +1865,299 @@ export class BrowserSession implements BrowserPort {
     this.onUnexpectedDomain?.();
   }
 
+  private async requestRdcApiResponse(url: string, deadline: number, range?: string, referer?: string): Promise<{ response: APIResponse; url: string }> {
+    const expectedOrigin = this.originOf(url);
+    if (!expectedOrigin || !this.policy.isAllowedNavigation(url)) {
+      this.notifyBlockedUrl(url);
+      throw new UnexpectedDomainError();
+    }
+    const safeReferer = referer && this.originOf(referer) === expectedOrigin ? referer : undefined;
+    let current = url;
+    for (let hop = 0; hop <= 5; hop++) {
+      if (this.originOf(current) !== expectedOrigin || !this.policy.isAllowedNavigation(current)) {
+        this.notifyBlockedUrl(current);
+        throw new UnexpectedDomainError();
+      }
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new RdcChacabucoError('PDF_FULL_FETCH_FAILED');
+      let response: APIResponse;
+      try {
+        response = await this.context.request.get(current, {
+          timeout: remaining,
+          maxRedirects: 0,
+          headers: { Accept: 'application/pdf', ...(range ? { Range: range } : {}), ...(safeReferer ? { Referer: safeReferer } : {}) },
+        });
+      } catch {
+        throw new RdcChacabucoError('PDF_FULL_FETCH_FAILED');
+      }
+      const status = response.status();
+      if (status < 300 || status >= 400) return { response, url: current };
+      const location = response.headers().location;
+      await response.dispose().catch(() => {});
+      if (!location || hop === 5) throw new RdcChacabucoError('PDF_FULL_FETCH_FAILED');
+      try { current = new URL(location, current).href; }
+      catch { throw new RdcChacabucoError('PDF_FULL_FETCH_FAILED'); }
+      if (this.originOf(current) !== expectedOrigin || !this.policy.isAllowedNavigation(current)) {
+        this.notifyBlockedUrl(current);
+        throw new UnexpectedDomainError();
+      }
+    }
+    throw new RdcChacabucoError('PDF_FULL_FETCH_FAILED');
+  }
+
+  private parseRdcContentRange(value: string): { start: number; end: number; total: number } | null {
+    const match = /^bytes\s+(\d+)-(\d+)\/(\d+)$/i.exec(value.trim());
+    if (!match) return null;
+    const start = Number(match[1]);
+    const end = Number(match[2]);
+    const total = Number(match[3]);
+    return Number.isSafeInteger(start) && Number.isSafeInteger(end) && Number.isSafeInteger(total) && start <= end && end < total
+      ? { start, end, total }
+      : null;
+  }
+
+  private makeRdcPdf(buffer: Buffer, contentType: string | null, strategy: NonNullable<ProviderStructureEvent['strategy']>): CapturedPdf {
+    this.providerStructure('rdc_pdf_source', undefined, { found: true, strategy });
+    this.providerStructure('rdc_pdf_full', buffer.length, { found: true, strategy });
+    this.providerStructure('rdc_pdf_valid', buffer.length, { found: true, strategy });
+    return { buffer, contentType, via: 'fetch' };
+  }
+
+  /** Obtiene un PDF completo con la cookie jar de la sesión; los 206 se reensamblan por rango. */
+  private async fetchRdcPdfFull(
+    url: string,
+    deadline: number,
+    fallbackStrategy: 'response_full' | 'iframe_fetch' | 'embed_fetch' | 'object_fetch' | 'context_request',
+    referer?: string,
+  ): Promise<CapturedPdf | null> {
+    const { response, url: finalUrl } = await this.requestRdcApiResponse(url, deadline, undefined, referer);
+    const status = response.status();
+    const headers = response.headers();
+    const contentType = headers['content-type'] || null;
+    const contentRangeValue = headers['content-range'] || '';
+    const range = this.parseRdcContentRange(contentRangeValue);
+    const isRangeResponse = status === 206 || !!contentRangeValue;
+    const announcedSize = Number(headers['content-length']);
+    if (!isRangeResponse && Number.isFinite(announcedSize) && announcedSize > this.maxPdfBytes) {
+      this.logRdcPdfCandidate(status, headers, null, true, true, 'oversized');
+      await response.dispose().catch(() => {});
+      this.providerStructure('rdc_pdf_source', undefined, { found: true, strategy: fallbackStrategy });
+      throw new RdcChacabucoError('INVALID_PDF');
+    }
+    if (!response.ok() && !isRangeResponse) {
+      await response.dispose().catch(() => {});
+      if (status === 404 || status === 410) return null;
+      throw new RdcChacabucoError('PDF_FULL_FETCH_FAILED');
+    }
+    if (isRangeResponse && (!range || range.total > this.maxPdfBytes)) {
+      this.logRdcPdfCandidate(status, headers, null, true, true, 'range_metadata_invalid');
+      await response.dispose().catch(() => {});
+      throw new RdcChacabucoError('PDF_RANGE_REASSEMBLY_FAILED');
+    }
+    let body: Buffer;
+    try { body = await response.body(); }
+    catch {
+      await response.dispose().catch(() => {});
+      throw new RdcChacabucoError(isRangeResponse ? 'PDF_RANGE_REASSEMBLY_FAILED' : 'PDF_FULL_FETCH_FAILED');
+    }
+    await response.dispose().catch(() => {});
+    const claimsPdf = /pdf/i.test(contentType || '') || /\.pdf/i.test(headers['content-disposition'] || '');
+    if (isHtmlPayload(body)) {
+      this.logRdcPdfCandidate(status, headers, body, true, true, 'html_payload');
+      return null;
+    }
+    if (!isRangeResponse) {
+      const valid = hasPdfMagic(body) && body.subarray(0, 4).toString('latin1') === '%PDF' && validatePdf(body, contentType, this.maxPdfBytes).ok;
+      this.logRdcPdfCandidate(status, headers, body, !valid, !valid, valid ? undefined : 'not_pdf_payload');
+      if (!valid) {
+        if (claimsPdf) throw new RdcChacabucoError('INVALID_PDF');
+        return null;
+      }
+      return this.makeRdcPdf(body, contentType, fallbackStrategy);
+    }
+
+    this.logRdcPdfCandidate(status, headers, body, true, true, 'range_fragment');
+    if (!range || body.length !== range.end - range.start + 1) throw new RdcChacabucoError('PDF_RANGE_REASSEMBLY_FAILED');
+    if (range.start === 0 && range.end === range.total - 1 && body.length === range.total) {
+      if (!hasPdfMagic(body) || body.subarray(0, 4).toString('latin1') !== '%PDF' || !validatePdf(body, contentType, this.maxPdfBytes).ok) {
+        throw new RdcChacabucoError('INVALID_PDF');
+      }
+      return this.makeRdcPdf(body, contentType, 'range_reassembly');
+    }
+
+    const chunks: Buffer[] = [];
+    let nextByte = 0;
+    if (range.start === 0) {
+      chunks.push(body);
+      nextByte = range.end + 1;
+    }
+    const chunkSize = Math.min(1024 * 1024, this.maxPdfBytes);
+    while (nextByte < range.total) {
+      const requestedEnd = Math.min(range.total - 1, nextByte + chunkSize - 1);
+      const part = await this.requestRdcApiResponse(finalUrl, deadline, `bytes=${nextByte}-${requestedEnd}`, referer);
+      const partStatus = part.response.status();
+      const partHeaders = part.response.headers();
+      const partContentType = partHeaders['content-type'] || contentType;
+      const partRange = this.parseRdcContentRange(partHeaders['content-range'] || '');
+      let bytes: Buffer;
+      try { bytes = await part.response.body(); }
+      catch {
+        await part.response.dispose().catch(() => {});
+        throw new RdcChacabucoError('PDF_RANGE_REASSEMBLY_FAILED');
+      }
+      await part.response.dispose().catch(() => {});
+      if (partStatus === 200) {
+        this.logRdcPdfCandidate(partStatus, partHeaders, bytes, false);
+        if (bytes.length === range.total && hasPdfMagic(bytes) && bytes.subarray(0, 4).toString('latin1') === '%PDF' && validatePdf(bytes, partContentType, this.maxPdfBytes).ok) {
+          return this.makeRdcPdf(bytes, partContentType, 'response_full');
+        }
+        throw new RdcChacabucoError('PDF_RANGE_REASSEMBLY_FAILED');
+      }
+      this.logRdcPdfCandidate(partStatus, partHeaders, bytes, true, true, 'range_fragment');
+      if (partStatus !== 206 || !partRange || partRange.start !== nextByte || partRange.total !== range.total ||
+          partRange.end > requestedEnd || bytes.length !== partRange.end - partRange.start + 1) {
+        throw new RdcChacabucoError('PDF_RANGE_REASSEMBLY_FAILED');
+      }
+      chunks.push(bytes);
+      nextByte = partRange.end + 1;
+    }
+    const assembled = Buffer.concat(chunks, range.total);
+    if (assembled.length !== range.total) throw new RdcChacabucoError('PDF_RANGE_REASSEMBLY_FAILED');
+    if (!hasPdfMagic(assembled) || assembled.subarray(0, 4).toString('latin1') !== '%PDF' || !validatePdf(assembled, contentType, this.maxPdfBytes).ok) {
+      throw new RdcChacabucoError('INVALID_PDF');
+    }
+    return this.makeRdcPdf(assembled, contentType, 'range_reassembly');
+  }
+
+  /** Recupera la fuente desde el frame que la declara: el fetch conserva cookies, origin y referrer del navegador. */
+  private async fetchRdcBrowserSource(source: RdcDomSource, deadline: number): Promise<RdcBrowserFetchResult> {
+    const frameUrl = source.frame.url();
+    const sourceOrigin = this.originOf(source.url);
+    const frameOrigin = this.originOf(frameUrl);
+    if (!/^https?:/i.test(source.url) || !sourceOrigin || sourceOrigin !== frameOrigin || !this.policy.isAllowedNavigation(source.url)) {
+      return { kind: 'failed', status: 0, contentType: '', bodyBytes: 0, magic: 'none', reason: 'origin_mismatch' };
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0 || source.frame.isDetached()) {
+      return { kind: 'failed', status: 0, contentType: '', bodyBytes: 0, magic: 'none', reason: remaining <= 0 ? 'timeout' : 'frame_unavailable' };
+    }
+
+    this.providerStructure('rdc_embed_fetch', undefined, { started: true, depth: source.depth });
+    let result: RdcBrowserFetchResult;
+    try {
+      result = await this.withPdfTimeout(source.frame.evaluate(async ({ url, maxBytes, depth }) => {
+        try {
+          const requestUrl = new URL(url, location.href);
+          if (requestUrl.origin !== location.origin || !/^https?:$/.test(requestUrl.protocol)) {
+            return { kind: 'failed', status: 0, contentType: '', bodyBytes: 0, magic: 'none', reason: 'origin_mismatch' };
+          }
+          const response = await fetch(requestUrl.href, { credentials: 'include', cache: 'no-store', redirect: 'follow' });
+          const contentType = response.headers.get('content-type') || '';
+          let responseUrl: URL;
+          try { responseUrl = new URL(response.url || requestUrl.href); }
+          catch { return { kind: 'failed', status: response.status, contentType, bodyBytes: 0, magic: 'none', reason: 'invalid_response_url' }; }
+          if (responseUrl.origin !== location.origin || !response.ok) {
+            return { kind: 'failed', status: response.status, contentType, bodyBytes: 0, magic: 'none', reason: response.ok ? 'origin_mismatch' : 'http_status' };
+          }
+          const announced = Number(response.headers.get('content-length'));
+          if (Number.isFinite(announced) && announced > maxBytes) return { kind: 'invalid', status: response.status, contentType, bodyBytes: announced, magic: 'none', reason: 'oversized' };
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          if (!bytes.length || bytes.length > maxBytes) return { kind: 'invalid', status: response.status, contentType, bodyBytes: bytes.length, magic: 'none', reason: bytes.length > maxBytes ? 'oversized' : 'empty_body' };
+          const magic = Array.from(bytes.subarray(0, 8), (byte) => byte.toString(16).padStart(2, '0')).join('') || 'none';
+          const pdfMagic = bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+          if (pdfMagic) {
+            let binary = '';
+            for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+            return { kind: 'pdf', status: response.status, contentType, bodyBytes: bytes.length, magic, data: btoa(binary) };
+          }
+
+          const prefix = new TextDecoder().decode(bytes.subarray(0, Math.min(bytes.length, 512))).replace(/^\uFEFF/, '').trimStart();
+          const htmlPayload = /^(?:<!doctype\s+html|<html\b|<head\b|<body\b)/i.test(prefix) || /^(?:text\/html|application\/xhtml\+xml)(?:\s*;|$)/i.test(contentType);
+          if (!htmlPayload) return { kind: 'invalid', status: response.status, contentType, bodyBytes: bytes.length, magic, reason: 'not_pdf_payload' };
+
+          const nested: NonNullable<RdcBrowserFetchResult['nested']> = [];
+          if (depth < 3 && bytes.length <= 2 * 1024 * 1024) {
+            const markup = new TextDecoder().decode(bytes);
+            const documentNode = new DOMParser().parseFromString(markup, 'text/html');
+            const baseNode = documentNode.querySelector('base[href]');
+            let baseUrl = responseUrl.href;
+            if (baseNode) {
+              try {
+                const candidateBase = new URL(baseNode.getAttribute('href') || '', responseUrl.href);
+                if (candidateBase.origin === location.origin) baseUrl = candidateBase.href;
+              } catch { /* base inválida: conserva la URL del documento */ }
+            }
+            const seen = new Set<string>();
+            for (const node of Array.from(documentNode.querySelectorAll('iframe,embed,object,source,[data-src],[data-pdf],[data-url],a[href]')).slice(0, 80)) {
+              const tag = node.tagName.toLowerCase();
+              const attrs = tag === 'object' ? ['data', 'src', 'data-src', 'data-pdf', 'data-url']
+                : tag === 'a' ? ['href']
+                  : ['src', 'data', 'data-src', 'data-pdf', 'data-url', 'href'];
+              for (const attribute of attrs) {
+                const raw = node.getAttribute(attribute);
+                if (!raw || (attribute === 'href' && tag === 'a' && !/\.pdf(?:[?#]|$)/i.test(raw))) continue;
+                let candidate: URL;
+                try { candidate = new URL(raw, baseUrl); } catch { continue; }
+                const isDataPdf = /^data:application\/pdf(?:;|,)/i.test(candidate.href);
+                const isBlobSameOrigin = /^blob:/i.test(candidate.protocol) && candidate.href.slice(5).startsWith(location.origin + '/');
+                if (candidate.protocol === 'http:' || candidate.protocol === 'https:') {
+                  if (candidate.origin !== location.origin) continue;
+                } else if (!isDataPdf && !isBlobSameOrigin) continue;
+                const normalized = candidate.href;
+                if (seen.has(normalized)) continue;
+                seen.add(normalized);
+                const strategy = tag === 'embed' ? 'embed' : tag === 'object' ? 'object' : isDataPdf ? 'data' : isBlobSameOrigin ? 'blob' : 'iframe';
+                nested.push({
+                  url: normalized,
+                  strategy,
+                  attr: attribute === 'data' ? 'data' : attribute === 'href' ? 'href' : attribute === 'data-src' ? 'data-src' : attribute === 'data-pdf' ? 'data-pdf' : attribute === 'data-url' ? 'data-url' : 'src',
+                  typePdf: /pdf/i.test(node.getAttribute('type') || '') || /\.pdf(?:[?#]|$)/i.test(normalized) || isDataPdf,
+                });
+                break;
+              }
+              if (nested.length >= 32) break;
+            }
+          }
+          return { kind: 'html', status: response.status, contentType, bodyBytes: bytes.length, magic, nested };
+        } catch {
+          return { kind: 'failed', status: 0, contentType: '', bodyBytes: 0, magic: 'none', reason: 'browser_fetch_failed' };
+        }
+      }, { url: source.url, maxBytes: this.maxPdfBytes, depth: source.depth }), remaining);
+    } catch (error) {
+      result = { kind: 'failed', status: 0, contentType: '', bodyBytes: 0, magic: 'none', reason: error instanceof PdfDownloadError ? 'timeout' : 'browser_evaluate_error' };
+    }
+
+    const safeContentType = this.contentTypeKind(result.contentType);
+    this.providerStructure('rdc_embed_fetch', undefined, {
+      depth: source.depth, status: result.status, contentType: safeContentType, magic: result.magic,
+      bodyBytes: result.bodyBytes, found: result.kind === 'pdf', rejected: result.kind === 'invalid',
+      ...(result.reason ? { reason: result.reason } : {}),
+    });
+    if (result.kind === 'html') {
+      this.logRdcPdfCandidate(result.status, { 'content-type': result.contentType, 'content-length': String(result.bodyBytes) }, null, true, true, 'html_payload');
+      const nested = result.nested || [];
+      this.providerStructure('rdc_nested_source_scan', nested.length, { depth: source.depth + 1, found: nested.length > 0 });
+      for (const item of nested) {
+        if (item.strategy === 'embed' && !this.rdcLoggedEmbedCandidateUrls.has(item.url)) {
+          this.rdcLoggedEmbedCandidateUrls.add(item.url);
+          this.providerStructure('rdc_embed_candidate', undefined, { found: true, sameOrigin: true, typePdf: item.typePdf, depth: source.depth + 1 });
+        }
+      }
+      return result;
+    }
+    if (result.kind === 'pdf') {
+      const buffer = Buffer.from(result.data || '', 'base64');
+      const valid = buffer.subarray(0, 4).toString('latin1') === '%PDF' && validatePdf(buffer, result.contentType, this.maxPdfBytes).ok;
+      this.logRdcPdfCandidate(result.status, { 'content-type': result.contentType, 'content-length': String(result.bodyBytes) }, buffer, !valid, !valid, valid ? undefined : 'not_pdf_payload');
+      if (!valid) return { ...result, kind: 'invalid', reason: 'not_pdf_payload' };
+      return result;
+    }
+    if (result.kind === 'invalid') {
+      this.logRdcPdfCandidate(result.status, { 'content-type': result.contentType, 'content-length': String(result.bodyBytes) }, null, true, true, result.reason || 'not_pdf_payload');
+    }
+    return result;
+  }
+
   /** GET autenticado, validando manualmente cada redirect antes de seguirlo. */
   private async requestPdfSource(url: string, deadline: number): Promise<{ pdf: CapturedPdf | null; invalid: boolean; notFound?: boolean }> {
     let current = url;
@@ -1340,6 +2249,158 @@ export class BrowserSession implements BrowserPort {
         .filter(Boolean);
       return { isPdf: document.contentType === 'application/pdf', embeds };
     }).catch(() => ({ isPdf: false, embeds: [] }));
+  }
+
+  async downloadRdcChacabucoStudyPdf(): Promise<CapturedPdf | null> {
+    if (this.provider.studyExtractor !== 'rdcchacabuco' || !this.activeStudyId) throw new RdcChacabucoError('PDF_SOURCE_NOT_FOUND');
+    const invalidBefore = this.invalidPdfObservedAt;
+    const deadline = Date.now() + this.pdfDownloadTimeoutMs;
+    const alreadyCaptured = this.takeRecentPdf();
+    if (alreadyCaptured) {
+      if (!this.isRdcPdfPayload(alreadyCaptured.buffer, alreadyCaptured.contentType)) throw new RdcChacabucoError('INVALID_PDF');
+      const strategy = alreadyCaptured.via === 'download' ? 'download' : 'response_full';
+      this.providerStructure('rdc_pdf_source', undefined, { found: true, strategy });
+      this.providerStructure('rdc_pdf_full', alreadyCaptured.buffer.length, { found: true, strategy });
+      this.providerStructure('rdc_pdf_valid', alreadyCaptured.buffer.length, { found: true, strategy });
+      return alreadyCaptured;
+    }
+
+    let invalidFullPayload = false;
+    let recoveryFailure: 'PDF_RANGE_REASSEMBLY_FAILED' | 'PDF_FULL_FETCH_FAILED' | null = null;
+    const processedUrls = new Set<string>();
+    const maxNestedDepth = 3;
+    const maxCandidates = 48;
+    this.pdfActionDepth++;
+    try {
+      while (Date.now() < deadline) {
+        const captured = this.takeRecentPdf();
+        if (captured) {
+          if (!this.isRdcPdfPayload(captured.buffer, captured.contentType)) {
+            invalidFullPayload = true;
+          } else {
+            const strategy = captured.via === 'download' ? 'download' : 'response_full';
+            this.providerStructure('rdc_pdf_source', undefined, { found: true, strategy });
+            this.providerStructure('rdc_pdf_full', captured.buffer.length, { found: true, strategy });
+            this.providerStructure('rdc_pdf_valid', captured.buffer.length, { found: true, strategy });
+            return captured;
+          }
+        }
+
+        const state = await this.rdcModalState();
+        const capturedAfterScan = this.takeRecentPdf();
+        if (capturedAfterScan) {
+          if (!this.isRdcPdfPayload(capturedAfterScan.buffer, capturedAfterScan.contentType)) {
+            invalidFullPayload = true;
+          } else {
+            const strategy = capturedAfterScan.via === 'download' ? 'download' : 'response_full';
+            this.providerStructure('rdc_pdf_source', undefined, { found: true, strategy });
+            this.providerStructure('rdc_pdf_full', capturedAfterScan.buffer.length, { found: true, strategy });
+            this.providerStructure('rdc_pdf_valid', capturedAfterScan.buffer.length, { found: true, strategy });
+            return capturedAfterScan;
+          }
+        }
+        const candidates: { url: string; strategy: string; depth: number; source?: RdcDomSource }[] = [
+          ...[...this.rdcPdfCandidateUrls].map((url) => ({ url, strategy: 'response_candidate', depth: 0 })),
+          ...state.sources.map((source) => ({ url: source.url, strategy: source.strategy, depth: source.depth, source })),
+          ...state.pdfDocuments.map((url) => ({ url, strategy: 'context_request', depth: 0 })),
+        ];
+        this.rdcPdfCandidateUrls.clear();
+        let processedAny = false;
+        for (let candidateIndex = 0; candidateIndex < candidates.length && candidateIndex < maxCandidates; candidateIndex++) {
+          const candidate = candidates[candidateIndex];
+          if (processedUrls.has(candidate.url)) continue;
+          processedUrls.add(candidate.url);
+          processedAny = true;
+          if (/^https?:/i.test(candidate.url) && !this.policy.isAllowedNavigation(candidate.url)) {
+            const host = this.safeUrlParts(candidate.url).host;
+            this.providerStructure('rdc_external_origin', undefined, { host });
+            this.notifyBlockedUrl(candidate.url);
+            throw new UnexpectedDomainError();
+          }
+          const remaining = deadline - Date.now();
+          if (remaining <= 0) break;
+          try {
+            if (/^https?:/i.test(candidate.url)) {
+              const candidateDeadline = Math.min(deadline, Date.now() + Math.min(8_000, remaining));
+              if (candidate.source && candidate.depth <= maxNestedDepth) {
+                const browserResult = await this.fetchRdcBrowserSource(candidate.source, candidateDeadline);
+                if (browserResult.kind === 'pdf') {
+                  const buffer = Buffer.from(browserResult.data || '', 'base64');
+                  const strategy: NonNullable<ProviderStructureEvent['strategy']> = candidate.source.strategy === 'embed'
+                    ? candidate.depth > 0 ? 'nested_embed_browser_fetch' : 'embed_browser_fetch'
+                    : candidate.source.strategy === 'object' ? 'object_browser_fetch' : 'iframe_browser_fetch';
+                  return this.makeRdcPdf(buffer, browserResult.contentType || null, strategy);
+                }
+                if (browserResult.kind === 'html') {
+                  for (const nested of browserResult.nested || []) {
+                    const nestedDepth = candidate.depth + 1;
+                    if (nestedDepth > maxNestedDepth || candidates.length >= maxCandidates) continue;
+                    candidates.push({
+                      url: nested.url,
+                      strategy: nested.strategy,
+                      depth: nestedDepth,
+                      source: { ...nested, frame: candidate.source.frame, depth: nestedDepth },
+                    });
+                  }
+                  continue;
+                }
+                if (browserResult.kind === 'invalid') invalidFullPayload = true;
+              }
+              const fallbackStrategy = candidate.strategy === 'response_candidate' ? 'response_full'
+                : candidate.strategy === 'embed' ? 'embed_fetch'
+                  : candidate.strategy === 'object' ? 'object_fetch'
+                    : candidate.strategy === 'context_request' ? 'context_request' : 'iframe_fetch';
+              const referer = candidate.source?.frame.url();
+              const pdf = await this.fetchRdcPdfFull(candidate.url, candidateDeadline, fallbackStrategy, referer);
+              if (pdf) return pdf;
+              continue;
+            }
+            const pdf = await this.withPdfTimeout(this.fetchPdf(candidate.url, Math.min(remaining, 8_000)), Math.min(remaining, 8_000));
+            if (!pdf) continue;
+            if (!hasPdfMagic(pdf.buffer) || pdf.buffer.subarray(0, 4).toString('latin1') !== '%PDF' || !validatePdf(pdf.buffer, pdf.contentType, this.maxPdfBytes).ok) {
+              invalidFullPayload = true;
+              this.logRdcPdfCandidate(200, { 'content-type': pdf.contentType || '' }, pdf.buffer, true, true, 'not_pdf_payload');
+              continue;
+            }
+            const strategy = /^blob:/i.test(candidate.url) ? 'blob_fetch'
+              : /^data:/i.test(candidate.url) ? 'data_url'
+                : candidate.strategy === 'embed' ? 'embed_fetch'
+                  : candidate.strategy === 'object' ? 'object_fetch'
+                    : candidate.strategy === 'context_request' ? 'context_request' : 'iframe_fetch';
+            return this.makeRdcPdf(pdf.buffer, pdf.contentType, strategy);
+          } catch (error) {
+            if (error instanceof UnexpectedDomainError) throw error;
+            if (error instanceof RdcChacabucoError) {
+              if (error.code === 'INVALID_PDF') invalidFullPayload = true;
+              else if (error.code === 'PDF_RANGE_REASSEMBLY_FAILED') recoveryFailure ||= error.code;
+              else if (error.code !== 'PDF_FULL_FETCH_FAILED') throw error;
+              continue;
+            }
+            if (error instanceof PdfDownloadError && (error.code === 'INVALID_DOCUMENT' || error.code === 'PDF_DOWNLOAD_TIMEOUT')) {
+              if (error.code === 'INVALID_DOCUMENT') invalidFullPayload = true;
+              continue;
+            }
+            throw error;
+          }
+        }
+
+        const lateCapture = this.takeRecentPdf();
+        if (lateCapture && this.isRdcPdfPayload(lateCapture.buffer, lateCapture.contentType)) {
+          const strategy = lateCapture.via === 'download' ? 'download' : 'response_full';
+          this.providerStructure('rdc_pdf_source', undefined, { found: true, strategy });
+          this.providerStructure('rdc_pdf_full', lateCapture.buffer.length, { found: true, strategy });
+          this.providerStructure('rdc_pdf_valid', lateCapture.buffer.length, { found: true, strategy });
+          return lateCapture;
+        }
+        if (!processedAny) await sleep(Math.min(100, Math.max(1, deadline - Date.now())));
+      }
+
+      if (recoveryFailure) throw new RdcChacabucoError(recoveryFailure);
+      if (invalidFullPayload || this.rdcInvalidPdfObservedAt > 0 || this.invalidPdfObservedAt > invalidBefore) throw new RdcChacabucoError('INVALID_PDF');
+      throw new RdcChacabucoError('PDF_SOURCE_NOT_FOUND');
+    } finally {
+      this.pdfActionDepth = Math.max(0, this.pdfActionDepth - 1);
+    }
   }
 
   async downloadCurrentStudyPdf(): Promise<CapturedPdf | null> {

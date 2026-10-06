@@ -62,6 +62,28 @@ test('Pixeon debug: no registra job_closed antes del TTL y lo registra al termin
   } finally { await m.shutdown(); }
 });
 
+test('RDC debug: retiene el contexto por PDF_SOURCE_NOT_FOUND y después lo cierra', async () => {
+  let disposed = false;
+  const logs: string[] = [];
+  const m = new JobManager({
+    config: testConfig({ rdcDebugKeepModalOpen: true, rdcDebugKeepModalOpenMs: 120 }),
+    providers: { rdcchacabuco: { ...testProvider(), id: 'rdcchacabuco' } },
+    log: { info: (_id, message) => logs.push(message), debug: () => {}, warn: () => {} },
+    runnerFactory: job => ({
+      debugViewerRetentionMs: 120,
+      start: async () => { job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'PDF_SOURCE_NOT_FOUND'); },
+      importSelected: async () => {},
+      dispose: async () => { disposed = true; },
+    }),
+  });
+  try {
+    m.create('rdcchacabuco');
+    assert.equal(disposed, false);
+    assert.ok(logs.includes('rdc_debug_hold'));
+    await waitFor(() => disposed && logs.includes('rdc_debug_modal_closed'), 2_000);
+  } finally { await m.shutdown(); }
+});
+
 function manager(cfg: Config, opts: FakeOptions = FAST) {
   return new JobManager({ config: cfg, providers, runnerFactory: fakeRunnerFactory(opts), log: silentLogger });
 }
@@ -102,6 +124,7 @@ test('flujo completo con FakeProviderAgent: selección, archivos y limpieza al e
   assert.ok(existsSync(f.path), 'recibir el archivo no lo limpia antes del acuse de persistencia');
   await m.acknowledgePortalImport(job.id, f.id, job.files[0].studyId, true);
   await waitFor(() => job.state === S.COMPLETED);
+  await waitFor(() => !existsSync(path.join(cfg.tmpDir, job.id)));
   assert.equal(existsSync(path.join(cfg.tmpDir, job.id)), false, 'entregados todos, se borran');
   await m.shutdown();
 });

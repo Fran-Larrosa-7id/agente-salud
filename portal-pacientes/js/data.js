@@ -22,6 +22,7 @@
     /* Conexión real: la trae el agente de IA (portal-pacientes-agent). El resto es simulado. */
     { id: 'pc', name: 'Pérez Cambet', kind: 'Laboratorio', city: '', mono: 'PC', tone: 'teal', compatible: true, featured: true, live: 'percamb', host: 'www.biodatasa.com.ar' },
     { id: 'cdm', name: 'Centro DM', kind: 'Diagnóstico por imágenes', city: 'CABA', mono: 'CDM', tone: 'sky', compatible: true, featured: true, live: 'centrodm', host: 'estudios.centrodm.com.ar' },
+    { id: 'rdc', name: 'RDC Chacabuco', kind: 'Diagnóstico por imágenes', city: '', mono: 'RDC', tone: 'sky', compatible: true, featured: true, live: 'rdcchacabuco', host: 'rdcchacabuco.from-ar.com' },
     { id: 'ln', name: 'Laboratorio Norte', kind: 'Laboratorio', city: 'San Isidro', mono: 'LN', tone: 'sage', compatible: true, featured: true, host: 'pacientes.laboratorionorte.ejemplo' },
     { id: 'lc', name: 'Laboratorio Central', kind: 'Laboratorio', city: 'CABA', mono: 'LC', tone: 'indigo', compatible: true, featured: true, host: 'resultados.laboratoriocentral.ejemplo' },
     { id: 'dm', name: 'Diagnóstico Médico', kind: 'Centro de diagnóstico', city: 'CABA', mono: 'DM', tone: 'sand', compatible: true, featured: true, host: 'portal.diagnosticomedico.ejemplo' },

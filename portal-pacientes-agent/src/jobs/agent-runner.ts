@@ -3,7 +3,7 @@ import { extractStudies, resolveColumns, signatureOf } from '../agent/studies.js
 import type { AgentModel, GoalOutcome, TargetLocator } from '../agent/types.js';
 import { BrowserNotInstalledError, type BrowserHost } from '../browser/browser-host.js';
 import { evaluateLogin, waitForLogin } from '../browser/login-detector.js';
-import { BrowserSession, MedicalArchiveError, PdfDownloadError, ProviderUnavailableError, StudyReferenceMismatchError, UnexpectedDomainError } from '../browser/session.js';
+import { BrowserSession, MedicalArchiveError, PdfDownloadError, ProviderUnavailableError, RdcChacabucoError, StudyReferenceMismatchError, UnexpectedDomainError } from '../browser/session.js';
 import { ProviderParserMismatchError, type RawPageSnapshot } from '../browser/types.js';
 import { sleep } from '../util.js';
 import type { HumanReason, ImportJob } from './job.js';
@@ -80,7 +80,7 @@ export class AgentImportRunner implements JobRunner {
       job.transition(S.OPENING_PROVIDER);
       const session = await BrowserSession.open(
         this.opts.host, provider, config.headless, config.maxPdfBytes, config.providerDebugStructure,
-        config.pdfDownloadTimeoutMs, config.maxMedicalArchiveBytes,
+        provider.id === 'rdcchacabuco' ? config.rdcPdfSourceTimeoutMs : config.pdfDownloadTimeoutMs, config.maxMedicalArchiveBytes,
         provider.id === 'centrodm' ? config.centroDmAllowedOrigins : [],
         provider.id === 'centrodm' ? config.pixeonViewerReadyTimeoutMs : undefined,
         provider.id === 'centrodm' ? config.pixeonToolbarTimeoutMs : undefined,
@@ -111,12 +111,18 @@ export class AgentImportRunner implements JobRunner {
         log.debug(job.id, stage, fields);
         if (stage === 'pdf_download_started' && job.state === S.FINDING_DOCUMENT) job.transition(S.DOWNLOADING, { studyId: job.current?.studyId });
       };
-      const ALWAYS_LOG_PIXEON = new Set(['centrodm_metadata_dates_found', 'centrodm_studies_with_date', 'centrodm_study_metadata', 'pixeon_download_probe_start', 'pixeon_download_probe_end', 'pixeon_download_probe', 'pixeon_download_fastpath', 'pixeon_download_click', 'pixeon_download_options', 'pixeon_frames', 'pixeon_frame', 'pixeon_text_exact', 'pixeon_text_partial', 'pixeon_attr_candidates', 'pixeon_dom_candidate', 'pixeon_clickable_ancestor', 'pixeon_structural_fallback', 'pixeon_toolbar_candidates', 'toolbar_candidate', 'pixeon_toolbar_detected', 'pixeon_download_structural_candidate', 'pixeon_download_text_matches', 'pixeon_download_role_matches', 'pixeon_download_attr_matches', 'pixeon_download_candidate', 'pixeon_download_button', 'pixeon_download_menu', 'pixeon_download_menu_options', 'pixeon_download_choice', 'centrodm_find_document_enter', 'find_document_dispatch']);
-      session.onProviderStructure = ({ event, ...fields }) => event === 'percamb_page'
-        ? log.debug(job.id, event, { provider: provider.id, type: 'results_list' })
-        : ALWAYS_LOG_PIXEON.has(event)
-          ? log.info(job.id, event, { provider: provider.id, ...fields })
-        : log.debug(job.id, event, { provider: provider.id, ...fields });
+      const ALWAYS_LOG_PIXEON = new Set(['centrodm_metadata_dates_found', 'centrodm_studies_with_date', 'centrodm_study_metadata', 'pixeon_download_probe_start', 'pixeon_download_probe_end', 'pixeon_download_probe', 'pixeon_download_fastpath', 'pixeon_download_click', 'pixeon_download_options', 'pixeon_frames', 'pixeon_frame', 'pixeon_text_exact', 'pixeon_text_partial', 'pixeon_attr_candidates', 'pixeon_dom_candidate', 'pixeon_clickable_ancestor', 'pixeon_structural_fallback', 'pixeon_toolbar_candidates', 'toolbar_candidate', 'pixeon_toolbar_detected', 'pixeon_download_structural_candidate', 'pixeon_download_text_matches', 'pixeon_download_role_matches', 'pixeon_download_attr_matches', 'pixeon_download_candidate', 'pixeon_download_button', 'pixeon_download_menu', 'pixeon_download_menu_options', 'pixeon_download_choice', 'centrodm_find_document_enter', 'find_document_dispatch', 'rdc_page', 'rdc_rows', 'rdc_file_icons', 'rdc_file_icons_fallback', 'rdc_file_icons_class_fallback', 'rdc_file_icons_global', 'rdc_result_actions', 'rdc_candidate_rows', 'rdc_parsed_studies', 'rdc_studies_found', 'rdc_action_build', 'rdc_study_action', 'rdc_study_build', 'rdc_study_reference_saved', 'rdc_provider_refs', 'rdc_open_study', 'rdc_document_listeners_ready', 'rdc_study_action_click', 'rdc_modal_opened', 'rdc_frame_navigation', 'rdc_frames', 'rdc_frame', 'rdc_modal_probe', 'rdc_pdf_sources_scan', 'rdc_embed_candidates', 'rdc_embed_candidate', 'rdc_embed_fetch', 'rdc_nested_source_scan', 'rdc_pdf_dom_candidate', 'rdc_pdf_response', 'rdc_pdf_candidate', 'rdc_pdf_source', 'rdc_pdf_full', 'rdc_pdf_valid', 'rdc_external_origin', 'rdc_import_complete']);
+      session.onProviderStructure = ({ event, ...fields }) => {
+        if (event === 'rdc_pdf_response' && fields.found && provider.studyExtractor === 'rdcchacabuco' && job.state === S.OPENING_STUDY) {
+          job.transition(S.FINDING_DOCUMENT, { studyId: job.current?.studyId });
+        }
+        if (event === 'rdc_pdf_source' && fields.found && provider.studyExtractor === 'rdcchacabuco' && job.state === S.FINDING_DOCUMENT) {
+          job.transition(S.DOWNLOADING, { studyId: job.current?.studyId });
+        }
+        if (event === 'percamb_page') return log.debug(job.id, event, { provider: provider.id, type: 'results_list' });
+        if (ALWAYS_LOG_PIXEON.has(event)) return log.info(job.id, event, { provider: provider.id, ...fields });
+        return log.debug(job.id, event, { provider: provider.id, ...fields });
+      };
       session.onUserClosed = () => job.fail(S.CANCELLED, 'WINDOW_CLOSED');
       await session.gotoLogin();
       job.push('provider_opened');
@@ -138,6 +144,30 @@ export class AgentImportRunner implements JobRunner {
 
   private async discover(session: BrowserSession): Promise<void> {
     const { job } = this;
+    if (session.provider.studyExtractor === 'rdcchacabuco') {
+      if (job.state !== S.SEARCHING_STUDIES) job.transition(S.SEARCHING_STUDIES);
+      try {
+        const result = await session.listStudies();
+        if (!result) {
+          if (await session.isRdcChacabucoResultsPage?.()) throw new ProviderParserMismatchError(0, 0);
+          job.fail(S.PROVIDER_CHANGED, 'PROVIDER_CHANGED');
+          return;
+        }
+        const studies = result.studies.map((study) => ({ ...study, provider: this.deps.provider.id }));
+        job.setStudies(studies);
+        this.deps.log.info(job.id, 'studies_found', { provider: this.deps.provider.id, count: studies.length });
+        job.transition(S.STUDIES_FOUND, { count: studies.length });
+        job.transition(S.WAITING_SELECTION, { studies });
+        return;
+      } catch (error) {
+        if (error instanceof ProviderParserMismatchError) {
+          this.deps.log.warn(job.id, 'rdc_parser_mismatch', { provider: this.deps.provider.id, resultActions: error.resultActions, candidateRows: error.candidateRows, parsedStudies: error.parsedStudies });
+          job.transition(S.PROVIDER_PARSER_MISMATCH, { code: 'PROVIDER_PARSER_MISMATCH' });
+          return;
+        }
+        throw error;
+      }
+    }
     if (session.provider.studyExtractor === 'centrodm') {
       if (job.state !== S.SEARCHING_STUDIES) job.transition(S.SEARCHING_STUDIES);
       try {
@@ -256,18 +286,20 @@ export class AgentImportRunner implements JobRunner {
     const session = this.session;
     if (!session) return void job.fail(S.ERROR, 'NO_SESSION');
     const isCentroDm = session.provider.studyExtractor === 'centrodm';
+    const isRdcChacabuco = session.provider.studyExtractor === 'rdcchacabuco';
     if (isCentroDm) {
       this.deps.log.info(job.id, 'import_dispatch', { provider: this.deps.provider.id, selectedCount: studyIds.length });
       this.deps.log.info(job.id, 'centrodm_import_queue', { count: studyIds.length });
       this.deps.log.info(job.id, 'centrodm_import_start', { count: studyIds.length });
     }
+    if (isRdcChacabuco) this.deps.log.info(job.id, 'rdc_import_queue', { count: studyIds.length });
     try {
       for (let i = 0; i < studyIds.length; i++) {
         const studyId = studyIds[i];
         // CentroDM resuelve sus referencias dentro de BrowserSession y no crea TargetLocators
         // genéricos. El despacho del proveedor debe ocurrir antes de validar esos locators.
-        const providerOwned = isCentroDm || session.hasStudy?.(studyId) === true;
-        const target = isCentroDm ? { studyId } : this.locators.get(studyId) ?? (providerOwned ? { studyId } : undefined);
+        const providerOwned = isCentroDm || isRdcChacabuco || session.hasStudy?.(studyId) === true;
+        const target = isCentroDm || isRdcChacabuco ? { studyId } : this.locators.get(studyId) ?? (providerOwned ? { studyId } : undefined);
         if (!target) {
           job.failures.push({ studyId, code: 'UNKNOWN_STUDY' });
           continue;
@@ -284,24 +316,28 @@ export class AgentImportRunner implements JobRunner {
           } catch (error) {
             if (job.isTerminal) return;
             if (error instanceof StudyReferenceMismatchError) openingFailure = error.code;
+            else if (isRdcChacabuco && error instanceof RdcChacabucoError) openingFailure = error.code;
             else if (isCentroDm && error instanceof MedicalArchiveError) openingFailure = error.code;
-            else if (isCentroDm && error instanceof UnexpectedDomainError) openingFailure = 'UNEXPECTED_DOMAIN';
+            else if ((isCentroDm || isRdcChacabuco) && error instanceof UnexpectedDomainError) openingFailure = 'UNEXPECTED_DOMAIN';
             else throw error;
           }
           if (openingFailure) {
-            this.retainFailedViewer(session, openingFailure);
+            this.retainFailedViewer(session, openingFailure, i === studyIds.length - 1);
             job.failures.push({ studyId, code: openingFailure });
             job.push('study_failed', { studyId, code: openingFailure });
             if (isCentroDm) this.deps.log.warn(job.id, 'centrodm_study_failed', { index: i + 1, errorCode: openingFailure });
+            if (isRdcChacabuco) this.deps.log.warn(job.id, 'rdc_study_failed', { index: i + 1, errorCode: openingFailure });
+            if (isRdcChacabuco) await session.closeRdcChacabucoModal?.();
             await session.closeExtraPages();
             continue;
           }
           this.deps.log.debug(job.id, 'provider_study_opened', { step: i + 1, outcome: !!opened, count: session.openPages() });
           if (!opened) {
-            const code = isCentroDm ? 'VIEWER_OPEN_TIMEOUT' : 'STUDY_NOT_FOUND';
+            const code = isCentroDm ? 'VIEWER_OPEN_TIMEOUT' : isRdcChacabuco ? 'STUDY_ACTION_NOT_FOUND' : 'STUDY_NOT_FOUND';
             job.failures.push({ studyId, code });
             job.push('study_failed', { studyId, code });
             if (isCentroDm) this.deps.log.warn(job.id, 'centrodm_study_failed', { index: i + 1, errorCode: code });
+            if (isRdcChacabuco) this.deps.log.warn(job.id, 'rdc_study_failed', { index: i + 1, errorCode: code });
             await session.closeExtraPages();
             continue;
           }
@@ -369,6 +405,39 @@ export class AgentImportRunner implements JobRunner {
             const code = error instanceof PdfDownloadError ? error.code : error instanceof UnexpectedDomainError ? 'UNEXPECTED_DOMAIN' : 'PDF_NOT_FOUND';
             job.failures.push({ studyId, code });
             job.push('study_failed', { studyId, code });
+          }
+          done = true;
+        } else if (providerOwned && isRdcChacabuco) {
+          try {
+            if (this.downloads.used >= this.deps.config.maxDownloadsPerJob) throw new PdfDownloadError('PDF_DOWNLOAD_TIMEOUT');
+            this.downloads.used++;
+            const pdf = await session.downloadRdcChacabucoStudyPdf?.();
+            if (!pdf) throw new RdcChacabucoError('PDF_SOURCE_NOT_FOUND');
+            if (job.state === S.FINDING_DOCUMENT) job.transition(S.DOWNLOADING, { studyId });
+            await session.closeRdcChacabucoModal?.();
+            job.transition(S.IMPORTING, { studyId });
+            const saved = await this.deps.files.save(pdf.buffer, pdf.contentType);
+            if (!saved.ok) {
+              const code = ['EMPTY', 'NOT_PDF_BYTES', 'TOO_LARGE'].includes(saved.reason) ? 'INVALID_PDF' : 'ARTIFACT_IMPORT_FAILED';
+              job.failures.push({ studyId, code });
+              job.push('study_failed', { studyId, code });
+            } else {
+              const imported = importMetadata();
+              job.addFile({ id: saved.file.id, studyId, bytes: saved.file.bytes, sha256: saved.file.sha256, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+              job.push('file_ready', { studyId, fileId: saved.file.id, bytes: saved.file.bytes, kind: saved.file.kind, mimeType: saved.file.mimeType, duplicate: saved.duplicate, ...imported });
+              this.deps.log.info(job.id, 'rdc_artifact_staged', { bytes: saved.file.bytes });
+            }
+          } catch (error) {
+            if (job.isTerminal) return;
+            const code = error instanceof RdcChacabucoError ? error.code
+              : error instanceof PdfDownloadError ? error.code
+                : error instanceof UnexpectedDomainError ? 'UNEXPECTED_DOMAIN' : 'ARTIFACT_IMPORT_FAILED';
+            this.retainFailedViewer(session, code, i === studyIds.length - 1);
+            job.failures.push({ studyId, code });
+            job.push('study_failed', { studyId, code });
+            this.deps.log.warn(job.id, 'rdc_study_failed', { index: i + 1, errorCode: code });
+          } finally {
+            await session.closeRdcChacabucoModal?.();
           }
           done = true;
         }
@@ -439,8 +508,8 @@ export class AgentImportRunner implements JobRunner {
       }
       job.current = undefined;
       if (job.files.length === 0) {
-        const specificFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH', 'STUDY_NOT_FOUND', 'STUDY_REFERENCE_MISSING', 'VIEWER_NOT_READY', 'VIEWER_OPEN_TIMEOUT', 'VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND', 'DICOM_DOWNLOAD_TIMEOUT', 'INVALID_MEDICAL_ARCHIVE'].includes(failure.code));
-        return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, specificFailure?.code ?? (isCentroDm ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS'));
+        const specificFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'INVALID_PDF', 'PDF_SOURCE_NOT_FOUND', 'ARTIFACT_IMPORT_FAILED', 'STUDY_ACTION_NOT_FOUND', 'STUDY_MODAL_NOT_OPENED', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH', 'STUDY_NOT_FOUND', 'STUDY_REFERENCE_MISSING', 'VIEWER_NOT_READY', 'VIEWER_OPEN_TIMEOUT', 'VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND', 'DICOM_DOWNLOAD_TIMEOUT', 'INVALID_MEDICAL_ARCHIVE'].includes(failure.code));
+        return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, specificFailure?.code ?? (isCentroDm || isRdcChacabuco ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS'));
       }
       // El JobManager mantiene IMPORTING hasta que el Portal confirme el Blob y la ficha persistida.
     } catch (e) {
@@ -521,9 +590,12 @@ export class AgentImportRunner implements JobRunner {
 
   get debugViewerRetentionMs(): number { return this.session?.debugViewerRetentionMs || 0; }
 
-  private retainFailedViewer(session: BrowserSession, code: string): void {
+  private retainFailedViewer(session: BrowserSession, code: string, lastSelectedStudy = false): void {
     if (this.deps.config.pixeonDebugKeepViewerOpen && ['VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(code)) {
       session.retainPixeonViewerForDebug(this.deps.config.pixeonDebugKeepViewerOpenMs);
+    }
+    if (lastSelectedStudy && this.deps.config.rdcDebugKeepModalOpen && code === 'PDF_SOURCE_NOT_FOUND') {
+      session.retainRdcModalForDebug(this.deps.config.rdcDebugKeepModalOpenMs);
     }
   }
 

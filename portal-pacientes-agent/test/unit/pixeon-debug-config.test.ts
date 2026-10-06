@@ -11,6 +11,15 @@ test('retener Pixeon es opt-in DEV y nunca se habilita en producción', () => {
   assert.equal(loadConfig({ NODE_ENV: 'production', PIXEON_DEBUG_KEEP_VIEWER_OPEN_MS: '90000' }, []).pixeonDebugKeepViewerOpenMs, 0);
 });
 
+test('retener modal RDC es opt-in DEV, máximo 120 s y nunca se habilita en producción', () => {
+  assert.equal(loadConfig({}, []).rdcDebugKeepModalOpen, false);
+  assert.equal(loadConfig({ NODE_ENV: 'development', RDC_DEBUG_KEEP_MODAL_OPEN: 'true' }, []).rdcDebugKeepModalOpen, true);
+  assert.equal(loadConfig({ NODE_ENV: 'production', RDC_DEBUG_KEEP_MODAL_OPEN: 'true' }, []).rdcDebugKeepModalOpen, false);
+  assert.equal(loadConfig({ NODE_ENV: 'development', RDC_DEBUG_KEEP_MODAL_OPEN_MS: '90000' }, []).rdcDebugKeepModalOpenMs, 90_000);
+  assert.equal(loadConfig({ NODE_ENV: 'development', RDC_DEBUG_KEEP_MODAL_OPEN_MS: '240000' }, []).rdcDebugKeepModalOpenMs, 120_000);
+  assert.equal(loadConfig({ NODE_ENV: 'production', RDC_DEBUG_KEEP_MODAL_OPEN_MS: '90000' }, []).rdcDebugKeepModalOpenMs, 0);
+});
+
 test('timeout de toolbar Pixeon es configurable y usa 30 s por defecto', () => {
   assert.equal(loadConfig({}, []).pixeonToolbarTimeoutMs, 30_000);
   assert.equal(loadConfig({ PIXEON_TOOLBAR_TIMEOUT_MS: '12000' }, []).pixeonToolbarTimeoutMs, 12_000);

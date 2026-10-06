@@ -210,6 +210,63 @@ test('Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imáge
   }
 });
 
+test('Portal: RDC Chacabuco conserva fecha y tipo, guarda el PDF como imágenes y deduplica por sourceKey', { timeout: 60_000 }, async () => {
+  const cfg = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes') });
+  const manager = new JobManager({ config: cfg, providers: PROVIDERS, runnerFactory: fakeRunnerFactory({ loginDelayMs: 20, stepMs: 30 }), log: silentLogger });
+  const app = createApp({ config: cfg, manager, providers: PROVIDERS, info: { runner: 'fake', model: 'fake', modelReady: true } });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
+  const errors: string[] = [];
+  try {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.addInitScript(`try { localStorage.setItem('pp_agent_url', ${JSON.stringify(base)}); } catch (e) {}`);
+    await page.goto(base + '/index.html#/login');
+    await page.fill('#dni', '32456789');
+    await page.fill('#pass', 'demo1234');
+    await page.click('#login-form [type=submit]');
+    await page.waitForSelector('.home-head');
+
+    await page.goto(base + '/index.html#/traer?inst=rdc');
+    await page.waitForSelector('.fv-explain');
+    assert.match(await page.locator('.fv-explain').innerText(), /RDC Chacabuco/);
+    await page.click('[data-action=live-open]');
+    await page.waitForSelector('.res-list', { timeout: 10_000 });
+    assert.match(await page.locator('.res-list').innerText(), /ECOGRAFIA TIROIDES[\s\S]*ULTRASONIDO[\s\S]*PDF[\s\S]*15\/01\/2026/);
+    assert.match(await page.locator('.res-list').innerText(), /RX TORAX FTE[\s\S]*RADIOGRAFÍA COMPUTADA[\s\S]*14\/05\/2025/);
+    await page.click('.res-list li:first-child .res-row');
+    await page.click('#res-save');
+    await page.waitForSelector('.fv-success', { timeout: 10_000 });
+    await page.click('[data-action=see-imported]');
+    const study = await page.evaluate(() => {
+      const db = JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}');
+      return db.studies?.find((item: { provider?: string; name?: string }) => item.provider === 'rdcchacabuco' && item.name === 'ECOGRAFIA TIROIDES');
+    });
+    assert.ok(study);
+    assert.equal(study.type, 'imagenes');
+    assert.equal(study.studyType, 'ULTRASONIDO');
+    assert.equal(study.studyDate, '2026-01-15');
+    assert.equal(study.date, '2026-01-15');
+    assert.equal(study.artifactKind, 'PDF');
+    assert.equal(study.providerDisplayName, 'RDC Chacabuco');
+    assert.match(study.sourceKey, /^[a-f0-9]{64}$/);
+
+    await page.goto(base + '/index.html#/traer?inst=rdc');
+    await page.click('[data-action=live-open]');
+    await page.waitForSelector('.res-list', { timeout: 10_000 });
+    assert.equal(await page.locator('.res-list li:first-child input').isDisabled(), true);
+    assert.match(await page.locator('.res-list li:first-child').innerText(), /ya está en tu portal/i);
+    assert.equal(await page.locator('.res-list li:nth-child(2) input').isDisabled(), false);
+    assert.deepEqual(errors, []);
+  } finally {
+    await browser.close();
+    server.close();
+    await manager.shutdown();
+  }
+});
+
 test('Portal: no confirma la importación si no puede persistir el ZIP o sus metadatos', { timeout: 60_000 }, async () => {
   const cfg = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes') });
   const manager = new JobManager({ config: cfg, providers: PROVIDERS, runnerFactory: fakeRunnerFactory({ loginDelayMs: 20, stepMs: 20 }), log: silentLogger });

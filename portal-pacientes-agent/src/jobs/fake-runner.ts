@@ -1,6 +1,7 @@
 import { sleep } from '../util.js';
 import { percambSourceKey } from '../providers/percamb/source-key.js';
 import { centroDmSourceKey } from '../providers/centrodm/source-key.js';
+import { rdcChacabucoSourceKey } from '../providers/rdcchacabuco/source-key.js';
 import type { ExternalStudy, ImportJob } from './job.js';
 import { makeDemoPdf } from './pdf.js';
 import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
@@ -26,6 +27,17 @@ export const FAKE_CENTRODM_STUDIES: Omit<ExternalStudy, 'provider'>[] = [
   { id: 'st_cdm_fake000001', studyDate: '2024-04-08', title: 'Reconstrucción 3D', modality: 'SC', sourceKey: centroDmSourceKey('2024-04-08', 'Reconstrucción 3D', 'SC') },
   { id: 'st_cdm_fake000002', studyDate: '2024-04-10', title: 'Tomografía de tórax', modality: 'CT', sourceKey: centroDmSourceKey('2024-04-10', 'Tomografía de tórax', 'CT') },
 ];
+
+export const FAKE_RDC_STUDIES: Omit<ExternalStudy, 'provider'>[] = [
+  { id: 'st_rdc_fake000001', date: '2026-01-15', studyDate: '2026-01-15', studyType: 'ULTRASONIDO', title: 'ECOGRAFIA TIROIDES', sourceKey: rdcChacabucoSourceKey('2026-01-15', 'ULTRASONIDO', 'ECOGRAFIA TIROIDES') },
+  { id: 'st_rdc_fake000002', date: '2025-05-14', studyDate: '2025-05-14', studyType: 'RADIOGRAFÍA COMPUTADA', title: 'RX TORAX FTE', sourceKey: rdcChacabucoSourceKey('2025-05-14', 'RADIOGRAFÍA COMPUTADA', 'RX TORAX FTE') },
+];
+
+function demoStudiesFor(provider: string): Omit<ExternalStudy, 'provider'>[] {
+  if (provider === 'centrodm') return FAKE_CENTRODM_STUDIES;
+  if (provider === 'rdcchacabuco') return FAKE_RDC_STUDIES;
+  return FAKE_STUDIES;
+}
 
 /**
  * FakeProviderAgent: recorre la misma máquina de estados y emite los mismos eventos que el runner
@@ -82,7 +94,7 @@ export class FakeProviderAgent implements JobRunner {
         job.transition(S.PROVIDER_PARSER_MISMATCH, { code: 'PROVIDER_PARSER_MISMATCH' });
         return;
       }
-      const demoStudies = job.provider === 'centrodm' ? FAKE_CENTRODM_STUDIES : FAKE_STUDIES;
+      const demoStudies = demoStudiesFor(job.provider);
       const studies = this.scenario === 'empty' ? [] : demoStudies.map((s) => ({
         ...s,
         ...(job.provider === 'percamb' ? { sourceKey: percambSourceKey(s.date, s.protocol) } : {}),
@@ -105,7 +117,7 @@ export class FakeProviderAgent implements JobRunner {
       job.transition(S.AGENT_OBSERVING);
       job.transition(S.SEARCHING_STUDIES);
       await this.pause(this.step);
-      const demoStudies = job.provider === 'centrodm' ? FAKE_CENTRODM_STUDIES : FAKE_STUDIES;
+      const demoStudies = demoStudiesFor(job.provider);
       const studies = demoStudies.map((s) => ({ ...s, provider: job.provider }));
       job.setStudies(studies);
       job.transition(S.STUDIES_FOUND, { count: studies.length });
@@ -149,6 +161,8 @@ export class FakeProviderAgent implements JobRunner {
           'Este PDF lo genero el modo simulado del Portal de Pacientes.',
           'No proviene de ningun laboratorio y no contiene datos reales.',
           'Fecha del estudio: ' + (study.date ?? '-'),
+          'Estudio: ' + (study.title ?? '-'),
+          'Tipo: ' + (study.studyType ?? '-'),
           'Protocolo: ' + (study.protocol ?? '-'),
         ]);
         const saved = await this.deps.files.save(pdf, 'application/pdf');

@@ -133,6 +133,9 @@ export class JobManager {
     if (e.job.provider === 'centrodm') {
       this.deps.log.info(jobId, 'centrodm_artifact_persisted', { fileIdPresent: true });
       this.deps.log.info(jobId, 'centrodm_study_persisted', { studyPersisted: true });
+    } else if (e.job.provider === 'rdcchacabuco') {
+      this.deps.log.info(jobId, 'rdc_artifact_persisted', { fileIdPresent: true });
+      this.deps.log.info(jobId, 'rdc_study_persisted', { studyPersisted: true });
     }
     this.completeIfPersisted(e);
     return e.job;
@@ -141,7 +144,7 @@ export class JobManager {
   private importWorkFinished(e: Entry): void {
     if (e.job.isTerminal) return;
     if (e.job.files.length === 0) {
-      e.job.fail(JobState.AGENT_UNABLE_TO_CONTINUE, e.job.provider === 'centrodm' ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS');
+      e.job.fail(JobState.AGENT_UNABLE_TO_CONTINUE, e.job.provider === 'centrodm' || e.job.provider === 'rdcchacabuco' ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS');
       return;
     }
     e.importFinished = true;
@@ -157,6 +160,7 @@ export class JobManager {
     if ([...expected].some((key) => !e.portalAcks.has(key))) return;
     e.job.transition(JobState.COMPLETED, { files: e.job.files.length, failures: e.job.failures.length });
     if (e.job.provider === 'centrodm') this.deps.log.info(e.job.id, 'centrodm_import_complete', { files: e.job.files.length, failures: e.job.failures.length });
+    else if (e.job.provider === 'rdcchacabuco') this.deps.log.info(e.job.id, 'rdc_import_complete', { files: e.job.files.length, failures: e.job.failures.length });
     // El endpoint de archivos ya entregó los bytes antes de que el Portal pudiera acusar recibo.
     if (e.delivered.size >= e.files.count) void e.files.cleanup();
   }
@@ -183,13 +187,20 @@ export class JobManager {
   private async onTerminal(e: Entry, state: JobState): Promise<void> {
     const { config, log } = this.deps;
     const recoverable = ['VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(e.job.errorCode || '');
-    const hold = recoverable && state === JobState.AGENT_UNABLE_TO_CONTINUE && config.pixeonDebugKeepViewerOpen && e.job.provider === 'centrodm'
+    const holdPixeon = recoverable && state === JobState.AGENT_UNABLE_TO_CONTINUE && config.pixeonDebugKeepViewerOpen && e.job.provider === 'centrodm'
       ? Math.min(config.pixeonDebugKeepViewerOpenMs, e.runner.debugViewerRetentionMs || 0) : 0;
+    const holdRdc = e.job.errorCode === 'PDF_SOURCE_NOT_FOUND' && state === JobState.AGENT_UNABLE_TO_CONTINUE && config.rdcDebugKeepModalOpen && e.job.provider === 'rdcchacabuco'
+      ? Math.min(config.rdcDebugKeepModalOpenMs, e.runner.debugViewerRetentionMs || 0) : 0;
+    const hold = Math.max(holdPixeon, holdRdc);
     if (hold > 0) {
-      log.info(e.job.id, 'pixeon_debug_hold', { viewer: true, reason: e.job.errorCode, ttlMs: hold });
-      log.info(e.job.id, 'pixeon_debug_viewer_held', { durationMs: hold, errorCode: e.job.errorCode });
+      if (holdRdc > 0) log.info(e.job.id, 'rdc_debug_hold', { keepModalOpen: true, reason: 'PDF_SOURCE_NOT_FOUND', ttlMs: holdRdc });
+      else {
+        log.info(e.job.id, 'pixeon_debug_hold', { viewer: true, reason: e.job.errorCode, ttlMs: hold });
+        log.info(e.job.id, 'pixeon_debug_viewer_held', { durationMs: hold, errorCode: e.job.errorCode });
+      }
       e.debugDisposeTimer = this.timer(e, hold, () => void e.runner.dispose().catch(() => {}).then(() => {
-        log.info(e.job.id, 'pixeon_debug_viewer_closed');
+        if (holdRdc > 0) log.info(e.job.id, 'rdc_debug_modal_closed');
+        else log.info(e.job.id, 'pixeon_debug_viewer_closed');
         log.info(e.job.id, 'job_closed', { provider: e.job.provider, state, errorCode: e.job.errorCode, files: e.job.files.length });
       }));
     } else await e.runner.dispose().catch(() => {});

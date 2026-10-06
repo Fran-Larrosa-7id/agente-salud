@@ -25,12 +25,15 @@ export interface Config {
   maxDownloadsPerJob: number;
   maxPdfBytes: number;
   pdfDownloadTimeoutMs: number;
+  rdcPdfSourceTimeoutMs: number;
   maxMedicalArchiveBytes: number;
   medicalArchiveDownloadTimeoutMs: number;
   pixeonViewerReadyTimeoutMs: number;
   pixeonToolbarTimeoutMs: number;
   pixeonDebugKeepViewerOpen: boolean;
   pixeonDebugKeepViewerOpenMs: number;
+  rdcDebugKeepModalOpen: boolean;
+  rdcDebugKeepModalOpenMs: number;
   centroDmAllowedOrigins: string[];
   providerDebugStructure: boolean;
   maxConcurrentJobs: number;
@@ -118,12 +121,15 @@ export function loadConfig(env: Env = process.env, argv: string[] = process.argv
     maxDownloadsPerJob: int(env, 'MAX_DOWNLOADS_PER_JOB', 10),
     maxPdfBytes: int(env, 'MAX_PDF_BYTES', 40 * 1024 * 1024),
     pdfDownloadTimeoutMs: int(env, 'PDF_DOWNLOAD_TIMEOUT_MS', 60_000),
+    rdcPdfSourceTimeoutMs: int(env, 'RDC_PDF_SOURCE_TIMEOUT_MS', 30_000),
     maxMedicalArchiveBytes: int(env, 'MAX_MEDICAL_ARCHIVE_BYTES', 512 * 1024 * 1024),
     medicalArchiveDownloadTimeoutMs: int(env, 'MEDICAL_ARCHIVE_DOWNLOAD_TIMEOUT_MS', 120_000),
     pixeonViewerReadyTimeoutMs: int(env, 'PIXEON_VIEWER_READY_TIMEOUT_MS', 30_000),
     pixeonToolbarTimeoutMs: int(env, 'PIXEON_TOOLBAR_TIMEOUT_MS', 30_000),
     pixeonDebugKeepViewerOpen: env.NODE_ENV !== 'production' && bool(env, 'PIXEON_DEBUG_KEEP_VIEWER_OPEN', false),
     pixeonDebugKeepViewerOpenMs: env.NODE_ENV !== 'production' ? Math.min(120_000, int(env, 'PIXEON_DEBUG_KEEP_VIEWER_OPEN_MS', 120_000)) : 0,
+    rdcDebugKeepModalOpen: env.NODE_ENV !== 'production' && bool(env, 'RDC_DEBUG_KEEP_MODAL_OPEN', false),
+    rdcDebugKeepModalOpenMs: env.NODE_ENV !== 'production' ? Math.min(120_000, int(env, 'RDC_DEBUG_KEEP_MODAL_OPEN_MS', 120_000)) : 0,
     centroDmAllowedOrigins: httpsOrigins(env, 'CENTRODM_ALLOWED_ORIGINS'),
     providerDebugStructure: bool(env, 'PROVIDER_DEBUG_STRUCTURE', false),
     maxConcurrentJobs: int(env, 'MAX_CONCURRENT_JOBS', 2),

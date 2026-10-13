@@ -1,0 +1,19 @@
+{
+  "name": "portal-pacientes-openai-browser-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node smoke.mjs",
+    "cleanup": "node cleanup.mjs",
+    "recover": "node recover-session.mjs",
+    "test:percamb": "node percamb-public.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "*",
+    "openai": "*",
+    "prompt-sync": "*"
+  }
+}

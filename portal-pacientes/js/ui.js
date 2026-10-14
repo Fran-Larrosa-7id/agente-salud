@@ -305,10 +305,16 @@
       return;
     }
     // Documento real (traído con el agente): se descarga el PDF original guardado en este dispositivo.
-    P.files.get(d.file.key).then((blob) => {
+    P.files.get(d.file.key).then(async (blob) => {
       if (!blob) throw new Error('missing');
+      if (d.file.bytes && blob.size !== d.file.bytes) throw new Error('integrity');
+      if (d.file.sha256) {
+        const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+        const hash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+        if (hash !== d.file.sha256) throw new Error('integrity');
+      }
       P.saveBlob(blob, name);
       P.toast('Descarga iniciada · <span class="num">' + P.esc(name) + '</span>', { icon: 'download' });
-    }).catch(() => P.toast('El archivo no está guardado en este dispositivo.', { icon: 'alert', tone: 'danger' }));
+    }).catch(() => P.toast('No pudimos recuperar un archivo íntegro en este navegador. Volvé a importarlo desde la institución.', { icon: 'alert', tone: 'danger' }));
   };
 })();

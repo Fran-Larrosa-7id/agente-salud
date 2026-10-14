@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import path from 'node:path';
+import type { AddressInfo } from 'node:net';
+import { chromium } from 'playwright';
+import { AGENT_ROOT } from '../../src/config.js';
+import { JobManager } from '../../src/jobs/job-manager.js';
+import { fakeRunnerFactory } from '../../src/jobs/fake-runner.js';
+import { PROVIDERS } from '../../src/providers/index.js';
+import { createApp } from '../../src/server/app.js';
+import { silentLogger } from '../../src/security/logger.js';
+import { testConfig } from '../helpers.js';
+
+test('un único formulario autentica backend, resiste sesión local falsa y revoca acceso al salir', { timeout: 30_000 }, async () => {
+  const config = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes'), portalAuth: { username: '1234', password: '1234' } });
+  const manager = new JobManager({ config, providers: PROVIDERS, log: silentLogger, runnerFactory: fakeRunnerFactory({ loginDelayMs: 20, stepMs: 20 }) });
+  const server = createApp({ config, manager, providers: PROVIDERS, info: { runner: 'fake', model: 'rules', modelReady: true } }).listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const browser = await chromium.launch({ headless: true });
+  try {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await context.addInitScript(`localStorage.setItem('pp_agent_url', ${JSON.stringify(base)});`);
+    const page = await context.newPage();
+    const initial = await page.goto(base + '/'); assert.equal(initial!.status(), 200); assert.equal(initial!.headers()['www-authenticate'], undefined);
+    await page.waitForSelector('#login-form');
+    if (process.env.QA_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.QA_SCREENSHOTS, 'portal-single-login.png'), fullPage: true });
+    assert.equal(await page.inputValue('#dni'), '1234'); assert.equal(await page.inputValue('#pass'), '1234');
+    await page.fill('#pass', 'incorrecta'); await page.click('#login-form [type=submit]');
+    await page.waitForSelector('text=Usuario o contraseña incorrectos');
+    assert.equal((await page.request.get(base + '/api/health')).status(), 401);
+    await page.fill('#pass', '1234'); await page.click('#login-form [type=submit]'); await page.waitForSelector('.home-head');
+    const cookie = (await context.cookies()).find(cookie => cookie.name === 'portal_session')!;
+    assert.ok(cookie.httpOnly); assert.equal(cookie.sameSite, 'Strict');
+    assert.equal(await page.evaluate(() => document.cookie.includes('portal_session')), false);
+    assert.equal((await page.request.get(base + '/api/health')).status(), 200);
+    await page.reload(); await page.waitForSelector('.home-head');
+    const second = await context.newPage(); await second.goto(base + '/#/inicio'); await second.waitForSelector('.home-head');
+    await page.goto(base + '/#/traer?inst=cdm'); await page.click('[data-action=live-open]'); await page.waitForSelector('.res-list');
+    assert.equal(manager.activeCount(), 1);
+    await second.evaluate(() => { (window as any).P.actions.logout(); });
+    await second.click('.ov [data-confirm]'); await second.waitForSelector('#login-form');
+    await page.waitForSelector('#login-form');
+    assert.equal((await page.request.get(base + '/api/health')).status(), 401);
+    assert.equal(manager.activeCount(), 0);
+    await page.evaluate(() => { const P = (window as any).P; P.db.session = { since: 'fake' }; P.save(); });
+    await page.reload(); await page.waitForSelector('#login-form');
+    assert.equal((await page.request.get(base + '/api/health')).status(), 401);
+    assert.equal((await page.request.get(base + '/api/auth/session')).headers()['www-authenticate'], undefined);
+  } finally { await browser.close(); await manager.shutdown(); await new Promise<void>(resolve => server.close(() => resolve())); }
+});

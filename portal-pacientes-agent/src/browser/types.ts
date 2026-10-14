@@ -34,6 +34,10 @@ export interface RawCollection {
 }
 
 export interface RawPageSnapshot {
+  /** Señal booleana del extractor Centro DM; sin filas ni identificadores añadidos. */
+  centroDmStudyList?: boolean;
+  /** Identificador efímero de la pestaña candidata; solo lo usa el detector de login. */
+  loginPageId?: string;
   url: string;
   title: string;
   headings: string[];
@@ -206,6 +210,8 @@ export interface ProviderStructureEvent {
 
 /** Puerto que usa el agente para actuar sobre el navegador. Permite testear el agente sin Playwright. */
 export interface BrowserPort {
+  loginSnapshot?(hints: string[]): Promise<RawPageSnapshot>;
+  confirmLogin?(snapshot: RawPageSnapshot): Promise<boolean>;
   snapshot(hints: string[]): Promise<RawPageSnapshot>;
   click(el: RawElement): Promise<{ newPage: boolean }>;
   navigate(url: string): Promise<void>;

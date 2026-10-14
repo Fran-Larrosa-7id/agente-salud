@@ -10,6 +10,7 @@ import { checkOllama, type OllamaStatus, warmupOllama } from '../llm/ollama.js';
 import { PROVIDERS } from '../providers/index.js';
 import { createLogger } from '../security/logger.js';
 import { createApp } from './app.js';
+import { RemoteDesktop } from './remote-desktop.js';
 
 loadDotEnv();
 const config = loadConfig();
@@ -24,6 +25,7 @@ await mkdir(config.tmpDir, { recursive: true });
 const host = new BrowserHost({
   headless: config.headless,
   channel: config.browserChannel,
+  chromiumSandbox: config.chromiumSandbox,
   debugArtifacts: config.debugArtifacts,
   debugDir: path.join(AGENT_ROOT, 'debug-artifacts'),
 });
@@ -93,7 +95,8 @@ const info = {
   browserReady: null as boolean | null,
   browserChannel: config.browserChannel,
 };
-const app = createApp({ config, manager, providers: PROVIDERS, info });
+const desktop = config.remoteLogin ? new RemoteDesktop(log) : undefined;
+const app = createApp({ config, manager, providers: PROVIDERS, info, desktop });
 
 const server = app.listen(config.port, config.host, async () => {
   log.info(null, 'server_started', { port: config.port, runner: config.runner, headless: config.headless, model: fake ? 'fake' : config.llm.provider });
@@ -106,7 +109,7 @@ const server = app.listen(config.port, config.host, async () => {
         : `El modelo ${config.llm.model} no está descargado en Ollama. Ejecutá: ollama pull ${config.llm.model}`);
     }
   }
-  if (config.browserChannel) {
+  if (!fake) {
     try {
       await host.ensureBrowserAvailable();
       info.browserReady = true;
@@ -115,6 +118,7 @@ const server = app.listen(config.port, config.host, async () => {
       info.browserReady = false;
       log.warn(null, 'browser_not_installed', { errorCode: 'BROWSER_NOT_INSTALLED', channel: config.browserChannel });
     }
+    await host.close();
   }
   console.log(`Agente listo en http://${config.host}:${config.port}`);
   if (config.portalDir) console.log(`Portal de Pacientes en http://${config.host}:${config.port}/#/traer?inst=pc`);
@@ -123,10 +127,12 @@ const server = app.listen(config.port, config.host, async () => {
 });
 
 let stopping = false;
+desktop?.attach(server, manager);
 async function shutdown() {
   if (stopping) return;
   stopping = true;
   server.close();
+  await desktop?.stop();
   await manager.shutdown();
   await host.close();
   await rm(config.tmpDir, { recursive: true, force: true });

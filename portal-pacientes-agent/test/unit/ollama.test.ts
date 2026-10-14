@@ -173,8 +173,12 @@ test('ollama: timeout corta la solicitud HTTP', async () => {
         });
       }),
   );
-  await assert.rejects(model(impl, 50).decide(observation(), { signal: signal() }), /MODEL_TIMEOUT/);
-  assert.ok(aborted, 'la solicitud se abortó (Ollama deja de generar)');
+  // El fetch simulado no mantiene un socket abierto; AbortSignal.timeout usa un timer unref en Node/Linux.
+  const keepAlive = setTimeout(() => {}, 1_000);
+  try {
+    await assert.rejects(model(impl, 50).decide(observation(), { signal: signal() }), /MODEL_TIMEOUT/);
+    assert.ok(aborted, 'la solicitud se abortó (Ollama deja de generar)');
+  } finally { clearTimeout(keepAlive); }
 });
 
 test('ollama apagado: MODEL_UNAVAILABLE, sin reintentos ni fallback', async () => {

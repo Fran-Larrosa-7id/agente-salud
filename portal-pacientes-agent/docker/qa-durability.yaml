@@ -1,0 +1,20 @@
+# Backend aislado; el cliente Chromium sigue vivo cuando este proyecto baja y vuelve a subir.
+services:
+  portal:
+    image: mocks-salud-portal
+    init: true
+    environment:
+      IMPORT_RUNNER: fake
+      REMOTE_LOGIN: "false"
+      HEADLESS: "true"
+      PORTAL_AUTH_USER: "1234"
+      PORTAL_AUTH_PASSWORD: "1234"
+      FILE_RETENTION_MINUTES: "5"
+      LOG_LEVEL: silent
+    networks:
+      qa:
+        aliases: [portal]
+networks:
+  qa:
+    external: true
+    name: portal-qa-durability

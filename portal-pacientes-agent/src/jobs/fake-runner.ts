@@ -4,6 +4,7 @@ import { centroDmSourceKey } from '../providers/centrodm/source-key.js';
 import { rdcChacabucoSourceKey } from '../providers/rdcchacabuco/source-key.js';
 import type { ExternalStudy, ImportJob } from './job.js';
 import { makeDemoPdf } from './pdf.js';
+import { makeDemoArchive } from './demo-archive.js';
 import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
 import { JobState } from './states.js';
 
@@ -147,7 +148,7 @@ export class FakeProviderAgent implements JobRunner {
         }
         job.transition(S.IMPORTING, { studyId });
         if (job.provider === 'centrodm') {
-          const zip = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x10, 0x20, 0x30, 0x40]);
+          const zip = makeDemoArchive();
           const saved = await this.deps.files.save(zip, 'application/zip', 'DICOM_ZIP');
           if (!saved.ok) throw new Error(saved.reason);
           const imported = { importedAt: new Date().toISOString(), importedBy: 'agent' as const };

@@ -8,6 +8,8 @@
     "node": ">=20.12"
   },
   "scripts": {
+    "test:remote": "xvfb-run -a env TEST_REMOTE_DESKTOP=true node --import tsx --test test/e2e/remote-desktop.test.ts",
+    "smoke": "node --import tsx scripts/smoke.ts",
     "dev": "tsx watch src/server/index.ts",
     "start": "tsx src/server/index.ts",
     "start:fake": "tsx src/server/index.ts --fake",
@@ -19,7 +21,7 @@
   },
   "dependencies": {
     "express": "5.1.0",
-    "playwright": "1.55.0"
+    "playwright": "1.55.1"
   },
   "devDependencies": {
     "@types/express": "5.0.3",

@@ -10,6 +10,7 @@ export interface JobRunner {
   start(): Promise<void>;
   /** Reintenta el discovery manteniendo navegador y sesiÃ³n autenticada cuando sea posible. */
   retryDiscovery?(): Promise<void>;
+  resume?(beforeResume: () => Promise<void>): Promise<boolean>;
   /** Descarga SOLO los estudios elegidos por el paciente. */
   importSelected(studyIds: string[]): Promise<void>;
   /** Cierra navegador, pestañas y handles. Idempotente. */

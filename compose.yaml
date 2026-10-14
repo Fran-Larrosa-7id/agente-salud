@@ -1,0 +1,43 @@
+services:
+  portal:
+    build: .
+    init: true
+    user: "1000:1000"
+    ports:
+      - "127.0.0.1:8787:8787"
+    env_file:
+      - .env.docker
+    environment:
+      BROWSER_CHANNEL: ""
+      REMOTE_LOGIN: "true"
+      XDG_CONFIG_HOME: /home/pwuser/.config
+      XDG_CACHE_HOME: /home/pwuser/.cache
+      ALLOWED_ORIGINS: ""
+      LLM_PROVIDER: rules
+      MAX_CONCURRENT_JOBS: "1"
+      FILE_RETENTION_MINUTES: "5"
+      JOB_TTL_MINUTES: "20"
+      PLAYWRIGHT_DEBUG_ARTIFACTS: "false"
+      AGENT_DEBUG_ERRORS: "false"
+    shm_size: 1gb
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=./portal-pacientes-agent/docker/seccomp_profile.json
+    tmpfs:
+      - /tmp:size=1g,mode=1777
+      - /home/pwuser:size=128m,uid=1000,gid=1000,mode=0700
+      - /var/lib/portal:size=1g,uid=1000,gid=1000,mode=0700
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8787/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

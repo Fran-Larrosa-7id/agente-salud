@@ -30,13 +30,20 @@ export class JobFileStore {
   private readonly byHash = new Map<string, StoredFile>();
   private readonly byId = new Map<string, StoredFile>();
   private removed = false;
+  private writes: Promise<void> = Promise.resolve();
 
   constructor(root: string, jobId: string, private readonly maxPdfBytes = MAX_PDF_BYTES, private readonly maxMedicalArchiveBytes = MAX_MEDICAL_ARCHIVE_BYTES) {
     if (!isUuid(jobId)) throw new Error('jobId inválido');
     this.dir = path.join(root, jobId);
   }
 
-  async save(buffer: Buffer, contentType: string | null, kind: StoredFile['kind'] = 'PDF'): Promise<SaveResult> {
+  save(buffer: Buffer, contentType: string | null, kind: StoredFile['kind'] = 'PDF'): Promise<SaveResult> {
+    const pending = this.writes.then(() => this.saveOne(buffer, contentType, kind));
+    this.writes = pending.then(() => {}, () => {});
+    return pending;
+  }
+
+  private async saveOne(buffer: Buffer, contentType: string | null, kind: StoredFile['kind']): Promise<SaveResult> {
     if (this.removed) return { ok: false, reason: 'STORE_CLOSED' };
     const check = kind === 'PDF'
       ? validatePdf(buffer, contentType, this.maxPdfBytes)
@@ -45,7 +52,7 @@ export class JobFileStore {
     const sha256 = createHash('sha256').update(buffer).digest('hex');
     const existing = this.byHash.get(sha256);
     if (existing) return { ok: true, file: existing, duplicate: true };
-    await mkdir(this.dir, { recursive: true });
+    await mkdir(this.dir, { recursive: true, mode: 0o700 });
     const id = randomUUID();
     const extension = kind === 'PDF' ? '.pdf' : '.zip';
     const mimeType = kind === 'PDF' ? 'application/pdf' : 'application/zip';
@@ -71,6 +78,7 @@ export class JobFileStore {
   /** Borra la carpeta del job y olvida los archivos. Idempotente. */
   async cleanup(): Promise<void> {
     this.removed = true;
+    await this.writes;
     this.byHash.clear();
     this.byId.clear();
     await rm(this.dir, { recursive: true, force: true });

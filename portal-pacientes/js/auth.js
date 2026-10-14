@@ -3,6 +3,18 @@
   const P = window.P;
   const ic = P.icon;
   const rec = (P.ui.rec = { step: 'dni', dni: '' });
+  P.prepareAuth = async () => {
+    try {
+      const response = await fetch(P.agent.base() + '/api/auth/session', { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error('AUTH_UNAVAILABLE');
+      const session = await response.json();
+      P.portalAuthEnabled = session.enabled;
+      if (session.enabled) { P.db.session = session.authenticated ? { since: new Date().toISOString() } : null; P.save(); }
+    } catch {
+      P.portalAuthEnabled = location.port === '8787';
+      if (P.portalAuthEnabled) { P.db.session = null; P.save(); }
+    }
+  };
 
   const art =
     '<div class="auth-art" aria-hidden="true">' +
@@ -34,21 +46,21 @@
     document.title = 'Ingresar · Portal de Pacientes';
     return layout(
       '<h1 class="auth-title" tabindex="-1">Ingresar</h1>' +
-      '<p class="muted">Usá tu DNI y la contraseña del portal.</p>' +
+      '<p class="muted">' + (P.portalAuthEnabled ? 'Ingresá con la cuenta del piloto.' : 'Usá tu DNI y la contraseña del portal.') + '</p>' +
       '<div class="alert alert-error" id="login-alert" role="alert" hidden></div>' +
       '<form id="login-form" class="auth-form" novalidate>' +
-      '<div class="field"><label for="dni">DNI</label>' +
-      '<input class="input input-lg num" id="dni" name="dni" inputmode="numeric" autocomplete="username" value="' + P.PATIENT.dniFmt + '" aria-describedby="dni-e">' +
+      '<div class="field"><label for="dni">' + (P.portalAuthEnabled ? 'Usuario' : 'DNI') + '</label>' +
+      '<input class="input input-lg num" id="dni" name="dni" autocomplete="username" value="' + (P.portalAuthEnabled ? '1234' : P.PATIENT.dniFmt) + '" aria-describedby="dni-e">' +
       '<p class="field-error" id="dni-e" hidden></p></div>' +
-      '<div class="field"><div class="field-top"><label for="pass">Contraseña</label><a class="link link-sm" href="#/recuperar">Olvidé mi contraseña</a></div>' +
-      '<div class="pass-wrap"><input class="input input-lg" id="pass" name="pass" type="password" autocomplete="current-password" value="demo1234" aria-describedby="pass-e caps">' +
+      '<div class="field"><div class="field-top"><label for="pass">Contraseña</label>' + (P.portalAuthEnabled ? '' : '<a class="link link-sm" href="#/recuperar">Olvidé mi contraseña</a>') + '</div>' +
+      '<div class="pass-wrap"><input class="input input-lg" id="pass" name="pass" type="password" autocomplete="current-password" value="' + (P.portalAuthEnabled ? '1234' : 'demo1234') + '" aria-describedby="pass-e caps">' +
       '<button type="button" class="pass-toggle" data-action="toggle-pass" aria-label="Mostrar contraseña" aria-pressed="false">' + ic('eye', 20) + '</button></div>' +
       '<p class="field-hint" id="caps" hidden>' + ic('info', 16) + 'Bloq Mayús está activado.</p>' +
       '<p class="field-error" id="pass-e" hidden></p></div>' +
       '<button class="btn btn-primary btn-lg btn-block" type="submit">Ingresar</button>' +
       '</form>' +
-      '<p class="auth-note">' + ic('info', 16) + '<span>Demo: DNI <b class="num">32.456.789</b> y cualquier contraseña.</span></p>' +
-      '<p class="auth-first">¿Primera vez? Tu institución de salud te envía la invitación por email para crear tu cuenta.</p>'
+      '<p class="auth-note">' + ic('info', 16) + '<span>' + (P.portalAuthEnabled ? 'Piloto: usuario <b>1234</b> y contraseña <b>1234</b>.' : 'Demo: DNI <b class="num">32.456.789</b> y cualquier contraseña.') + '</span></p>' +
+      (P.portalAuthEnabled ? '' : '<p class="auth-first">¿Primera vez? Tu institución de salud te envía la invitación por email para crear tu cuenta.</p>')
     );
   };
 
@@ -56,7 +68,7 @@
     const f = document.getElementById('login-form');
     const dni = f.querySelector('#dni');
     const pass = f.querySelector('#pass');
-    dni.addEventListener('input', () => { dni.value = P.fmtDni(dni.value); clearErr(dni); });
+    dni.addEventListener('input', () => { if (!P.portalAuthEnabled) dni.value = P.fmtDni(dni.value); clearErr(dni); });
     pass.addEventListener('input', () => clearErr(pass));
     pass.addEventListener('keyup', (e) => { if (e.getModifierState) document.getElementById('caps').hidden = !e.getModifierState('CapsLock'); });
     f.addEventListener('submit', async (e) => {
@@ -65,10 +77,21 @@
       alert.hidden = true;
       const digits = dni.value.replace(/\D/g, '');
       let bad = false;
-      if (digits.length < 7) { setErr(dni, 'Revisá tu DNI: debe tener 7 u 8 números.'); bad = true; }
+      if (P.portalAuthEnabled ? !dni.value.trim() : digits.length < 7) { setErr(dni, P.portalAuthEnabled ? 'Ingresá tu usuario.' : 'Revisá tu DNI: debe tener 7 u 8 números.'); bad = true; }
       if (!pass.value) { setErr(pass, 'Ingresá tu contraseña.'); bad = true; }
       if (bad) { f.querySelector('[aria-invalid="true"]').focus(); return; }
       const done = P.busy(f.querySelector('[type="submit"]'), 'Ingresando…');
+      if (P.portalAuthEnabled) {
+        try {
+          const response = await fetch(P.agent.base() + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: dni.value.trim(), password: pass.value }), signal: AbortSignal.timeout(10000) });
+          if (!response.ok) throw new Error(response.status === 401 ? 'Usuario o contraseña incorrectos.' : response.status === 429 ? 'Esperá un minuto y volvé a intentar.' : 'No pudimos iniciar sesión. Volvé a intentar.');
+          P.db.session = { since: new Date().toISOString() }; P.save(); P.ui.fresh = true;
+          const returnTo = new URLSearchParams(location.search).get('returnTo');
+          if (returnTo && /^\/remote\/[0-9a-f-]{36}$/.test(returnTo)) location.replace(returnTo);
+          else location.hash = '#/inicio';
+        } catch (error) { done(); alert.hidden = false; alert.textContent = error.message || 'No pudimos conectar con el Portal.'; }
+        return;
+      }
       await P.wait(800);
       if (digits !== P.PATIENT.dni) {
         done();
@@ -108,6 +131,7 @@
 
   /* ---------- Recuperar contraseña ---------- */
   P.renderRecover = function () {
+    if (P.portalAuthEnabled) return layout('<h1 class="auth-title">Acceso al piloto</h1><p>Usá el usuario 1234 y la contraseña 1234.</p><a class="btn btn-primary" href="#/login">Volver a ingresar</a>');
     document.title = 'Recuperar contraseña · Portal de Pacientes';
     const back = '<a class="back-link" href="#/login">' + ic('arrow-left', 18) + 'Volver a ingresar</a>';
     let inner = '';

@@ -22,6 +22,7 @@ interface Entry {
   delivered: Set<string>;
   portalAcks: Set<string>;
   importFinished: boolean;
+  disposing: boolean;
   timers: NodeJS.Timeout[];
   debugDisposeTimer?: NodeJS.Timeout;
 }
@@ -60,10 +61,14 @@ export class JobManager {
     const job = new ImportJob(provider.id, provider.name);
     const files = new JobFileStore(config.tmpDir, job.id, config.maxPdfBytes, config.maxMedicalArchiveBytes);
     const runner = this.deps.runnerFactory(job, { config, provider, files, log });
-    const entry: Entry = { job, runner, files, delivered: new Set(), portalAcks: new Set(), importFinished: false, timers: [] };
+    const entry: Entry = { job, runner, files, delivered: new Set(), portalAcks: new Set(), importFinished: false, disposing: false, timers: [] };
     this.jobs.set(job.id, entry);
+    log.info(job.id, 'job_created', { provider: provider.id });
 
-    job.on('event', (ev: { type: string }) => log.info(job.id, 'job_event', { provider: provider.id, state: job.state, event: ev.type }));
+    job.on('event', (ev: { type: string }) => {
+      log.info(job.id, 'job_event', { provider: provider.id, state: job.state, event: ev.type });
+      if (ev.type === 'waiting_user_login') log.info(job.id, 'login_ready', { durationMs: Date.now() - job.createdAt });
+    });
     job.once('terminal', (state: JobState) => void this.onTerminal(entry, state));
     this.timer(entry, config.jobTtlMs, () => void this.expire(entry));
 
@@ -75,8 +80,18 @@ export class JobManager {
     return this.jobs.get(jobId)?.job;
   }
 
+  async resume(jobId: string, beforeResume: () => Promise<void>): Promise<void> {
+    const entry = this.jobs.get(jobId);
+    if (!entry?.runner.resume) throw new ManagerError('RESUME_NOT_AVAILABLE', 409);
+    if (!await entry.runner.resume(beforeResume)) throw new ManagerError('LOGIN_NOT_READY', 409);
+  }
+
   activeCount(): number {
-    return [...this.jobs.values()].filter((e) => !e.job.isTerminal || (e.runner.debugViewerRetentionMs || 0) > 0).length;
+    return this.activeJobs().length;
+  }
+
+  activeJobs(): ImportJob[] {
+    return [...this.jobs.values()].filter((e) => !e.job.isTerminal || e.disposing || (e.runner.debugViewerRetentionMs || 0) > 0).map(e => e.job);
   }
 
   select(jobId: string, studyIds: unknown, importedSourceKeys?: unknown): string[] {
@@ -174,6 +189,7 @@ export class JobManager {
       await e.files.cleanup();
     }
     await e.runner.dispose();
+    e.disposing = false;
     return e.job;
   }
 
@@ -185,6 +201,7 @@ export class JobManager {
   }
 
   private async onTerminal(e: Entry, state: JobState): Promise<void> {
+    e.disposing = true;
     const { config, log } = this.deps;
     const recoverable = ['VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(e.job.errorCode || '');
     const holdPixeon = recoverable && state === JobState.AGENT_UNABLE_TO_CONTINUE && config.pixeonDebugKeepViewerOpen && e.job.provider === 'centrodm'
@@ -199,14 +216,18 @@ export class JobManager {
         log.info(e.job.id, 'pixeon_debug_viewer_held', { durationMs: hold, errorCode: e.job.errorCode });
       }
       e.debugDisposeTimer = this.timer(e, hold, () => void e.runner.dispose().catch(() => {}).then(() => {
+        e.disposing = false;
         if (holdRdc > 0) log.info(e.job.id, 'rdc_debug_modal_closed');
         else log.info(e.job.id, 'pixeon_debug_viewer_closed');
         log.info(e.job.id, 'job_closed', { provider: e.job.provider, state, errorCode: e.job.errorCode, files: e.job.files.length });
       }));
-    } else await e.runner.dispose().catch(() => {});
+    } else {
+      await e.runner.dispose().catch(() => {});
+      e.disposing = false;
+    }
     if (state !== JobState.COMPLETED) await e.files.cleanup();
     else this.timer(e, config.fileRetentionMs, () => void e.files.cleanup());
-    if (hold === 0) log.info(e.job.id, 'job_closed', { provider: e.job.provider, state, errorCode: e.job.errorCode, files: e.job.files.length });
+    if (hold === 0) log.info(e.job.id, 'job_closed', { provider: e.job.provider, state, errorCode: e.job.errorCode, files: e.job.files.length, durationMs: Date.now() - e.job.createdAt });
     const keep = state === JobState.COMPLETED ? Math.max(config.jobRetentionMs, config.fileRetentionMs) : config.jobRetentionMs;
     this.timer(e, keep + hold, () => void this.forget(e));
   }

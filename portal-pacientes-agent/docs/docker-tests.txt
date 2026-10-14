@@ -1,0 +1,1010 @@
+
+> portal-pacientes-agent@0.1.0 test
+> node --import tsx --test --test-concurrency=1 test/unit/*.test.ts test/e2e/*.test.ts
+
+TAP version 13
+# Subtest: el paciente inicia sesión, el agente descubre y trae los 3 PDF
+ok 1 - el paciente inicia sesión, el agente descubre y trae los 3 PDF
+  ---
+  duration_ms: 4055.836129
+  type: 'test'
+  ...
+# Subtest: cancelar mientras espera el login cierra el navegador de inmediato
+ok 2 - cancelar mientras espera el login cierra el navegador de inmediato
+  ---
+  duration_ms: 196.315681
+  type: 'test'
+  ...
+# Subtest: si el paciente cierra la ventana, el job se cancela
+ok 3 - si el paciente cierra la ventana, el job se cancela
+  ---
+  duration_ms: 218.536543
+  type: 'test'
+  ...
+# Subtest: sin login a tiempo: AUTH_TIMEOUT y cierre
+ok 4 - sin login a tiempo: AUTH_TIMEOUT y cierre
+  ---
+  duration_ms: 1850.499085
+  type: 'test'
+  ...
+# Subtest: parser mismatch conserva Edge abierto y nunca pide una intervención humana inventada
+ok 5 - parser mismatch conserva Edge abierto y nunca pide una intervención humana inventada
+  ---
+  duration_ms: 1145.601864
+  type: 'test'
+  ...
+# Subtest: cancelar durante launch espera el contexto pendiente y no deja Chromium huérfano
+ok 6 - cancelar durante launch espera el contexto pendiente y no deja Chromium huérfano
+  ---
+  duration_ms: 207.23595
+  type: 'test'
+  ...
+# Subtest: el último contexto cierra Chromium y el siguiente job recibe un proceso nuevo
+ok 7 - el último contexto cierra Chromium y el siguiente job recibe un proceso nuevo
+  ---
+  duration_ms: 329.880711
+  type: 'test'
+  ...
+# Subtest: Centro DM rechaza un visor cuyo metadata explícito no coincide con el estudio elegido
+ok 8 - Centro DM rechaza un visor cuyo metadata explícito no coincide con el estudio elegido
+  ---
+  duration_ms: 544.819395
+  type: 'test'
+  ...
+# Subtest: Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup Pixeon y descarga ZIP DICOM completo
+ok 9 - Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup Pixeon y descarga ZIP DICOM completo
+  ---
+  duration_ms: 581.515033
+  type: 'test'
+  ...
+# Subtest: Centro DM espera el render tardío de la toolbar Pixeon hasta el timeout configurado
+ok 10 - Centro DM espera el render tardío de la toolbar Pixeon hasta el timeout configurado
+  ---
+  duration_ms: 2019.093858
+  type: 'test'
+  ...
+# Subtest: Centro DM acepta un modal de consentimiento Pixeon y reintenta readiness
+ok 11 - Centro DM acepta un modal de consentimiento Pixeon y reintenta readiness
+  ---
+  duration_ms: 1164.808922
+  type: 'test'
+  ...
+# Subtest: Centro DM permite solo el origin Pixeon configurado y conserva la pestaña autenticada
+ok 12 - Centro DM permite solo el origin Pixeon configurado y conserva la pestaña autenticada
+  ---
+  duration_ms: 462.757393
+  type: 'test'
+  ...
+# Subtest: Pixeon: errores distinguibles y keep-open preserva visor y principal hasta dispose
+ok 13 - Pixeon: errores distinguibles y keep-open preserva visor y principal hasta dispose
+  ---
+  duration_ms: 5617.970715
+  type: 'test'
+  ...
+# Subtest: Centro DM bloquea redirects a origins no confirmados y no registra path ni query
+ok 14 - Centro DM bloquea redirects a origins no confirmados y no registra path ni query
+  ---
+  duration_ms: 82.061642
+  type: 'test'
+  ...
+# Subtest: Centro DM valida cada salto y bloquea un redirect externo desde el origin Pixeon permitido
+ok 15 - Centro DM valida cada salto y bloquea un redirect externo desde el origin Pixeon permitido
+  ---
+  duration_ms: 117.983717
+  type: 'test'
+  ...
+# Subtest: Centro DM detecta el ancla llamadoURL con imagen, ignora Compartir y acepta metadata mínima
+ok 16 - Centro DM detecta el ancla llamadoURL con imagen, ignora Compartir y acepta metadata mínima
+  ---
+  duration_ms: 63.727813
+  type: 'test'
+  ...
+# Subtest: Centro DM no informa parser mismatch cuando un listado reconocible no contiene acciones
+ok 17 - Centro DM no informa parser mismatch cuando un listado reconocible no contiene acciones
+  ---
+  duration_ms: 54.349213
+  type: 'test'
+  ...
+# Subtest: Centro DM detecta llamadoURL en onclick/data-* y asocia acciones a filas div
+ok 18 - Centro DM detecta llamadoURL en onclick/data-* y asocia acciones a filas div
+  ---
+  duration_ms: 57.270383
+  type: 'test'
+  ...
+# Subtest: Centro DM no confunde una fila de listado vacío con un parser mismatch
+ok 19 - Centro DM no confunde una fila de listado vacío con un parser mismatch
+  ---
+  duration_ms: 52.327729
+  type: 'test'
+  ...
+# Subtest: Centro DM asigna studyDate por orden solo si coinciden la cantidad de actions y fechas
+ok 20 - Centro DM asigna studyDate por orden solo si coinciden la cantidad de actions y fechas
+  ---
+  duration_ms: 100.227117
+  type: 'test'
+  ...
+# Subtest: Centro DM deja studyDate indefinida si no puede asociar fechas por fila ni por conteos
+ok 21 - Centro DM deja studyDate indefinida si no puede asociar fechas por fila ni por conteos
+  ---
+  duration_ms: 49.467907
+  type: 'test'
+  ...
+# Subtest: Centro DM crea tres estudios mínimos por href aunque no pueda asociarlos a filas
+ok 22 - Centro DM crea tres estudios mínimos por href aunque no pueda asociarlos a filas
+  ---
+  duration_ms: 54.991059
+  type: 'test'
+  ...
+# Subtest: Portal: Traer mis estudios desde Pérez Cambet con el asistente (simulado)
+ok 23 - Portal: Traer mis estudios desde Pérez Cambet con el asistente (simulado)
+  ---
+  duration_ms: 26830.498151
+  type: 'test'
+  ...
+# Subtest: Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imágenes y deduplica
+ok 24 - Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imágenes y deduplica
+  ---
+  duration_ms: 7819.262139
+  type: 'test'
+  ...
+# Subtest: Portal: RDC Chacabuco conserva fecha y tipo, guarda el PDF como imágenes y deduplica por sourceKey
+ok 25 - Portal: RDC Chacabuco conserva fecha y tipo, guarda el PDF como imágenes y deduplica por sourceKey
+  ---
+  duration_ms: 6939.903534
+  type: 'test'
+  ...
+# Subtest: Portal: no confirma la importación si no puede persistir el ZIP o sus metadatos
+ok 26 - Portal: no confirma la importación si no puede persistir el ZIP o sus metadatos
+  ---
+  duration_ms: 8400.770762
+  type: 'test'
+  ...
+# Subtest: Portal: parser mismatch deja de cargar y reintenta en la misma importación
+ok 27 - Portal: parser mismatch deja de cargar y reintenta en la misma importación
+  ---
+  duration_ms: 4098.744625
+  type: 'test'
+  ...
+# Subtest: el extractor lista todas las filas y captura PDF tras about:blank y data PDF
+ok 28 - el extractor lista todas las filas y captura PDF tras about:blank y data PDF
+  ---
+  duration_ms: 2879.490696
+  type: 'test'
+  ...
+# Subtest: prioriza context.request para href directo y redirect interno; fallback captura popup y data PDF
+ok 29 - prioriza context.request para href directo y redirect interno; fallback captura popup y data PDF
+  ---
+  duration_ms: 7433.299839
+  type: 'test'
+  ...
+# Subtest: el orden invertido conserva la asociación opaca entre estudio y PDF
+ok 30 - el orden invertido conserva la asociación opaca entre estudio y PDF
+  ---
+  duration_ms: 2591.264029
+  type: 'test'
+  ...
+# Subtest: rechaza redirect externo, HTML anunciado como PDF y reporta un timeout específico
+ok 31 - rechaza redirect externo, HTML anunciado como PDF y reporta un timeout específico
+  ---
+  duration_ms: 5695.784841
+  type: 'test'
+  ...
+# Subtest: un host externo real se bloquea y un archivo con MIME PDF pero bytes HTML no se acepta
+ok 32 - un host externo real se bloquea y un archivo con MIME PDF pero bytes HTML no se acepta
+  ---
+  duration_ms: 4503.50442
+  type: 'test'
+  ...
+# Subtest: extrae metadata administrativa de filas DIV sin leer contenido clínico y abre el ID elegido
+ok 33 - extrae metadata administrativa de filas DIV sin leer contenido clínico y abre el ID elegido
+  ---
+  duration_ms: 1467.803514
+  type: 'test'
+  ...
+# Subtest: prioriza links ver_resultado y conserva estudios aunque falte metadata
+ok 34 - prioriza links ver_resultado y conserva estudios aunque falte metadata
+  ---
+  duration_ms: 1225.67563
+  type: 'test'
+  ...
+# Subtest: rechaza abrir un detalle cuyo protocolo contradice al de la fila original
+ok 35 - rechaza abrir un detalle cuyo protocolo contradice al de la fila original
+  ---
+  duration_ms: 1253.068978
+  type: 'test'
+  ...
+# Subtest: detecta uno o ningún link ver_resultado sin depender del icono
+ok 36 - detecta uno o ningún link ver_resultado sin depender del icono
+  ---
+  duration_ms: 1348.061052
+  type: 'test'
+  ...
+# Subtest: devuelve una fila o lista vacía solo cuando no hay ojos
+ok 37 - devuelve una fila o lista vacía solo cuando no hay ojos
+  ---
+  duration_ms: 1316.647704
+  type: 'test'
+  ...
+# Subtest: dos acciones visibles sin filas parseables devuelven mismatch en vez de lista vacía
+ok 38 - dos acciones visibles sin filas parseables devuelven mismatch en vez de lista vacía
+  ---
+  duration_ms: 673.470267
+  type: 'test'
+  ...
+# Subtest: no confunde resultados con OTP, pero reconoce un campo de verificación visible
+ok 39 - no confunde resultados con OTP, pero reconoce un campo de verificación visible
+  ---
+  duration_ms: 1327.902124
+  type: 'test'
+  ...
+# Subtest: Pixeon: div role button
+ok 40 - Pixeon: div role button
+  ---
+  duration_ms: 363.599029
+  type: 'test'
+  ...
+# Subtest: Pixeon: onclick en abuelo
+ok 41 - Pixeon: onclick en abuelo
+  ---
+  duration_ms: 161.218628
+  type: 'test'
+  ...
+# Subtest: Pixeon: tabindex en abuelo
+ok 42 - Pixeon: tabindex en abuelo
+  ---
+  duration_ms: 150.602407
+  type: 'test'
+  ...
+# Subtest: Pixeon: aria label en icono
+ok 43 - Pixeon: aria label en icono
+  ---
+  duration_ms: 166.214554
+  type: 'test'
+  ...
+# Subtest: Pixeon: toolbar estructural
+ok 44 - Pixeon: toolbar estructural
+  ---
+  duration_ms: 150.131691
+  type: 'test'
+  ...
+# Subtest: Pixeon: toolbar en iframe y menú en otro frame; elige solo full ZIP DCM
+ok 45 - Pixeon: toolbar en iframe y menú en otro frame; elige solo full ZIP DCM
+  ---
+  duration_ms: 490.452734
+  type: 'test'
+  ...
+# Subtest: Pixeon: usa primero el selector real .downloadToolsItem sin exigir role ni onclick
+ok 46 - Pixeon: usa primero el selector real .downloadToolsItem sin exigir role ni onclick
+  ---
+  duration_ms: 126.56611
+  type: 'test'
+  ...
+# Subtest: Pixeon: espera a que .downloadToolsItem aparezca antes del timeout
+ok 47 - Pixeon: espera a que .downloadToolsItem aparezca antes del timeout
+  ---
+  duration_ms: 1672.237379
+  type: 'test'
+  ...
+# Subtest: Pixeon: menú de DIVs sin semántica elige solo todas las Series ZIP DCM
+ok 48 - Pixeon: menú de DIVs sin semántica elige solo todas las Series ZIP DCM
+  ---
+  duration_ms: 178.78001
+  type: 'test'
+  ...
+# Subtest: Pixeon: toolbar y menú dentro de shadow DOM abierto
+ok 49 - Pixeon: toolbar y menú dentro de shadow DOM abierto
+  ---
+  duration_ms: 282.316806
+  type: 'test'
+  ...
+# Subtest: Pixeon: finder DOM identifica data-label sin exponer su valor
+ok 50 - Pixeon: finder DOM identifica data-label sin exponer su valor
+  ---
+  duration_ms: 92.078678
+  type: 'test'
+  ...
+# Subtest: Pixeon: finder DOM identifica data-tooltip sin exponer su valor
+ok 51 - Pixeon: finder DOM identifica data-tooltip sin exponer su valor
+  ---
+  duration_ms: 89.215706
+  type: 'test'
+  ...
+# Subtest: Pixeon: acepta cookie overlay, espera hidden y no acepta un modal ajeno
+ok 52 - Pixeon: acepta cookie overlay, espera hidden y no acepta un modal ajeno
+  ---
+  duration_ms: 228.415822
+  type: 'test'
+  ...
+# Subtest: Pixeon: texto sin interacción se distingue de texto ausente
+ok 53 - Pixeon: texto sin interacción se distingue de texto ausente
+  ---
+  duration_ms: 111.715885
+  type: 'test'
+  ...
+# Subtest: Pixeon: overlay tardío intercepta click; acepta y reintenta una sola vez
+ok 54 - Pixeon: overlay tardío intercepta click; acepta y reintenta una sola vez
+  ---
+  duration_ms: 3193.040695
+  type: 'test'
+  ...
+# Subtest: Pixeon: no interactúa con frames fuera de la política existente
+ok 55 - Pixeon: no interactúa con frames fuera de la política existente
+  ---
+  duration_ms: 96.06711
+  type: 'test'
+  ...
+# Subtest: Pixeon: fallback detecta toolbar repetitiva, la describe y no hace click sin señal semántica
+ok 56 - Pixeon: fallback detecta toolbar repetitiva, la describe y no hace click sin señal semántica
+  ---
+  duration_ms: 91.473599
+  type: 'test'
+  ...
+# Subtest: Pixeon: el fallback estructural registra clases action/button sin click por clase sola
+ok 57 - Pixeon: el fallback estructural registra clases action/button sin click por clase sola
+  ---
+  duration_ms: 89.569555
+  type: 'test'
+  ...
+# Subtest: Pixeon: data-action download resuelve locator estructural con señal semántica
+ok 58 - Pixeon: data-action download resuelve locator estructural con señal semántica
+  ---
+  duration_ms: 159.065309
+  type: 'test'
+  ...
+# Subtest: Pixeon: class SVG arrow-down es señal estructural; no se usan coordenadas
+ok 59 - Pixeon: class SVG arrow-down es señal estructural; no se usan coordenadas
+  ---
+  duration_ms: 164.931542
+  type: 'test'
+  ...
+# Subtest: RDC descubre iconos fa-file y mapea metadata aunque el icono no sea un ancestor interactivo
+ok 60 - RDC descubre iconos fa-file y mapea metadata aunque el icono no sea un ancestor interactivo
+  ---
+  duration_ms: 240.437012
+  type: 'test'
+  ...
+# Subtest: RDC descubre un fa-file dentro de wrappers sin onclick/role y lo abre al seleccionar el estudio
+ok 61 - RDC descubre un fa-file dentro de wrappers sin onclick/role y lo abre al seleccionar el estudio
+  ---
+  duration_ms: 273.280837
+  type: 'test'
+  ...
+# Subtest: RDC usa los selectores fallback i.fa-file y .fa-file.icon-size cuando falla el selector principal
+ok 62 - RDC usa los selectores fallback i.fa-file y .fa-file.icon-size cuando falla el selector principal
+  ---
+  duration_ms: 230.340918
+  type: 'test'
+  ...
+# Subtest: RDC inspecciona .fa-file y conserva el estudio cuando fallan los selectores específicos
+ok 63 - RDC inspecciona .fa-file y conserva el estudio cuando fallan los selectores específicos
+  ---
+  duration_ms: 152.159676
+  type: 'test'
+  ...
+# Subtest: RDC conserva dos estudios y referencias mínimas cuando falta toda la metadata y no hay href ni data-id
+ok 64 - RDC conserva dos estudios y referencias mínimas cuando falta toda la metadata y no hay href ni data-id
+  ---
+  duration_ms: 214.872523
+  type: 'test'
+  ...
+# Subtest: RDC conserva la acción cuya fila no tiene metadata y enriquece por índice cuando ambos conteos coinciden
+ok 65 - RDC conserva la acción cuya fila no tiene metadata y enriquece por índice cuando ambos conteos coinciden
+  ---
+  duration_ms: 55.184002
+  type: 'test'
+  ...
+# Subtest: RDC reutiliza la referencia del segundo estudio, tolera la pérdida del icon token y distingue referencias faltantes
+ok 66 - RDC reutiliza la referencia del segundo estudio, tolera la pérdida del icon token y distingue referencias faltantes
+  ---
+  duration_ms: 196.525194
+  type: 'test'
+  ...
+# Subtest: RDC devuelve STUDY_ACTION_NOT_FOUND si la referencia existe pero su acción desapareció del listado
+ok 67 - RDC devuelve STUDY_ACTION_NOT_FOUND si la referencia existe pero su acción desapareció del listado
+  ---
+  duration_ms: 94.578284
+  type: 'test'
+  ...
+# Subtest: RDC abre un único modal, captura la respuesta PDF original y lo cierra sin cerrar la pestaña
+ok 68 - RDC abre un único modal, captura la respuesta PDF original y lo cierra sin cerrar la pestaña
+  ---
+  duration_ms: 385.979885
+  type: 'test'
+  ...
+# Subtest: RDC captura PDF desde embed
+ok 69 - RDC captura PDF desde embed
+  ---
+  duration_ms: 266.537045
+  type: 'test'
+  ...
+# Subtest: RDC captura PDF desde object
+ok 70 - RDC captura PDF desde object
+  ---
+  duration_ms: 283.731925
+  type: 'test'
+  ...
+# Subtest: RDC captura PDF desde blob
+ok 71 - RDC captura PDF desde blob
+  ---
+  duration_ms: 153.403962
+  type: 'test'
+  ...
+# Subtest: RDC captura PDF desde data
+ok 72 - RDC captura PDF desde data
+  ---
+  duration_ms: 167.621911
+  type: 'test'
+  ...
+# Subtest: RDC captura PDF desde download
+ok 73 - RDC captura PDF desde download
+  ---
+  duration_ms: 161.635361
+  type: 'test'
+  ...
+# Subtest: RDC recupera el PDF real de un embed same-origin dentro del frame
+ok 74 - RDC recupera el PDF real de un embed same-origin dentro del frame
+  ---
+  duration_ms: 238.479287
+  type: 'test'
+  ...
+# Subtest: RDC sigue un embed HTML con iframe y embed anidados sin guardar el wrapper
+ok 75 - RDC sigue un embed HTML con iframe y embed anidados sin guardar el wrapper
+  ---
+  duration_ms: 251.565617
+  type: 'test'
+  ...
+# Subtest: RDC ignora un primer embed HTML y continúa con el siguiente candidato PDF
+ok 76 - RDC ignora un primer embed HTML y continúa con el siguiente candidato PDF
+  ---
+  duration_ms: 330.941679
+  type: 'test'
+  ...
+# Subtest: RDC limita por timeout un fetch del embed y conserva un diagnóstico seguro
+ok 77 - RDC limita por timeout un fetch del embed y conserva un diagnóstico seguro
+  ---
+  duration_ms: 2205.003661
+  type: 'test'
+  ...
+# Subtest: RDC rechaza un body application/pdf que no contiene magic PDF
+ok 78 - RDC rechaza un body application/pdf que no contiene magic PDF
+  ---
+  duration_ms: 2157.303727
+  type: 'test'
+  ...
+# Subtest: RDC acepta la respuesta PDF sin modal y corta los clicks ancestros
+ok 79 - RDC acepta la respuesta PDF sin modal y corta los clicks ancestros
+  ---
+  duration_ms: 164.746991
+  type: 'test'
+  ...
+# Subtest: RDC reensambla el PDF completo cuando el visor responde con 206 (response-range)
+ok 80 - RDC reensambla el PDF completo cuando el visor responde con 206 (response-range)
+  ---
+  duration_ms: 224.12471
+  type: 'test'
+  ...
+# Subtest: RDC reensambla el PDF completo cuando el visor responde con 206 (response-range-offset)
+ok 81 - RDC reensambla el PDF completo cuando el visor responde con 206 (response-range-offset)
+  ---
+  duration_ms: 208.562777
+  type: 'test'
+  ...
+# Subtest: RDC descarta un viewer shell HTML y sigue esperando el PDF real
+ok 82 - RDC descarta un viewer shell HTML y sigue esperando el PDF real
+  ---
+  duration_ms: 347.974883
+  type: 'test'
+  ...
+# Subtest: RDC encuentra el PDF real tras una respuesta application/pdf que contiene HTML e iframes anidados
+ok 83 - RDC encuentra el PDF real tras una respuesta application/pdf que contiene HTML e iframes anidados
+  ---
+  duration_ms: 604.203503
+  type: 'test'
+  ...
+# Subtest: RDC debug retiene el modal abierto solo tras observar un modal
+ok 84 - RDC debug retiene el modal abierto solo tras observar un modal
+  ---
+  duration_ms: 2122.973079
+  type: 'test'
+  ...
+# Subtest: RDC rechaza una respuesta PDF inválida aunque no haya modal
+ok 85 - RDC rechaza una respuesta PDF inválida aunque no haya modal
+  ---
+  duration_ms: 2133.594014
+  type: 'test'
+  ...
+# Subtest: RDC devuelve PDF_SOURCE_NOT_FOUND si vence el timeout sin modal ni fuente de documento
+ok 86 - RDC devuelve PDF_SOURCE_NOT_FOUND si vence el timeout sin modal ni fuente de documento
+  ---
+  duration_ms: 7531.89252
+  type: 'test'
+  ...
+# Subtest: RDC bloquea PDF desde un origin no permitido
+ok 87 - RDC bloquea PDF desde un origin no permitido
+  ---
+  duration_ms: 261.420038
+  type: 'test'
+  ...
+# Subtest: RDC sourceKey es estable, opaca y distingue IDs de proveedor de la metadata
+ok 88 - RDC sourceKey es estable, opaca y distingue IDs de proveedor de la metadata
+  ---
+  duration_ms: 0.38649
+  type: 'test'
+  ...
+# Subtest: noVNC permite login ficticio en el mismo contexto; resume y cancel revocan el escritorio
+ok 89 - noVNC permite login ficticio en el mismo contexto; resume y cancel revocan el escritorio # SKIP
+  ---
+  duration_ms: 0.676624
+  type: 'test'
+  ...
+# Subtest: el agente solo tiene herramientas de lectura y navegación acotada
+ok 90 - el agente solo tiene herramientas de lectura y navegación acotada
+  ---
+  duration_ms: 1.117088
+  type: 'test'
+  ...
+# Subtest: las acciones de escritura están bloqueadas por política
+ok 91 - las acciones de escritura están bloqueadas por política
+  ---
+  duration_ms: 2.036944
+  type: 'test'
+  ...
+# Subtest: DISCOVER_STUDIES con reglas: encuentra el listado y termina sin descargar
+ok 92 - DISCOVER_STUDIES con reglas: encuentra el listado y termina sin descargar
+  ---
+  duration_ms: 4.937395
+  type: 'test'
+  ...
+# Subtest: no se descarga durante la búsqueda aunque el modelo lo intente
+ok 93 - no se descarga durante la búsqueda aunque el modelo lo intente
+  ---
+  duration_ms: 2.056169
+  type: 'test'
+  ...
+# Subtest: en DOWNLOAD_STUDY solo puede tocar la fila del estudio elegido
+ok 94 - en DOWNLOAD_STUDY solo puede tocar la fila del estudio elegido
+  ---
+  duration_ms: 2.101248
+  type: 'test'
+  ...
+# Subtest: DOWNLOAD_STUDY: abre el estudio elegido y captura el PDF
+ok 95 - DOWNLOAD_STUDY: abre el estudio elegido y captura el PDF
+  ---
+  duration_ms: 0.863816
+  type: 'test'
+  ...
+# Subtest: límites: máximo de pasos, bucles y duración
+ok 96 - límites: máximo de pasos, bucles y duración
+  ---
+  duration_ms: 36.137347
+  type: 'test'
+  ...
+# Subtest: límite de descargas por job
+ok 97 - límite de descargas por job
+  ---
+  duration_ms: 1.862925
+  type: 'test'
+  ...
+# Subtest: CAPTCHA, código o sesión vencida detienen al agente sin consultar al modelo
+ok 98 - CAPTCHA, código o sesión vencida detienen al agente sin consultar al modelo
+  ---
+  duration_ms: 0.527504
+  type: 'test'
+  ...
+# Subtest: un pedido de OTP sin evidencia se rechaza y no llega al estado de intervención humana
+ok 99 - un pedido de OTP sin evidencia se rechaza y no llega al estado de intervención humana
+  ---
+  duration_ms: 0.786426
+  type: 'test'
+  ...
+# Subtest: un extractor del proveedor devuelve todas las filas con ids opacos y metadata mínima sin consultar al modelo
+ok 100 - un extractor del proveedor devuelve todas las filas con ids opacos y metadata mínima sin consultar al modelo
+  ---
+  duration_ms: 0.229425
+  type: 'test'
+  ...
+# Subtest: cancelar corta el ciclo
+ok 101 - cancelar corta el ciclo
+  ---
+  duration_ms: 0.1543
+  type: 'test'
+  ...
+# Subtest: configura el canal elegido y mantiene Chromium empaquetado por defecto
+ok 102 - configura el canal elegido y mantiene Chromium empaquetado por defecto
+  ---
+  duration_ms: 1.632188
+  type: 'test'
+  ...
+# Subtest: BrowserHost launches the configured channel and can warm it up at startup
+ok 103 - BrowserHost launches the configured channel and can warm it up at startup
+  ---
+  duration_ms: 0.388033
+  type: 'test'
+  ...
+# Subtest: a requested channel that cannot launch reports BROWSER_NOT_INSTALLED
+ok 104 - a requested channel that cannot launch reports BROWSER_NOT_INSTALLED
+  ---
+  duration_ms: 0.573823
+  type: 'test'
+  ...
+# Subtest: browser_ready logs the requested channel through the safe-field whitelist
+ok 105 - browser_ready logs the requested channel through the safe-field whitelist
+  ---
+  duration_ms: 0.212683
+  type: 'test'
+  ...
+# Subtest: Centro DM procesa la cola secuencialmente y continúa tras un fallo recuperable
+ok 106 - Centro DM procesa la cola secuencialmente y continúa tras un fallo recuperable
+  ---
+  duration_ms: 7.590471
+  type: 'test'
+  ...
+# Subtest: Centro DM despacha sin documentos genéricos y reporta una referencia de estudio faltante
+ok 107 - Centro DM despacha sin documentos genéricos y reporta una referencia de estudio faltante
+  ---
+  duration_ms: 2.129723
+  type: 'test'
+  ...
+# Subtest: Centro DM sourceKey es estable por ID del proveedor o metadata y no publica los valores
+ok 108 - Centro DM sourceKey es estable por ID del proveedor o metadata y no publica los valores
+  ---
+  duration_ms: 1.337457
+  type: 'test'
+  ...
+# Subtest: Centro DM normaliza fechas dd/mm/aa tomando los años de dos dígitos como 2000–2099
+ok 109 - Centro DM normaliza fechas dd/mm/aa tomando los años de dos dígitos como 2000–2099
+  ---
+  duration_ms: 0.301625
+  type: 'test'
+  ...
+# Subtest: ZIP médico valida magic bytes y límites, no el nombre del archivo
+ok 110 - ZIP médico valida magic bytes y límites, no el nombre del archivo
+  ---
+  duration_ms: 0.679408
+  type: 'test'
+  ...
+# Subtest: almacenamiento conserva y deduplica ZIP DICOM por hash con extensión propia
+ok 111 - almacenamiento conserva y deduplica ZIP DICOM por hash con extensión propia
+  ---
+  duration_ms: 7.702999
+  type: 'test'
+  ...
+# Subtest: allowlist Centro DM bloquea viewer desconocido y acepta solo su origen HTTPS exacto
+ok 112 - allowlist Centro DM bloquea viewer desconocido y acepta solo su origen HTTPS exacto
+  ---
+  duration_ms: 0.620795
+  type: 'test'
+  ...
+# Subtest: CENTRODM_ALLOWED_ORIGINS admite orígenes HTTPS explícitos, no rutas ni comodines
+ok 113 - CENTRODM_ALLOWED_ORIGINS admite orígenes HTTPS explícitos, no rutas ni comodines
+  ---
+  duration_ms: 0.621276
+  type: 'test'
+  ...
+# Subtest: deduplica escrituras concurrentes y cleanup impide recrear temporales
+ok 114 - deduplica escrituras concurrentes y cleanup impide recrear temporales
+  ---
+  duration_ms: 6.378671
+  type: 'test'
+  ...
+# Subtest: validación de PDF por bytes, no por status ni Content-Type
+ok 115 - validación de PDF por bytes, no por status ni Content-Type
+  ---
+  duration_ms: 1.346885
+  type: 'test'
+  ...
+# Subtest: archivos: nombres UUID, deduplicación por SHA-256 y limpieza
+ok 116 - archivos: nombres UUID, deduplicación por SHA-256 y limpieza
+  ---
+  duration_ms: 8.475589
+  type: 'test'
+  ...
+# Subtest: detección de login: una sola señal no alcanza
+ok 117 - detección de login: una sola señal no alcanza
+  ---
+  duration_ms: 0.614642
+  type: 'test'
+  ...
+# Subtest: fechas y columnas del listado de estudios
+ok 118 - fechas y columnas del listado de estudios
+  ---
+  duration_ms: 1.889337
+  type: 'test'
+  ...
+# Subtest: Pixeon debug: retención temporal y cierre por timeout
+ok 119 - Pixeon debug: retención temporal y cierre por timeout
+  ---
+  duration_ms: 164.236864
+  type: 'test'
+  ...
+# Subtest: Pixeon debug: retención temporal y cierre por cancelación
+ok 120 - Pixeon debug: retención temporal y cierre por cancelación
+  ---
+  duration_ms: 1.749959
+  type: 'test'
+  ...
+# Subtest: Pixeon debug: no registra job_closed antes del TTL y lo registra al terminar
+ok 121 - Pixeon debug: no registra job_closed antes del TTL y lo registra al terminar
+  ---
+  duration_ms: 123.15945
+  type: 'test'
+  ...
+# Subtest: RDC debug: retiene el contexto por PDF_SOURCE_NOT_FOUND y después lo cierra
+ok 122 - RDC debug: retiene el contexto por PDF_SOURCE_NOT_FOUND y después lo cierra
+  ---
+  duration_ms: 123.591382
+  type: 'test'
+  ...
+# Subtest: Pixeon: cleanup inmediato con debug=false y error=DOWNLOAD_ACTION_NOT_FOUND
+ok 123 - Pixeon: cleanup inmediato con debug=false y error=DOWNLOAD_ACTION_NOT_FOUND
+  ---
+  duration_ms: 3.905781
+  type: 'test'
+  ...
+# Subtest: Pixeon: cleanup inmediato con debug=true y error=INVALID_MEDICAL_ARCHIVE
+ok 124 - Pixeon: cleanup inmediato con debug=true y error=INVALID_MEDICAL_ARCHIVE
+  ---
+  duration_ms: 1.502627
+  type: 'test'
+  ...
+# Subtest: flujo completo con FakeProviderAgent: selección, archivos y limpieza al entregar
+ok 125 - flujo completo con FakeProviderAgent: selección, archivos y limpieza al entregar
+  ---
+  duration_ms: 165.988781
+  type: 'test'
+  ...
+# Subtest: fallo de persistencia del Portal termina con ARTIFACT_IMPORT_FAILED, nunca COMPLETED
+ok 126 - fallo de persistencia del Portal termina con ARTIFACT_IMPORT_FAILED, nunca COMPLETED
+  ---
+  duration_ms: 164.153755
+  type: 'test'
+  ...
+# Subtest: TTL: el job vence, se cierra el runner y se borran archivos
+ok 127 - TTL: el job vence, se cierra el runner y se borran archivos
+  ---
+  duration_ms: 82.806665
+  type: 'test'
+  ...
+# Subtest: cancelar: CANCELLED, runner cerrado y sin archivos
+ok 128 - cancelar: CANCELLED, runner cerrado y sin archivos
+  ---
+  duration_ms: 21.857241
+  type: 'test'
+  ...
+# Subtest: límite de jobs simultáneos y proveedor desconocido
+ok 129 - límite de jobs simultáneos y proveedor desconocido
+  ---
+  duration_ms: 1.625745
+  type: 'test'
+  ...
+# Subtest: escenarios de error del FakeProviderAgent
+ok 130 - escenarios de error del FakeProviderAgent
+  ---
+  duration_ms: 61.763134
+  type: 'test'
+  ...
+# Subtest: API + SSE: eventos en orden, importación y descarga del PDF
+ok 131 - API + SSE: eventos en orden, importación y descarga del PDF
+  ---
+  duration_ms: 258.956232
+  type: 'test'
+  ...
+# Subtest: ollama: request a /api/chat local, sin stream, sin thinking, con esquema y el mismo system prompt
+ok 132 - ollama: request a /api/chat local, sin stream, sin thinking, con esquema y el mismo system prompt
+  ---
+  duration_ms: 18.812051
+  type: 'test'
+  ...
+# Subtest: ollama: parsing de acciones y validación contra el esquema de la herramienta
+ok 133 - ollama: parsing de acciones y validación contra el esquema de la herramienta
+  ---
+  duration_ms: 1.052412
+  type: 'test'
+  ...
+# Subtest: ollama: JSON inválido no ejecuta nada, cuenta como paso y se reintenta
+ok 134 - ollama: JSON inválido no ejecuta nada, cuenta como paso y se reintenta
+  ---
+  duration_ms: 8.404331
+  type: 'test'
+  ...
+# Subtest: ollama: respuestas inválidas seguidas terminan en AGENT_STUCK
+ok 135 - ollama: respuestas inválidas seguidas terminan en AGENT_STUCK
+  ---
+  duration_ms: 4.525724
+  type: 'test'
+  ...
+# Subtest: ollama: el razonamiento (thinking) nunca se usa
+ok 136 - ollama: el razonamiento (thinking) nunca se usa
+  ---
+  duration_ms: 0.652657
+  type: 'test'
+  ...
+# Subtest: ollama: timeout corta la solicitud HTTP
+ok 137 - ollama: timeout corta la solicitud HTTP
+  ---
+  duration_ms: 51.053616
+  type: 'test'
+  ...
+# Subtest: ollama apagado: MODEL_UNAVAILABLE, sin reintentos ni fallback
+ok 138 - ollama apagado: MODEL_UNAVAILABLE, sin reintentos ni fallback
+  ---
+  duration_ms: 1.268202
+  type: 'test'
+  ...
+# Subtest: modelo inexistente: MODEL_UNAVAILABLE y el health check lo informa
+ok 139 - modelo inexistente: MODEL_UNAVAILABLE y el health check lo informa
+  ---
+  duration_ms: 1.111076
+  type: 'test'
+  ...
+# Subtest: warm-up de Ollama hace una inferencia sintética una sola vez y no contiene datos del paciente
+ok 140 - warm-up de Ollama hace una inferencia sintética una sola vez y no contiene datos del paciente
+  ---
+  duration_ms: 1.19017
+  type: 'test'
+  ...
+# Subtest: LLM_PROVIDER=ollama: sin claves, sin fallback a cloud y solo host local
+ok 141 - LLM_PROVIDER=ollama: sin claves, sin fallback a cloud y solo host local
+  ---
+  duration_ms: 2.135695
+  type: 'test'
+  ...
+# Subtest: la clave de Percamb se mantiene estable al normalizar el protocolo
+ok 142 - la clave de Percamb se mantiene estable al normalizar el protocolo
+  ---
+  duration_ms: 1.293931
+  type: 'test'
+  ...
+# Subtest: un identificador estable en la referencia del resultado prevalece sobre metadatos cambiantes
+ok 143 - un identificador estable en la referencia del resultado prevalece sobre metadatos cambiantes
+  ---
+  duration_ms: 0.516663
+  type: 'test'
+  ...
+# Subtest: no crea una clave débil si faltan tanto la referencia estable como metadatos suficientes
+ok 144 - no crea una clave débil si faltan tanto la referencia estable como metadatos suficientes
+  ---
+  duration_ms: 0.167124
+  type: 'test'
+  ...
+# Subtest: retener Pixeon es opt-in DEV y nunca se habilita en producción
+ok 145 - retener Pixeon es opt-in DEV y nunca se habilita en producción
+  ---
+  duration_ms: 1.451527
+  type: 'test'
+  ...
+# Subtest: retener modal RDC es opt-in DEV, máximo 120 s y nunca se habilita en producción
+ok 146 - retener modal RDC es opt-in DEV, máximo 120 s y nunca se habilita en producción
+  ---
+  duration_ms: 0.418131
+  type: 'test'
+  ...
+# Subtest: timeout de toolbar Pixeon es configurable y usa 30 s por defecto
+ok 147 - timeout de toolbar Pixeon es configurable y usa 30 s por defecto
+  ---
+  duration_ms: 0.171042
+  type: 'test'
+  ...
+# Subtest: producción exige acceso privado y no permite captura de secretos
+ok 148 - producción exige acceso privado y no permite captura de secretos
+  ---
+  duration_ms: 1.75222
+  type: 'test'
+  ...
+# Subtest: protege portal, API, SSE y archivos; rechaza mutaciones de otro origen
+ok 149 - protege portal, API, SSE y archivos; rechaza mutaciones de otro origen
+  ---
+  duration_ms: 49.901792
+  type: 'test'
+  ...
+# Subtest: maskText oculta DNI, fechas, emails y números de protocolo
+ok 150 - maskText oculta DNI, fechas, emails y números de protocolo
+  ---
+  duration_ms: 1.735418
+  type: 'test'
+  ...
+# Subtest: maskLabel conserva la interfaz y oculta nombres propios
+ok 151 - maskLabel conserva la interfaz y oculta nombres propios
+  ---
+  duration_ms: 0.550398
+  type: 'test'
+  ...
+# Subtest: las celdas de tablas se envían como forma, no como valor
+ok 152 - las celdas de tablas se envían como forma, no como valor
+  ---
+  duration_ms: 0.491574
+  type: 'test'
+  ...
+# Subtest: maskPath elimina query e identificadores
+ok 153 - maskPath elimina query e identificadores
+  ---
+  duration_ms: 0.230447
+  type: 'test'
+  ...
+# Subtest: la observación que recibe el modelo no contiene datos personales
+ok 154 - la observación que recibe el modelo no contiene datos personales
+  ---
+  duration_ms: 3.685843
+  type: 'test'
+  ...
+# Subtest: el logger solo acepta campos de la lista blanca y valores con forma de identificador
+ok 155 - el logger solo acepta campos de la lista blanca y valores con forma de identificador
+  ---
+  duration_ms: 0.256248
+  type: 'test'
+  ...
+# Subtest: los diagnósticos estructurales Centro DM permiten forma, no destino ni query
+ok 156 - los diagnósticos estructurales Centro DM permiten forma, no destino ni query
+  ---
+  duration_ms: 0.228314
+  type: 'test'
+  ...
+# Subtest: allowlist de dominios
+ok 157 - allowlist de dominios
+  ---
+  duration_ms: 1.016092
+  type: 'test'
+  ...
+# Subtest: el detalle clínico se reemplaza por acciones sin valores ni filas
+ok 158 - el detalle clínico se reemplaza por acciones sin valores ni filas
+  ---
+  duration_ms: 0.455524
+  type: 'test'
+  ...
+# Subtest: camino feliz completo de la máquina de estados
+ok 159 - camino feliz completo de la máquina de estados
+  ---
+  duration_ms: 1.325553
+  type: 'test'
+  ...
+# Subtest: no se puede saltar el login ni volver de un estado terminal
+ok 160 - no se puede saltar el login ni volver de un estado terminal
+  ---
+  duration_ms: 0.461004
+  type: 'test'
+  ...
+# Subtest: cancelar, expirar y fallar son posibles desde cualquier estado activo
+ok 161 - cancelar, expirar y fallar son posibles desde cualquier estado activo
+  ---
+  duration_ms: 0.195901
+  type: 'test'
+  ...
+# Subtest: parser mismatch es recuperable, emite un estado SSE propio y permite reintentar
+ok 162 - parser mismatch es recuperable, emite un estado SSE propio y permite reintentar
+  ---
+  duration_ms: 0.230187
+  type: 'test'
+  ...
+# Subtest: fail guarda el código y emite un evento error
+ok 163 - fail guarda el código y emite un evento error
+  ---
+  duration_ms: 0.602119
+  type: 'test'
+  ...
+# Subtest: selección: solo estudios conocidos, sin duplicados, con límite y en el estado correcto
+ok 164 - selección: solo estudios conocidos, sin duplicados, con límite y en el estado correcto
+  ---
+  duration_ms: 0.651284
+  type: 'test'
+  ...
+# Subtest: cada archivo importado conserva el studyId explícito, aunque se seleccione en orden inverso
+ok 165 - cada archivo importado conserva el studyId explícito, aunque se seleccione en orden inverso
+  ---
+  duration_ms: 0.373245
+  type: 'test'
+  ...
+# Subtest: el snapshot público no expone internos
+ok 166 - el snapshot público no expone internos
+  ---
+  duration_ms: 0.198816
+  type: 'test'
+  ...
+1..166
+# tests 166
+# suites 0
+# pass 165
+# fail 0
+# cancelled 0
+# skipped 1
+# todo 0
+# duration_ms 157325.166896

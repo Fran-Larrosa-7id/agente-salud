@@ -1,0 +1,10 @@
+
+> portal-pacientes-agent@0.1.0 smoke
+> node --import tsx scripts/smoke.ts
+
+{"check":"health","ok":true}
+{"check":"public_navigation","provider":"example","status":200,"ok":true}
+{"check":"public_navigation","provider":"percamb","status":200,"ok":true}
+{"check":"public_navigation","provider":"centrodm","status":200,"ok":true}
+{"check":"public_navigation","provider":"rdcchacabuco","status":200,"ok":true}
+{"check":"browser_closed","ok":true}

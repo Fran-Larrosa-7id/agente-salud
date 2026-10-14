@@ -1,16 +1,21 @@
 import { createReadStream, existsSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import express, { type NextFunction, type Request, type Response } from 'express';
-import type { Config } from '../config.js';
+import { AGENT_ROOT, type Config } from '../config.js';
+import path from 'node:path';
 import { isUuid } from '../jobs/file-store.js';
 import { SelectionError } from '../jobs/job.js';
 import { ManagerError, type JobManager } from '../jobs/job-manager.js';
 import type { ProviderConfig } from '../providers/types.js';
 import { streamJobEvents } from './sse.js';
+import { desktopHtml, interactive, type RemoteDesktop } from './remote-desktop.js';
+import { installPortalAuth } from './portal-auth.js';
 
 export interface AppDeps {
   config: Config;
   manager: JobManager;
   providers: Record<string, ProviderConfig>;
+  desktop?: RemoteDesktop;
   info: {
     runner: string;
     model: string;
@@ -20,10 +25,12 @@ export interface AppDeps {
   };
 }
 
-export function createApp({ config, manager, providers, info }: AppDeps) {
+export function createApp({ config, manager, providers, info, desktop }: AppDeps) {
   const app = express();
   app.disable('x-powered-by');
   app.set('etag', false);
+  app.get('/health', (_req, res) => res.set('cache-control', 'no-store').json({ ok: true }));
+  installPortalAuth(app, config, manager);
 
   // CORS con lista blanca de orígenes del frontend.
   app.use((req, res, next) => {
@@ -55,6 +62,45 @@ export function createApp({ config, manager, providers, info }: AppDeps) {
     return job;
   };
 
+  if (desktop && config.remoteLogin) {
+    app.get('/remote-assets/portal-login.js', (_req, res) => {
+      res.set('cache-control', 'no-store').sendFile(path.join(AGENT_ROOT, 'src/server/remote-client.js'));
+    });
+    app.use('/remote-assets', (_req, res, next) => { res.set('cache-control', 'no-store'); next(); }, express.static('/usr/share/novnc', { etag: false, maxAge: 0 }));
+    app.get('/remote/:jobId', async (req, res) => {
+        const id = String(req.params.jobId);
+        const job = isUuid(id) ? manager.get(id) : undefined;
+        const nonce = randomBytes(16).toString('hex');
+        res.set('cache-control', 'no-store');
+        res.set('referrer-policy', 'no-referrer');
+        // noVNC decodifica tiles PNG/JPEG en imágenes data: antes de dibujarlos en el canvas.
+        res.set('content-security-policy', `default-src 'self'; img-src 'self' data:; script-src 'self' 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self' ws: wss:; frame-ancestors 'self'`);
+        res.status(job ? 200 : 404).type('html').send(desktopHtml(id, nonce, job?.providerName, job?.provider, !job));
+    });
+    app.post('/api/imports/:jobId/desktop', async (req, res) => {
+      const job = jobParam(req, res);
+      if (!job) return;
+      if (!interactive(job)) return void res.status(409).json({ error: job.isTerminal ? 'JOB_TERMINAL' : 'DESKTOP_PREPARING' });
+      try {
+        const token = await desktop.start(job);
+        if (!interactive(job)) return void res.status(409).json({ error: 'JOB_TERMINAL' });
+        res.cookie('portal_remote', token, { httpOnly: true, sameSite: 'strict', secure: req.secure || req.headers['x-forwarded-proto'] === 'https', path: `/remote/${job.id}/`, maxAge: config.loginTimeoutMs });
+        res.json({ ready: true });
+      } catch { res.status(503).json({ error: 'DESKTOP_UNAVAILABLE' }); }
+    });
+    app.post('/api/imports/:jobId/resume', async (req, res) => {
+      const job = jobParam(req, res);
+      if (!job) return;
+      try {
+        await manager.resume(job.id, () => desktop.stop(job.id));
+        res.json({ accepted: true });
+      } catch (error) {
+        if (error instanceof ManagerError) return void res.status(error.status).json({ error: error.code });
+        throw error;
+      }
+    });
+  }
+
   app.get('/api/health', (_req, res) => {
     res.json({
       ok: true,
@@ -62,6 +108,7 @@ export function createApp({ config, manager, providers, info }: AppDeps) {
       model: info.model,
       modelReady: info.modelReady,
       headless: config.headless,
+      remoteLogin: config.remoteLogin,
       browserReady: info.browserReady ?? null,
       browserChannel: info.browserChannel || null,
       providers: Object.values(providers).map((p) => ({ id: p.id, name: p.name })),
@@ -71,16 +118,16 @@ export function createApp({ config, manager, providers, info }: AppDeps) {
   app.post('/api/imports/:provider', (req, res) => {
     try {
       const job = manager.create(String(req.params.provider));
-      res.status(201).json({ jobId: job.id });
+      res.status(201).json({ jobId: job.id, remoteLogin: config.remoteLogin });
     } catch (e) {
-      if (e instanceof ManagerError) return void res.status(e.status).json({ error: e.code });
+      if (e instanceof ManagerError) return void res.status(e.status).json({ error: e.code, ...(e.code === 'TOO_MANY_JOBS' ? { activeJobId: manager.activeJobs()[0]?.id } : {}) });
       throw e;
     }
   });
 
   app.get('/api/imports/:jobId', (req, res) => {
     const job = jobParam(req, res);
-    if (job) res.json(job.snapshot());
+    if (job) res.json({ ...job.snapshot(), remoteLogin: config.remoteLogin });
   });
 
   app.get('/api/imports/:jobId/events', (req, res) => {

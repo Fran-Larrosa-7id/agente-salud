@@ -135,6 +135,8 @@ Ningún reinicio usa `localStorage.clear()`: cada demo restaura solo sus claves.
 
 ## Documentación
 
+- [Agente del Portal: Docker local, auditoría y comandos](portal-pacientes-agent/docs/docker-mvp.md). Backend experimental separado de los mockups; conserva Pérez Cambet, Centro DM y RDC. Incluye navegador interactivo noVNC para el login dentro de Docker; despliegue HTTPS pendiente.
+
 - `ROADMAP_PRODUCTOS.md`: estado de cada producto.
 - `HANDOFF.md`: arquitectura, archivos y notas para retomar el proyecto.
 - `PRODUCT.md`, `DESIGN.md`: contexto de producto y sistema de diseño.

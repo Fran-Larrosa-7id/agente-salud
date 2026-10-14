@@ -16,10 +16,30 @@
 
   P.startFlow = function (query) {
     F.run++;
-    liveClose(true);
-    Object.assign(F, { step: 'select', inst: null, found: [], selected: new Set(), q: '', more: false, saved: [], existing: [], live: null });
+    liveClose(!(query && query.get('job') === F.live?.jobId));
+    Object.assign(F, { step: 'select', inst: null, found: [], selected: new Set(), q: '', more: false, saved: [], existing: [], live: null, recovering: false });
     const pre = query && query.get('inst');
     if (pre && P.inst(pre).compatible) { F.inst = pre; F.step = 'explain'; }
+    const resumeJob = query && query.get('job');
+    if (resumeJob && /^[0-9a-f-]{36}$/.test(resumeJob)) {
+      F.inst = F.inst || 'pc'; F.step = 'wait'; F.recovering = true;
+      const token = F.run;
+      Promise.resolve().then(async () => {
+        try {
+          const snap = await P.agent.job(resumeJob);
+          if (token !== F.run) return;
+          const institution = P.INSTITUTIONS.find(item => item.live === snap.provider);
+          if (institution) F.inst = institution.id;
+          F.recovering = false;
+          if (snap.state === 'COMPLETED') { location.hash = '#/estudios'; return; }
+          liveBegin(resumeJob, snap.remoteLogin);
+          onLiveEvent(F.live, 'snapshot', snap);
+        } catch (error) {
+          if (token !== F.run) return;
+          F.recovering = false; liveBegin(resumeJob, true); liveFail(F.live, 'JOB_NOT_FOUND');
+        }
+      });
+    }
   };
   P.leaveFlow = () => { F.run++; liveClose(true); };
 
@@ -86,7 +106,7 @@
     return '<ul class="inst-list">' + list.map((i) => {
       const auth = P.authorization(i.id);
       const badge = !i.compatible ? P.badge('neutral', 'Próximamente', 'clock')
-        : i.live ? P.badge('teal', 'Asistente IA', 'sparkle')
+        : i.live ? P.badge('teal', 'Importación guiada', 'sparkle')
         : auth ? P.badge('info', 'Conectada', 'link') : P.badge('teal', 'Compatible', 'check');
       return '<li><button type="button" class="inst-row" data-action="inst-pick" data-id="' + i.id + '"' + (i.compatible ? '' : ' aria-disabled="true"') + '>' +
         P.mono(i.id, 'lg') +
@@ -104,7 +124,7 @@
       '<input type="search" id="inst-q" data-input="inst-q" value="' + P.esc(F.q) + '" placeholder="Buscá por nombre, tipo o localidad" autocomplete="off"></label>' +
       '<div class="list-head"><h2 class="list-h" id="inst-h">' + (F.q ? 'Resultados' : 'Instituciones conocidas') + '</h2>' +
       '<p class="legend"><span>' + ic('check', 16) + 'Compatible: podemos traer tus estudios automáticamente.</span>' +
-      '<span>' + ic('sparkle', 16) + 'Asistente IA: vos iniciás sesión y el asistente trae tus PDF originales.</span></p></div>' +
+      '<span>' + ic('sparkle', 16) + 'Vos iniciás sesión y el asistente trae tus archivos originales.</span></p></div>' +
       '<div id="inst-results">' + instRows() + '</div>' +
       (F.q || F.more ? '' : '<button type="button" class="more-btn" data-action="inst-more">' + ic('plus', 18) + 'Ver más instituciones <span class="num">(' + hidden + ')</span></button>') +
       '<p class="flow-foot">¿No encontrás la tuya? <button type="button" class="link" data-action="inst-suggest">Sugerir una institución</button></p>'
@@ -403,8 +423,9 @@
         '<li style="--i:' + k + '">' + ic('check', 18) + '<span class="sl-name">' + s.name + (F.saved.includes(s) ? '' : ' · Ya estaba guardado') + '</span><span class="num muted">' + P.fmt(s.date) + '</span>' +
         (s.file ? '<button type="button" class="btn btn-secondary btn-sm sl-dl" data-action="doc-download" data-id="doc-' + s.id + '" aria-label="Descargar ' + (s.file.kind === 'DICOM_ZIP' ? 'estudio DICOM' : 'PDF') + ' del ' + P.fmt(s.date) + '">' + ic('download', 16) + '<span>' + (s.file.kind === 'DICOM_ZIP' ? 'ZIP DICOM' : 'PDF') + '</span></button>' : '') +
         '</li>').join('') + '</ul>' +
-      '<div class="flow-actions center"><a class="btn btn-secondary btn-lg" href="#/inicio">Volver al inicio</a>' +
-      '<a class="btn btn-accent btn-lg" href="#/estudios" data-action="see-imported">Ver estudios' + ic('arrow-right', 20) + '</a></div>' +
+      '<p class="flow-sub center">Los archivos quedan guardados en este navegador y dispositivo. No se sincronizan con otros equipos; si borrás sus datos, se eliminan.</p>' +
+      '<div class="flow-actions center"><a class="btn btn-secondary btn-lg" href="#/estudios">Volver a Estudios</a>' +
+      '<a class="btn btn-accent btn-lg" href="' + (F.saved.length === 1 ? '#/estudios/' + encodeURIComponent(F.saved[0].id) : '#/estudios') + '" data-action="see-imported">' + (F.saved.length === 1 ? 'Ver estudio importado' : 'Ver estudios') + ic('arrow-right', 20) + '</a></div>' +
       '<p class="flow-foot center"><button type="button" class="link" data-action="flow-restart">Traer estudios de otra institución</button></p>'
     );
   }
@@ -483,10 +504,10 @@
       ['Abrimos la ventana oficial de ' + i.name, 'Se abre su propio sitio de resultados, en una ventana aparte.'],
       ['Iniciás sesión ahí, como siempre', 'Con tu usuario y contraseña de ' + i.name + '. Es lo único que hacés vos.'],
       ['El asistente busca tus estudios', 'Detectamos solos que entraste y revisamos qué estudios hay disponibles.'],
-      ['Elegís cuáles traer', 'El asistente descarga los PDF originales y los guarda en tu portal.'],
+      ['Elegís cuáles traer', 'El asistente descarga los archivos originales y los guarda en tu portal.'],
     ];
     return (
-      '<div class="flow-inst">' + P.mono(i.id, 'lg') + '<span class="fi-t"><b>' + i.name + '</b><span>' + P.instSub(i) + ' · Asistente IA</span></span>' +
+      '<div class="flow-inst">' + P.mono(i.id, 'lg') + '<span class="fi-t"><b>' + i.name + '</b><span>' + P.instSub(i) + ' · Importación guiada</span></span>' +
       '<button type="button" class="link" data-action="flow-back">Cambiar</button></div>' +
       '<h1 class="flow-title">Vamos a abrir ' + i.name + '</h1>' +
       '<p class="flow-sub">Iniciá sesión directamente en su sitio. Cuando termines, seguimos automáticamente.</p>' +
@@ -507,31 +528,76 @@
   };
 
   A['live-open'] = async (el) => {
+    if (el.disabled) return;
     const i = P.inst(F.inst);
     const box = document.getElementById('live-open-error');
     box.innerHTML = '';
     const done = P.busy(el, 'Abriendo ' + i.name + '…');
     const token = F.run;
+    // Reservar la pestaña dentro del clic: abrirla después del POST puede activar el bloqueo de popups.
+    let loginWindow = null;
+    try {
+      loginWindow = window.open('about:blank', '_blank');
+      if (loginWindow) {
+        loginWindow.opener = null;
+        loginWindow.document.title = 'Preparando el acceso · Portal de Pacientes';
+        loginWindow.document.body.textContent = 'Estamos preparando el acceso a ' + i.name + '…';
+        loginWindow.document.body.style.cssText = 'font:18px system-ui;padding:32px;color:#173248;background:#f4f8fa';
+      }
+    } catch { loginWindow?.close(); loginWindow = null; }
     let res;
     try {
       res = await P.agent.start(i.live);
     } catch (e) {
+      loginWindow?.close();
       done();
       if (token !== F.run) return;
       const m = OPEN_ERRORS[e.code] || ['No pudimos abrir ' + i.name, 'Probá de nuevo en unos minutos.'];
-      box.innerHTML = '<div class="error-card mt-4" role="alert" tabindex="-1">' + ic('alert', 22) + '<div><p class="error-t">' + m[0] + '</p><p>' + m[1] + '</p></div></div>';
+      const cancel = e.code === 'TOO_MANY_JOBS' && e.activeJobId
+        ? '<button type="button" class="btn btn-accent mt-4" data-action="live-recover-active" data-job-id="' + P.esc(e.activeJobId) + '">Continuar importación en curso</button> <button type="button" class="btn btn-secondary mt-4" data-action="live-cancel-active" data-job-id="' + P.esc(e.activeJobId) + '">Cancelar importación en curso</button>' : '';
+      box.innerHTML = '<div class="error-card mt-4" role="alert" tabindex="-1">' + ic('alert', 22) + '<div><p class="error-t">' + m[0] + '</p><p>' + m[1] + '</p>' + cancel + '</div></div>';
       box.firstChild.focus();
       return;
     }
-    if (token !== F.run) { P.agent.cancel(res.jobId); return; }
-    liveBegin(res.jobId);
+    if (token !== F.run) { loginWindow?.close(); P.agent.cancel(res.jobId); return; }
+    if (loginWindow && loginWindow.closed) { P.agent.cancel(res.jobId); done(); return; }
+    liveBegin(res.jobId, res.remoteLogin);
+    if (res.remoteLogin) {
+      const url = P.agent.base() + '/remote/' + res.jobId;
+      // Si el navegador bloqueó la pestaña, continuar directamente en esta misma ventana.
+      if (loginWindow && !loginWindow.closed) loginWindow.location.replace(url);
+      else location.assign(url);
+    } else loginWindow?.close();
   };
 
-  function liveBegin(jobId) {
+  A['live-cancel-active'] = async (el) => {
+    const done = P.busy(el, 'Cancelando…');
+    try {
+      await P.agent.cancelActive(el.dataset.jobId);
+      const box = document.getElementById('live-open-error');
+      if (box) box.innerHTML = '';
+      P.toast('Importación cancelada. Ya podés abrir la institución.', { icon: 'check' });
+    } catch (e) {
+      done();
+      P.toast('No pudimos cancelar la importación. Volvé a intentar.', { icon: 'alert', tone: 'danger' });
+    }
+  };
+  A['live-recover-active'] = async el => {
+    const done = P.busy(el, 'Recuperando…');
+    try {
+      const snap = await P.agent.job(el.dataset.jobId);
+      const institution = P.INSTITUTIONS.find(item => item.live === snap.provider);
+      if (institution) F.inst = institution.id;
+      liveBegin(snap.jobId, snap.remoteLogin); onLiveEvent(F.live, 'snapshot', snap);
+    } catch { done(); P.toast('Esta importación ya no está disponible.', { tone: 'danger' }); }
+  };
+
+  function liveBegin(jobId, remoteLogin) {
     const L = (F.live = {
-      jobId, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], importFailures: [], saved: [], existing: [],
-      human: null, error: null, at: 1, completed: false, closed: false, found: null, stop: null,
+      jobId, remoteLogin: !!remoteLogin, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], importFailures: [], saved: [], existing: [],
+      human: null, error: null, at: 1, completed: false, closed: false, found: null, stop: null, storing: new Set(), sizes: {},
     });
+    history.replaceState(null, '', '#/traer?inst=' + encodeURIComponent(F.inst) + '&job=' + encodeURIComponent(jobId));
     L.stop = P.agent.events(jobId, (type, data) => onLiveEvent(L, type, data), () => {
       if (L.closed || L !== F.live) return;
       liveFail(L, 'AGENT_LOST');
@@ -554,14 +620,28 @@
 
   const SEARCH_EVENTS = ['authenticated', 'agent_started', 'agent_observing', 'searching_studies', 'studies_found'];
   const DOWNLOAD_EVENTS = ['opening_study', 'viewer_ready', 'finding_document', 'downloading', 'importing'];
-  const PHASE_OF = { opening_study: 'opening', viewer_ready: 'finding', finding_document: 'finding', downloading: 'downloading', importing: 'importing' };
+  const PHASE_OF = { opening_study: 'opening', viewer_ready: 'finding', finding_document: 'finding', downloading: 'downloading', importing: 'verifying' };
 
   function onLiveEvent(L, type, d) {
     if (L !== F.live || L.closed) return;
+    if (Number.isFinite(d.lastSeq)) {
+      if (Number.isFinite(L.lastSeq) && d.lastSeq <= L.lastSeq) return;
+      L.lastSeq = d.lastSeq;
+    }
     if (d.state) L.state = d.state;
 
     if (type === 'snapshot') {
       if (d.studies && d.studies.length) L.studies = d.studies;
+      L.selectedIds = d.selection || L.selectedIds;
+      if (d.state === 'COMPLETED') { liveClose(false); location.hash = '#/estudios'; return; }
+      if (['OPENING_STUDY', 'VIEWER_READY', 'FINDING_DOCUMENT', 'DOWNLOADING', 'IMPORTING'].includes(d.state)) {
+        L.selectedIds.forEach(id => { if (!L.phase[id]) L.phase[id] = 'queued'; });
+        if (d.current) L.phase[d.current.studyId] = d.state === 'IMPORTING' ? 'verifying' : d.state === 'DOWNLOADING' ? 'downloading' : 'finding';
+        go('download');
+        (d.files || []).forEach(file => storeLiveFile(L, { ...file, fileId: file.id }));
+        return;
+      }
+      if (['AUTHENTICATED', 'AGENT_STARTING', 'AGENT_OBSERVING', 'SEARCHING_STUDIES', 'STUDIES_FOUND'].includes(d.state)) { go('lsearch'); return; }
       if (d.state === 'WAITING_SELECTION' && F.step !== 'lresults') return showResults(L);
       if (d.state === 'HUMAN_ACTION_REQUIRED') return onLiveEvent(L, 'human_action_required', { reason: d.human });
       if (d.state === 'PROVIDER_PARSER_MISMATCH' || d.errorCode === 'PROVIDER_PARSER_MISMATCH') return showParserMismatch(L);
@@ -621,6 +701,18 @@
     const i = P.inst(F.inst);
     const L = F.live;
     const opened = L && L.state !== 'CREATED' && L.state !== 'OPENING_PROVIDER';
+    if (F.recovering || (L && L.remoteLogin && !['WAITING_FOR_USER_LOGIN', 'HUMAN_ACTION_REQUIRED'].includes(L.state))) return (
+      liveArt(i) + '<h1 class="flow-title center">Preparando el acceso seguro a ' + i.name + '…</h1>' +
+      '<p class="flow-sub center">Estamos abriendo el navegador. Te avisaremos cuando esté listo para iniciar sesión.</p>' + pill('Preparando el acceso seguro…') +
+      '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>'
+    );
+    if (L && L.remoteLogin) return (
+      liveArt(i) + '<h1 class="flow-title center">Esperando tu inicio de sesión</h1>' +
+      '<p class="flow-sub center">Iniciá sesión en la pestaña de ' + i.name + ' que abrimos. Cuando termines, seguimos automáticamente.</p>' +
+      '<p class="flow-sub center">Al detectar el ingreso, el Portal mostrará los estudios para que elijas cuáles traer.</p>' +
+      '<p class="flow-foot center">¿No ves la pestaña? <a class="link" target="_blank" rel="noopener" href="' + P.esc(P.agent.base() + '/remote/' + L.jobId) + '">Volver a abrir el navegador' + ic('external', 16) + '</a></p>' +
+      '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>'
+    );
     return (
       liveArt(i) +
       '<h1 class="flow-title center">' + (opened ? 'Esperando tu inicio de sesión' : 'Abrimos ' + i.name) + '</h1>' +
@@ -639,6 +731,11 @@
   function viewHuman() {
     const i = P.inst(F.inst);
     const L = F.live;
+    if (L && L.remoteLogin) return liveArt(i, 'human') +
+      '<h1 class="flow-title center">' + i.name + ' necesita que completes un paso</h1>' +
+      '<p class="flow-sub center">Completalo en el navegador seguro. Seguimos automáticamente al detectar que el paso terminó.</p>' +
+      '<div class="flow-actions center"><a class="btn btn-accent btn-lg" target="_blank" rel="noopener" href="' + P.esc(P.agent.base() + '/remote/' + L.jobId) + '">Abrir navegador seguro</a></div>' +
+      '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>';
     return (
       liveArt(i, 'human') +
       '<h1 class="flow-title center">' + i.name + ' necesita que completes un paso</h1>' +
@@ -669,7 +766,7 @@
       '<div class="scan-track"><span></span><span></span><span></span></div>' +
       '<div class="scan-grid" id="scan-grid">' + Array.from({ length: 6 }, () => '<span class="slot"></span>').join('') + '</div></div>' +
       '<h1 class="flow-title center" id="search-title">Buscando tus estudios…</h1>' +
-      '<p class="flow-sub center">El asistente está revisando tu cuenta de ' + i.name + '. Podés mirar la ventana del laboratorio: navega solo.</p>' +
+      '<p class="flow-sub center">El asistente está revisando tu cuenta de ' + i.name + (L && L.remoteLogin ? '. Esperá acá mientras buscamos tus estudios.</p>' : '. Podés mirar la ventana del laboratorio: navega solo.</p>') +
       '<ol class="plist" id="plist" aria-live="polite">' + plistItems(searchStates(L), LIVE_SEARCH, LIVE_SEARCH_DONE) + '</ol>'
     );
   }
@@ -703,8 +800,10 @@
   }
 
   /* ---------- Resultados encontrados ---------- */
-  function showResults(L) {
-    refreshAlreadyImported(L);
+  async function showResults(L) {
+    const token = L.resultsVersion = (L.resultsVersion || 0) + 1;
+    await refreshAlreadyImported(L);
+    if (L !== F.live || L.closed || token !== L.resultsVersion) return;
     F.found = L.studies;
     F.selected = new Set();
     go('lresults');
@@ -750,10 +849,18 @@
     return records.find((saved) => isAgentStudyFromProvider(saved, providerId) &&
       ((external.sourceKey && saved.sourceKey === external.sourceKey) || sameStudyMetadata(external, saved, providerId)));
   }
-  function refreshAlreadyImported(L) {
+  async function refreshAlreadyImported(L) {
     const records = storedAgentStudies();
+    const available = await Promise.all(records.map(async record => {
+      if (!record.file?.key) return null;
+      try {
+        const blob = await P.files.get(record.file.key);
+        return blob && (!record.file.bytes || blob.size === record.file.bytes) ? record : null;
+      } catch { return null; }
+    }));
+    L.availableRecords = available.filter(Boolean);
     L.studies = L.studies.map((study) => {
-      const existing = importedMatch(study, records);
+      const existing = importedMatch(study, L.availableRecords);
       return Object.assign({}, study, existing ? { alreadyImported: true } : { alreadyImported: false });
     });
   }
@@ -761,7 +868,7 @@
     return F.found.filter((study) => !study.alreadyImported);
   }
   function selectedImportedKeys(studies) {
-    const records = storedAgentStudies();
+    const records = F.live?.availableRecords || [];
     return Array.from(new Set(studies
       .filter((study) => importedMatch(study, records))
       .map((study) => study.sourceKey)
@@ -836,12 +943,13 @@
 
   /* ---------- Descargando ---------- */
   const DL_STEPS = [
-    ['opening', (s) => 'Abriendo tu ' + ((s.studyDate || s.date) ? 'estudio del ' + P.fmt(s.studyDate || s.date) : 'estudio'), (s) => 'Abrí tu ' + ((s.studyDate || s.date) ? 'estudio del ' + P.fmt(s.studyDate || s.date) : 'estudio')],
-    ['finding', () => 'Buscando el documento original', () => 'Encontré el documento original'],
+    ['opening', (s) => 'Abriendo tu ' + ((s.studyDate || s.date) ? 'estudio del ' + P.fmt(s.studyDate || s.date) : 'estudio'), () => 'Estudio abierto'],
+    ['finding', () => 'Buscando el archivo original', () => 'Archivo original encontrado'],
     ['downloading', (s) => s.provider === 'centrodm' ? 'Descargando el estudio DICOM ZIP' : 'Descargando el PDF', (s) => s.provider === 'centrodm' ? 'Estudio DICOM ZIP descargado' : 'PDF descargado'],
-    ['importing', () => 'Agregándolo a tu portal', () => 'Agregado a tu portal'],
+    ['verifying', () => 'Verificando el archivo original', () => 'Archivo verificado'],
+    ['importing', () => 'Guardándolo en este navegador', () => 'Guardado en este navegador'],
   ];
-  const ORDER = { queued: -1, opening: 0, finding: 1, downloading: 2, importing: 3, stored: 4 };
+  const ORDER = { queued: -1, opening: 0, finding: 1, downloading: 2, verifying: 3, importing: 4, stored: 5 };
 
   function dlBlock(s, phase) {
     const failed = phase === 'failed';
@@ -851,7 +959,7 @@
     const st = (n) => (cur > n ? 'done' : cur === n ? 'active' : 'pending');
     const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', importFailed ? 'No se guardó' : 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
     return (
-      '<li class="dl-study' + (cur >= 0 && cur < 4 ? ' is-current' : '') + (failed ? ' is-failed' : '') + '">' +
+      '<li class="dl-study' + (cur >= 0 && cur < 5 ? ' is-current' : '') + (failed ? ' is-failed' : '') + '">' +
       '<div class="dl-head">' + P.typeTile(s.provider === 'centrodm' || s.provider === 'rdcchacabuco' ? 'imagenes' : 'laboratorio') + '<span class="dl-name">' + studyLabel(s) +
       (s.provider === 'rdcchacabuco' ? (s.studyType ? '<small>' + P.esc(s.studyType) + ' · Documento PDF</small>' : '<small>Documento PDF</small>') : s.provider === 'centrodm' ? (s.modality ? '<small>Modalidad ' + P.esc(s.modality) + '</small>' : '') : s.protocol ? '<small>Protocolo <span class="num">' + P.esc(s.protocol) + '</span></small>' : '') + '</span>' + head + '</div>' +
       (existing
@@ -872,10 +980,11 @@
     const chosen = L.selectedIds.map((id) => L.studies.find((s) => s.id === id)).filter(Boolean);
     const doneN = chosen.filter((s) => L.phase[s.id] === 'stored' || L.phase[s.id] === 'existing' || L.phase[s.id] === 'failed').length;
     return (
-      '<h1 class="flow-title center">El asistente está trabajando por vos</h1>' +
-      '<p class="flow-sub center">Está abriendo tus estudios en ' + i.name + ' y trayendo los archivos originales. No cierres la ventana de la institución.</p>' +
+      '<h1 class="flow-title center">Estamos trayendo tu estudio</h1>' +
+      '<p class="flow-sub center">Estamos descargando los archivos originales de ' + i.name + '. Los estudios de imágenes pueden tardar unos minutos según su tamaño.</p>' +
       '<p class="dl-count center" id="dl-count" aria-live="polite"><b class="num">' + doneN + '</b> de <span class="num">' + chosen.length + '</span> ' + (chosen.length === 1 ? 'estudio' : 'estudios') + '</p>' +
-      '<ul class="dl-list" id="dl-list">' + chosen.map((s) => dlBlock(s, L.phase[s.id])).join('') + '</ul>'
+      '<ul class="dl-list" id="dl-list">' + chosen.map((s) => dlBlock(s, L.phase[s.id])).join('') + '</ul>' +
+      '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>'
     );
   }
   function refreshDownload() {
@@ -899,7 +1008,9 @@
   }
 
   async function storeLiveFile(L, d) {
-    L.phase[d.studyId] = 'importing';
+    if (L.storing.has(d.studyId) || ['stored', 'existing'].includes(L.phase[d.studyId])) return;
+    L.storing.add(d.studyId);
+    L.phase[d.studyId] = 'downloading';
     refreshDownload();
     const ext = L.studies.find((s) => s.id === d.studyId);
     let fileKey = null;
@@ -921,7 +1032,7 @@
       }
     };
     try {
-      const { blob, sha256, kind, mimeType } = await P.agent.file(L.jobId, d.fileId);
+      const { blob, sha256, kind, mimeType } = await P.agent.file(L.jobId, d.fileId, () => { L.phase[d.studyId] = 'verifying'; refreshDownload(); });
       if (!ext || !d.studyId) throw new Error('STUDY_METADATA_MISSING');
       const providerId = ext.provider || P.inst(F.inst).live;
       const duplicate = P.db.studies.find((study) => isAgentStudyFromProvider(study, providerId) && sha256 && (study.file && study.file.sha256 || study.pdfSha256) === sha256);
@@ -935,6 +1046,7 @@
       fileKey = duplicate && duplicate.file && duplicate.file.key && duplicate.file.kind === kind
         ? duplicate.file.key
         : (kind === 'DICOM_ZIP' ? 'dicom-' : 'pdf-') + d.fileId;
+      L.phase[d.studyId] = 'importing'; refreshDownload();
       fileStored = await P.files.put(fileKey, blob);
       if (!fileStored) throw new Error('ARTIFACT_STORAGE_FAILED');
       const isImage = providerId === 'centrodm' || providerId === 'rdcchacabuco' || kind === 'DICOM_ZIP';
@@ -972,6 +1084,7 @@
       L.importFailures.push(d.studyId);
       await P.agent.acknowledgePortalImport(L.jobId, d.fileId, d.studyId, false).catch(() => {});
     }
+    L.storing.delete(d.studyId);
     refreshDownload();
     maybeFinish(L);
   }

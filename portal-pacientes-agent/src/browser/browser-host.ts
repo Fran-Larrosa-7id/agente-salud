@@ -6,6 +6,7 @@ export interface BrowserHostOptions {
   headless: boolean;
   /** Optional Playwright browser channel (for example, installed Edge on Windows). */
   channel?: string;
+  chromiumSandbox?: boolean;
   /** Solo desarrollo y con cuentas de prueba: guarda un trace de Playwright al cerrar cada contexto. */
   debugArtifacts: boolean;
   debugDir: string;
@@ -22,9 +23,10 @@ export class BrowserNotInstalledError extends Error {
   }
 }
 
-export function browserLaunchOptions(opts: Pick<BrowserHostOptions, 'headless' | 'channel'>): Parameters<typeof chromium.launch>[0] {
+export function browserLaunchOptions(opts: Pick<BrowserHostOptions, 'headless' | 'channel' | 'chromiumSandbox'>): Parameters<typeof chromium.launch>[0] {
   return {
     headless: opts.headless,
+    chromiumSandbox: opts.chromiumSandbox ?? true,
     ...(opts.channel ? { channel: opts.channel } : {}),
     args: ['--disable-features=Translate', '--no-default-browser-check'],
   };
@@ -38,6 +40,8 @@ export function browserLaunchOptions(opts: Pick<BrowserHostOptions, 'headless' |
 export class BrowserHost {
   private browser: Browser | null = null;
   private launching: Promise<Browser> | null = null;
+  private closing: Promise<void> | null = null;
+  private pendingContexts = 0;
   private readonly contexts = new Set<BrowserContext>();
   private readonly launchBrowser: NonNullable<BrowserHostOptions['launchBrowser']>;
 
@@ -50,14 +54,14 @@ export class BrowserHost {
   }
 
   private async getBrowser(): Promise<Browser> {
+    if (this.closing) await this.closing;
     if (this.browser?.isConnected()) return this.browser;
     if (!this.launching) {
       this.launching = this.launchBrowser(browserLaunchOptions(this.opts))
         .then((b) => {
           this.browser = b;
           b.on('disconnected', () => {
-            this.browser = null;
-            this.contexts.clear();
+            if (this.browser === b) this.browser = null;
           });
           return b;
         })
@@ -77,29 +81,48 @@ export class BrowserHost {
   }
 
   async newContext(): Promise<BrowserContext> {
-    const browser = await this.getBrowser();
-    const context = await browser.newContext({
-      acceptDownloads: true,
-      locale: 'es-AR',
-      timezoneId: 'America/Argentina/Buenos_Aires',
-      viewport: { width: 1180, height: 820 },
-      serviceWorkers: 'block',
-    });
-    this.contexts.add(context);
-    context.on('close', () => this.contexts.delete(context));
-    if (this.opts.debugArtifacts) {
-      await context.tracing.start({ screenshots: true, snapshots: true });
-      const file = path.join(this.opts.debugDir, randomUUID() + '.zip');
-      const close = context.close.bind(context);
-      context.close = async (o) => {
-        await context.tracing.stop({ path: file }).catch(() => {});
-        return close(o);
-      };
+    this.pendingContexts++;
+    try {
+      const browser = await this.getBrowser();
+      const context = await browser.newContext({
+        acceptDownloads: true,
+        locale: 'es-AR',
+        timezoneId: 'America/Argentina/Buenos_Aires',
+        viewport: { width: 1180, height: 820 },
+        serviceWorkers: 'block',
+      });
+      this.contexts.add(context);
+      context.on('close', () => {
+        this.contexts.delete(context);
+        void this.closeIfIdle();
+      });
+      if (this.opts.debugArtifacts) {
+        await context.tracing.start({ screenshots: true, snapshots: true });
+        const file = path.join(this.opts.debugDir, randomUUID() + '.zip');
+        const close = context.close.bind(context);
+        context.close = async (o) => {
+          await context.tracing.stop({ path: file }).catch(() => {});
+          return close(o);
+        };
+      }
+      return context;
+    } finally {
+      this.pendingContexts--;
+      void this.closeIfIdle();
     }
-    return context;
+  }
+
+  private async closeIfIdle(): Promise<void> {
+    if (this.contexts.size || this.pendingContexts || this.closing || !this.browser) return;
+    const browser = this.browser;
+    this.browser = null;
+    this.closing = browser.close().catch(() => {}).finally(() => { this.closing = null; });
+    await this.closing;
   }
 
   async close(): Promise<void> {
+    if (this.launching) await this.launching.catch(() => {});
+    if (this.closing) await this.closing;
     const b = this.browser;
     this.browser = null;
     await Promise.all([...this.contexts].map((c) => c.close().catch(() => {})));

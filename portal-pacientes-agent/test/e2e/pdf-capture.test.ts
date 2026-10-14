@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { after, before, test } from 'node:test';
 import { BrowserHost } from '../../src/browser/browser-host.js';
 import { BrowserSession, PdfDownloadError, UnexpectedDomainError } from '../../src/browser/session.js';
-import { validatePdf } from '../../src/jobs/pdf.js';
+import { makeDemoPdf, validatePdf } from '../../src/jobs/pdf.js';
 import { testBrowserChannel } from '../browser-channel.js';
 import { FAKE_USER, startFakePortal } from '../fixtures/fake-portal.js';
 import { testConfig, testProvider } from '../helpers.js';
@@ -77,7 +77,7 @@ test('prioriza context.request para href directo y redirect interno; fallback ca
 
   const direct = await importStudy(byDate.get('2026-05-28')!);
   assert.equal(direct.pdf.via, 'fetch');
-  assert.ok(direct.pdfTrace.some((line) => line.includes('context_request')));
+  assert.ok(direct.pdfTrace.some((line) => line.includes('context_request')), `etapas=${direct.pdfTrace.join(',')}`);
 
   const redirect = await importStudy(byDate.get('2025-06-01')!);
   assert.equal(redirect.pdf.via, 'fetch');
@@ -88,12 +88,15 @@ test('prioriza context.request para href directo y redirect interno; fallback ca
   assert.ok(mismatchedMime.pdfTrace.some((line) => line.includes('percamb_pdf_mime_warning')));
 
   const popup = await importStudy(byDate.get('2025-05-01')!);
-  assert.ok(popup.pdfTrace.some((line) => line.includes('popup_response')));
+  assert.ok(popup.pdfTrace.some((line) => line.includes('page_opened')), `etapas=${popup.pdfTrace.join(',')}`);
+  // Chromium/Linux puede recuperar el PDF de la pestaña por request antes de su response event.
+  assert.ok(popup.pdfTrace.some((line) => /popup_response|context_request/.test(line)), `etapas=${popup.pdfTrace.join(',')}`);
   const download = await importStudy(byDate.get('2025-11-01')!);
   assert.equal(download.pdf.via, 'download');
   assert.ok(download.pdfTrace.some((line) => line.includes('download_event')));
   const data = await importStudy(byDate.get('2025-04-01')!);
-  assert.equal(data.pdf.via, 'fetch');
+  assert.ok(['fetch', 'download'].includes(data.pdf.via));
+  assert.deepEqual(data.pdf.buffer, makeDemoPdf(['Informe de prueba', 'PDF fixture adicional']));
 });
 
 test('el orden invertido conserva la asociación opaca entre estudio y PDF', { timeout: 60_000 }, async () => {

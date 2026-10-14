@@ -40,6 +40,7 @@ export class AgentImportRunner implements JobRunner {
   private readonly locators = new Map<string, TargetLocator>();
   private readonly downloads = { used: 0 };
   private disposePromise: Promise<void> | null = null;
+  private openingSession: Promise<BrowserSession> | null = null;
 
   constructor(
     private readonly job: ImportJob,
@@ -78,15 +79,20 @@ export class AgentImportRunner implements JobRunner {
     const { provider, config, log } = this.deps;
     try {
       job.transition(S.OPENING_PROVIDER);
-      const session = await BrowserSession.open(
+      this.openingSession = BrowserSession.open(
         this.opts.host, provider, config.headless, config.maxPdfBytes, config.providerDebugStructure,
         provider.id === 'rdcchacabuco' ? config.rdcPdfSourceTimeoutMs : config.pdfDownloadTimeoutMs, config.maxMedicalArchiveBytes,
         provider.id === 'centrodm' ? config.centroDmAllowedOrigins : [],
         provider.id === 'centrodm' ? config.pixeonViewerReadyTimeoutMs : undefined,
         provider.id === 'centrodm' ? config.pixeonToolbarTimeoutMs : undefined,
       );
+      const session = await this.openingSession;
       this.session = session;
-      if (this.signal.aborted) return void (await this.dispose());
+      if (this.signal.aborted) {
+        this.session = null;
+        await session.close();
+        return;
+      }
       // Durante el login, el paciente navega: un enlace externo se bloquea en silencio.
       // Con el agente trabajando, un dominio inesperado detiene todo.
       session.onUnexpectedDomain = () => {
@@ -135,6 +141,7 @@ export class AgentImportRunner implements JobRunner {
       });
       if (login === 'aborted') return;
       if (login === 'timeout') return void job.fail(S.AUTH_TIMEOUT, 'LOGIN_TIMEOUT');
+      if (this.signal.aborted) return;
       job.transition(S.AUTHENTICATED);
       await this.discover(session);
     } catch (e) {
@@ -551,13 +558,13 @@ export class AgentImportRunner implements JobRunner {
     while (!this.signal.aborted && Date.now() < deadline) {
       await sleep(this.opts.humanPollMs ?? 1500, this.signal);
       const snap = await session.snapshot(provider.authenticatedHints).catch(() => null);
-      if (!snap) continue;
+      if (!snap) { streak = 0; continue; }
       const noChallenge = !snap.captcha && !snap.otp && !snap.hasPasswordField && !snap.modal;
       const cleared =
         reason === 'session_expired'
           ? evaluateLogin(snap, provider).authenticated
           : reason === 'captcha' || reason === 'mfa' || reason === 'security_check'
-            ? noChallenge
+            ? noChallenge && evaluateLogin(snap, provider).authenticated
             : noChallenge && keyOf(snap) !== initialKey;
       streak = cleared ? streak + 1 : 0;
       if (streak >= 2) return true;
@@ -599,13 +606,23 @@ export class AgentImportRunner implements JobRunner {
     }
   }
 
+  async resume(_beforeResume: () => Promise<void>): Promise<boolean> {
+    // Compatibilidad: nunca saltar las dos lecturas ni revocar un desafío pendiente.
+    return !!this.session && !this.signal.aborted && !this.job.isTerminal &&
+      this.job.state !== S.WAITING_FOR_USER_LOGIN && this.job.state !== S.HUMAN_ACTION_REQUIRED && this.job.state !== S.OPENING_PROVIDER;
+  }
+
   dispose(): Promise<void> {
     if (!this.disposePromise) {
-      const s = this.session;
-      this.session = null;
-      this.agent = null;
-      this.locators.clear();
-      this.disposePromise = s ? s.close() : Promise.resolve();
+      this.disposePromise = (async () => {
+        const opening = await this.openingSession?.catch(() => null);
+        const s = this.session ?? opening;
+        this.session = null;
+        this.openingSession = null;
+        this.agent = null;
+        this.locators.clear();
+        if (s) await s.close();
+      })();
     }
     return this.disposePromise;
   }

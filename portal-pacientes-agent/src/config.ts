@@ -14,6 +14,9 @@ export interface Config {
   portalDir: string | null;
   headless: boolean;
   browserChannel: string | undefined;
+  chromiumSandbox: boolean;
+  remoteLogin: boolean;
+  portalAuth: { username: string; password: string } | null;
   loginTimeoutMs: number;
   jobTtlMs: number;
   /** Cuánto se conservan los PDF de un job completado si el frontend no los retira. */
@@ -88,7 +91,7 @@ export function loadDotEnv(file = path.join(AGENT_ROOT, '.env')): void {
 }
 
 export function loadConfig(env: Env = process.env, argv: string[] = process.argv): Config {
-  const provider = (env.LLM_PROVIDER || 'anthropic').toLowerCase() as LlmProviderName;
+  const provider = (env.LLM_PROVIDER || 'rules').toLowerCase() as LlmProviderName;
   if (!['anthropic', 'openai', 'ollama', 'rules'].includes(provider)) throw new Error(`LLM_PROVIDER desconocido: ${provider}`);
   const ollama = provider === 'ollama';
   const ollamaUrl = env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
@@ -99,6 +102,12 @@ export function loadConfig(env: Env = process.env, argv: string[] = process.argv
   const runner: RunnerMode = argv.includes('--fake') ? 'fake' : env.IMPORT_RUNNER === 'fake' ? 'fake' : 'agent';
   const defaultModel = provider === 'openai' ? 'gpt-4.1-mini' : provider === 'anthropic' ? 'claude-sonnet-5' : 'rules';
   const servePortal = bool(env, 'SERVE_PORTAL', true);
+  const password = env.PORTAL_AUTH_PASSWORD || '';
+  const username = env.PORTAL_AUTH_USER || '1234';
+  if (username.includes(':')) throw new Error('PORTAL_AUTH_USER no puede contener dos puntos.');
+  if (env.NODE_ENV === 'production' && !password) throw new Error('Producción requiere PORTAL_AUTH_PASSWORD.');
+  if (bool(env, 'REMOTE_LOGIN', false) && (!password || bool(env, 'HEADLESS', false) || int(env, 'MAX_CONCURRENT_JOBS', 1) !== 1)) throw new Error('REMOTE_LOGIN requiere autenticación, navegador visible y un único job.');
+  if (env.NODE_ENV === 'production' && (bool(env, 'PLAYWRIGHT_DEBUG_ARTIFACTS', false) || bool(env, 'AGENT_DEBUG_ERRORS', false))) throw new Error('Producción no permite artefactos ni errores de depuración.');
 
   return {
     port: int(env, 'PORT', 8787),
@@ -111,6 +120,9 @@ export function loadConfig(env: Env = process.env, argv: string[] = process.argv
     portalDir: servePortal ? path.resolve(AGENT_ROOT, env.PORTAL_DIR || '../portal-pacientes') : null,
     headless: bool(env, 'HEADLESS', false),
     browserChannel: env.BROWSER_CHANNEL?.trim() || undefined,
+    chromiumSandbox: bool(env, 'CHROMIUM_SANDBOX', true),
+    remoteLogin: bool(env, 'REMOTE_LOGIN', false),
+    portalAuth: password ? { username, password } : null,
     loginTimeoutMs: int(env, 'LOGIN_TIMEOUT_MINUTES', 10) * 60_000,
     jobTtlMs: int(env, 'JOB_TTL_MINUTES', 20) * 60_000,
     fileRetentionMs: int(env, 'FILE_RETENTION_MINUTES', 5) * 60_000,
@@ -132,7 +144,7 @@ export function loadConfig(env: Env = process.env, argv: string[] = process.argv
     rdcDebugKeepModalOpenMs: env.NODE_ENV !== 'production' ? Math.min(120_000, int(env, 'RDC_DEBUG_KEEP_MODAL_OPEN_MS', 120_000)) : 0,
     centroDmAllowedOrigins: httpsOrigins(env, 'CENTRODM_ALLOWED_ORIGINS'),
     providerDebugStructure: bool(env, 'PROVIDER_DEBUG_STRUCTURE', false),
-    maxConcurrentJobs: int(env, 'MAX_CONCURRENT_JOBS', 2),
+    maxConcurrentJobs: int(env, 'MAX_CONCURRENT_JOBS', 1),
     tmpDir: path.resolve(AGENT_ROOT, env.TMP_DIR || 'tmp/import-jobs'),
     runner,
     llm: {

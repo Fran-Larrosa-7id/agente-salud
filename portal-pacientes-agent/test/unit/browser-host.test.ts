@@ -19,6 +19,7 @@ test('configura el canal elegido y mantiene Chromium empaquetado por defecto', (
   assert.deepEqual(browserLaunchOptions({ headless: false, channel: config.browserChannel }), {
     headless: false,
     channel: 'msedge',
+    chromiumSandbox: true,
     args: ['--disable-features=Translate', '--no-default-browser-check'],
   });
 
@@ -28,6 +29,7 @@ test('configura el canal elegido y mantiene Chromium empaquetado por defecto', (
   assert.equal(loadConfig({ LLM_PROVIDER: 'rules', RDC_PDF_SOURCE_TIMEOUT_MS: '9000' }, []).rdcPdfSourceTimeoutMs, 9_000);
   assert.deepEqual(browserLaunchOptions({ headless: true, channel: defaultConfig.browserChannel }), {
     headless: true,
+    chromiumSandbox: true,
     args: ['--disable-features=Translate', '--no-default-browser-check'],
   });
 });

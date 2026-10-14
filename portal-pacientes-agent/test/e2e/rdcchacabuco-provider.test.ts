@@ -363,7 +363,8 @@ test('RDC abre un único modal, captura la respuesta PDF original y lo cierra si
   const captured = await session.downloadRdcChacabucoStudyPdf();
   assert.ok(captured);
   assert.equal(captured.buffer.toString('latin1', 0, 5), '%PDF-');
-  assert.ok(['response', 'fetch'].includes(captured.via));
+  // Chromium headless puede entregar el PDF del iframe como un download válido.
+  assert.ok(['response', 'fetch', 'download'].includes(captured.via));
   await session.closeRdcChacabucoModal();
   assert.equal(await session.activePage().locator('[role="dialog"]').count(), 0);
   assert.equal(await session.openStudy(result.studies[1].id), true, 'el segundo estudio abre después de cerrar el modal anterior');

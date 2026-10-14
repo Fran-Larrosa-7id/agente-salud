@@ -156,8 +156,14 @@
 
   /* ---------- Acciones globales ---------- */
   P.actions.logout = async () => {
-    const ok = await P.confirm({ title: '¿Cerrar sesión?', text: 'Vas a tener que ingresar tu DNI y contraseña para volver a entrar.', confirmLabel: 'Cerrar sesión' });
+    const ok = await P.confirm({ title: '¿Cerrar sesión?', text: 'Vas a tener que ingresar de nuevo para volver a entrar.', confirmLabel: 'Cerrar sesión' });
     if (!ok) return;
+    if (P.portalAuthEnabled) {
+      try {
+        const response = await fetch(P.agent.base() + '/api/auth/logout', { method: 'POST' });
+        if (!response.ok) throw new Error('LOGOUT_FAILED');
+      } catch { P.toast('No pudimos cerrar la sesión. Volvé a intentar.', { tone: 'danger' }); return; }
+    }
     P.db.session = null;
     P.save();
     P.ui.navigated = false;
@@ -208,5 +214,11 @@
   });
 
   window.addEventListener('hashchange', P.route);
-  P.route();
+  window.addEventListener('storage', event => {
+    if (!P.portalAuthEnabled || event.key !== P.STORE_KEY) return;
+    try {
+      if (!JSON.parse(event.newValue || '{}').session) { P.db.session = null; location.hash = '#/login'; }
+    } catch {}
+  });
+  P.prepareAuth().then(P.route);
 })();

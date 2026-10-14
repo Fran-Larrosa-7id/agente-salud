@@ -346,7 +346,7 @@
       main += '<section class="card" aria-labelledby="h-orig">' + cardHead(isDicomZip ? 'Estudio de imágenes' : 'Documento original', null, 'h-orig') +
         (isDicomZip
           ? '<p>Archivo original DICOM en formato ZIP' + (s.size ? ' · ' + P.esc(s.size) : '') + '. Este estudio contiene imágenes médicas; el Portal todavía no tiene visor DICOM.</p>' +
-            '<div class="btn-row mt-4"><button type="button" class="btn btn-primary" data-action="doc-download" data-id="doc-' + s.id + '">' + ic('download', 18) + 'Descargar estudio original</button></div>'
+            '<p class="muted">Descargá el archivo original desde el botón del encabezado.</p>'
           : '<p>Trajimos el PDF original tal como lo emitió ' + inst.name + '. El Portal lo guarda sin leerlo ni interpretarlo.</p>' +
             '<div class="btn-row mt-4"><button type="button" class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">' + ic('eye', 18) + 'Ver documento</button></div>' +
             '<p class="disclaimer">' + ic('info', 18) + '<span>Si tenés dudas sobre los resultados, consultá con tu profesional de salud.</span></p>') + '</section>';
@@ -385,8 +385,7 @@
         ? isDicomZip
           ? '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Archivo original DICOM', null, 'h-doc') +
             '<p class="file-meta">' + ic('file', 18) + '<span>' + P.fileMeta(s) + '</span></p>' +
-            '<p class="muted">El Portal conserva el ZIP original y no interpreta ni muestra sus imágenes.</p>' +
-            '<div class="btn-row"><button type="button" class="btn btn-secondary" data-action="doc-download" data-id="' + doc.id + '">' + ic('download', 18) + 'Descargar estudio original</button></div></section>'
+            '<p class="muted">El Portal conserva el ZIP original y no interpreta ni muestra sus imágenes.</p><p class="muted">Guardado en este navegador y dispositivo. No se sincroniza con otros equipos. Si borrás los datos del navegador, este archivo se elimina.</p></section>'
           : '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Documento original', null, 'h-doc') +
           '<button type="button" class="doc-preview" data-action="doc-view" data-id="' + doc.id + '" aria-label="Ver documento original">' + P.paper(doc, true) + '<span class="doc-preview-cta">' + ic('eye', 18) + 'Ver documento</span></button>' +
           '<p class="file-meta">' + ic('file', 18) + '<span>' + P.fileMeta(s) + '</span></p>' +
@@ -412,7 +411,7 @@
       (s.studyType ? '<p class="muted">' + P.esc(s.studyType) + ' · Documento PDF original</p>' : '') + '</div></div>' +
       (available
         ? '<div class="detail-actions">' +
-          '<button type="button" class="btn btn-secondary" data-action="doc-download" data-id="doc-' + s.id + '">' + ic('download', 18) + '<span>Descargar</span></button>' +
+          '<button type="button" class="btn ' + (isDicomZip ? 'btn-primary' : 'btn-secondary') + '" data-action="doc-download" data-id="doc-' + s.id + '">' + ic('download', 18) + '<span>' + (isDicomZip ? 'Descargar estudio original' : 'Descargar') + '</span></button>' +
           '<button type="button" class="btn btn-accent" data-action="share" data-id="' + s.id + '">' + ic('share', 18) + '<span>Compartir</span></button></div>'
         : '') +
       '</header>' +

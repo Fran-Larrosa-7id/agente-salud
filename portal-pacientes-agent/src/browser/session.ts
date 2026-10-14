@@ -17,6 +17,7 @@ import type { BrowserHost } from './browser-host.js';
 import { probePixeonDownload, handlePixeonCookieConsent, clickPixeonControl } from './pixeon-download.js';
 import { COLLECTOR_SOURCE } from './collector.js';
 import { ProviderParserMismatchError, type BrowserPort, type CentroDmStudyReference, type RdcChacabucoStudyReference, type ProviderStudyList, type ProviderStudyMetadata, type ProviderStructureEvent, type RawElement, type RawPageSnapshot } from './types.js';
+import { evaluateLogin } from './login-detector.js';
 
 export class ProviderUnavailableError extends Error {
   constructor(readonly status: number | null) {
@@ -115,12 +116,15 @@ function isHtmlPayload(buffer: Buffer): boolean {
  * después la usa el agente, siempre a través de las operaciones de solo lectura de BrowserPort.
  */
 export class BrowserSession implements BrowserPort {
+  private loginCandidate: { page: Page; id: string } | null = null;
+  private readonly loginIds = new WeakMap<Page, string>();
   private page!: Page;
   private mainPage!: Page;
   private waiters: ((pdf: CapturedPdf) => void)[] = [];
   private archiveWaiters: ((archive: CapturedMedicalArchive | null) => void)[] = [];
   private recent: { pdf: CapturedPdf; at: number } | null = null;
   private closing = false;
+  private closePromise: Promise<void> | null = null;
   private readonly retainedViewers = new Map<Page, number>();
 
   get debugViewerRetentionMs(): number {
@@ -619,7 +623,7 @@ export class BrowserSession implements BrowserPort {
   }
 
   async close(): Promise<void> {
-    if (this.closing) return;
+    if (this.closePromise) return this.closePromise;
     this.closing = true;
     this.retainedViewers.clear();
     this.waiters.forEach((w) => w(null as unknown as CapturedPdf));
@@ -629,13 +633,40 @@ export class BrowserSession implements BrowserPort {
     this.recent = null;
     this.centroDmStudies.clear();
     this.pendingCentroDmViewer = null;
-    await this.context.close().catch(() => {});
+    this.closePromise = this.context.close().catch(() => {});
+    await this.closePromise;
   }
 
   /* ---------------- BrowserPort (lo que usan el detector de login y el agente) ---------------- */
 
-  async snapshot(hints: string[]): Promise<RawPageSnapshot> {
-    const frames = this.page.frames();
+  async loginSnapshot(hints: string[]): Promise<RawPageSnapshot> {
+    // Solo durante el login. No se adoptan visores de descarga ni ventanas de otros hosts.
+    for (const page of [...this.context.pages()].reverse().slice(0, 8)) {
+      if (page.isClosed() || !this.policy.isAllowedNavigation(page.url())) continue;
+      let hostname = ''; try { hostname = new URL(page.url()).hostname; } catch { continue; }
+      if (!this.provider.allowedHosts.includes(hostname)) continue;
+      const value = await this.snapshot(hints, page).catch(() => null);
+      if (!value || !evaluateLogin(value, this.provider).authenticated) continue;
+      let id = this.loginIds.get(page); if (!id) { id = randomUUID(); this.loginIds.set(page, id); }
+      this.loginCandidate = { page, id };
+      return { ...value, loginPageId: id };
+    }
+    this.loginCandidate = null;
+    return this.snapshot(hints);
+  }
+
+  async confirmLogin(snapshot: RawPageSnapshot): Promise<boolean> {
+    const candidate = this.loginCandidate;
+    if (!candidate || candidate.id !== snapshot.loginPageId || candidate.page.isClosed() || this.closing) return false;
+    const value = await this.snapshot(this.provider.authenticatedHints, candidate.page).catch(() => null);
+    if (!value || !evaluateLogin(value, this.provider).authenticated || this.closing) return false;
+    this.page = this.mainPage = candidate.page;
+    this.loginCandidate = null;
+    return true;
+  }
+
+  async snapshot(hints: string[], page = this.page): Promise<RawPageSnapshot> {
+    const frames = page.frames();
     let merged: RawPageSnapshot | null = null;
     for (let i = 0; i < frames.length && i < 8; i++) {
       const f = frames[i];
@@ -665,12 +696,16 @@ export class BrowserSession implements BrowserPort {
       merged.collections.push(...part.collections);
     }
     if (!merged) throw new Error('SNAPSHOT_FAILED');
-    merged.url = this.page.url();
+    merged.url = page.url();
+    if (this.provider.studyExtractor === 'centrodm') {
+      const list = await this.extractCentroDmRows(page);
+      merged.centroDmStudyList = list.recognized && list.resultActions > 0 && list.actions.some(({ action }) => !!action.studyDate || !!action.date);
+    }
     if (this.provider.studyExtractor === 'labwin') {
       const resultsHint = merged.hintHits.some((h) => /RESULTADOS ONLINE/i.test(h));
       const pdfAction = merged.elements.some((e) => /pdf|descarg|download|imprim|print|informe/i.test(e.label + ' ' + e.iconHint));
       const resultHeading = merged.headings.some((h) => /RESULTADOS ONLINE/i.test(h));
-      const detected = resultsHint ? await this.extractLabwinRows() : null;
+      const detected = resultsHint && page === this.page ? await this.extractLabwinRows() : null;
       const resultsList = resultsHint && (resultHeading || merged.noResultsText || merged.collections.length > 0 || !!detected?.resultActions);
       merged.pageType = resultsList && !pdfAction ? 'results_list' : pdfAction || merged.isPdfViewer || merged.pdfEmbeds.length ? 'result_detail' : 'unknown';
     }
@@ -993,7 +1028,7 @@ export class BrowserSession implements BrowserPort {
     return false;
   }
 
-  private async extractCentroDmRows(): Promise<{
+  private async extractCentroDmRows(page = this.page): Promise<{
     recognized: boolean;
     emptyResults: boolean;
     tableCount: number;
@@ -1003,7 +1038,7 @@ export class BrowserSession implements BrowserPort {
     metadataDatesFound: number;
     actions: { action: CentroDmRawAction; frame: number }[];
   }> {
-    const frames = this.page.frames();
+    const frames = page.frames();
     const actions: { action: CentroDmRawAction; frame: number }[] = [];
     let recognized = false;
     let emptyResults = true;

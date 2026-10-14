@@ -16,7 +16,7 @@
   }
 
   class AgentError extends Error {
-    constructor(code, status) { super(code); this.code = code; this.status = status || 0; }
+    constructor(code, status, activeJobId) { super(code); this.code = code; this.status = status || 0; this.activeJobId = activeJobId || null; }
   }
 
   async function call(method, path, body) {
@@ -32,7 +32,10 @@
     }
     let json = null;
     try { json = await res.json(); } catch (e) { /* sin cuerpo */ }
-    if (!res.ok) throw new AgentError((json && json.error) || 'HTTP_' + res.status, res.status);
+    if (!res.ok) {
+      if (res.status === 401 && P.portalAuthEnabled) { P.db.session = null; P.save(); location.hash = '#/login'; }
+      throw new AgentError((json && json.error) || 'HTTP_' + res.status, res.status, json && json.activeJobId);
+    }
     return json;
   }
 
@@ -59,27 +62,42 @@
     },
     retryDiscovery: (id) => call('POST', '/api/imports/' + id + '/retry-discovery'),
     cancel: (id) => call('DELETE', '/api/imports/' + id).catch(() => null),
+    cancelActive: (id) => call('DELETE', '/api/imports/' + encodeURIComponent(id)),
     /* Suscripción SSE. Devuelve una función para cerrarla. */
     events(id, onEvent, onLost) {
       const es = new EventSource(base() + '/api/imports/' + id + '/events');
       let lost = 0;
       EVENTS.forEach((t) => es.addEventListener(t, (m) => {
+        // EventSource usa «error» tanto para mensajes del job como para fallos de transporte.
+        if (typeof m.data !== 'string') return;
         lost = 0;
         let data = {};
         try { data = JSON.parse(m.data); } catch (e) { /* noop */ }
+        if (m.lastEventId) data.lastSeq = Number(m.lastEventId);
         onEvent(t, data);
       }));
+      es.onopen = () => {
+        lost = 0;
+        call('GET', '/api/imports/' + id).then(snapshot => onEvent('snapshot', snapshot)).catch(error => {
+          if ([401, 403, 404, 410].includes(error.status)) { es.close(); if (onLost) onLost(); }
+        });
+      };
       es.onerror = () => {
         // EventSource reintenta solo; si el servidor dejó de existir, avisamos tras varios intentos.
         if (es.readyState === EventSource.CLOSED || ++lost >= 4) { es.close(); if (onLost) onLost(); }
       };
       return () => es.close();
     },
-    async file(id, fileId) {
+    async file(id, fileId, onVerify) {
       let res;
       try { res = await fetch(base() + '/api/imports/' + id + '/files/' + fileId); } catch (e) { throw new AgentError('AGENT_OFFLINE'); }
       if (!res.ok) throw new AgentError('FILE_NOT_FOUND', res.status);
       const blob = await res.blob();
+      if (onVerify) onVerify();
+      const expected = res.headers.get('x-content-sha256');
+      const bytes = await blob.arrayBuffer();
+      const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), n => n.toString(16).padStart(2, '0')).join('');
+      if (!expected || sha256 !== expected || (res.headers.has('content-length') && Number(res.headers.get('content-length')) !== blob.size)) throw new AgentError('ARTIFACT_INTEGRITY_FAILED');
       const kind = res.headers.get('x-artifact-kind') || 'PDF';
       const head = new Uint8Array(await blob.slice(0, 1024).arrayBuffer());
       if (kind === 'DICOM_ZIP') {
@@ -88,7 +106,7 @@
       } else if (kind === 'PDF') {
         if ((blob.type && !/pdf|octet-stream/i.test(blob.type)) || !String.fromCharCode.apply(null, head).includes('%PDF-')) throw new AgentError('NOT_PDF');
       } else throw new AgentError('UNKNOWN_ARTIFACT');
-      return { blob, kind, mimeType: blob.type, sha256: res.headers.get('x-content-sha256') || '' };
+      return { blob, kind, mimeType: blob.type, sha256 };
     },
   };
 
@@ -118,19 +136,17 @@
       t.onabort = () => reject(t.error || new Error('IDB_TX_ABORTED'));
     }));
   }
-  // La memoria solo acelera lecturas. Una importación se confirma únicamente cuando IndexedDB
+  // Una importación se confirma únicamente cuando IndexedDB
   // confirmó la escritura, para que el archivo siga disponible después de cerrar o recargar el Portal.
-  const mem = new Map();
   P.files = {
     put(key, blob) {
-      return tx('readwrite', (s) => s.put(blob, key)).then(() => { mem.set(key, blob); return true; }, () => false);
+      return tx('readwrite', (s) => s.put(blob, key)).then(() => true, () => false);
     },
     get(key) {
-      if (mem.has(key)) return Promise.resolve(mem.get(key));
-      return tx('readonly', (s) => s.get(key)).then((b) => { if (b) mem.set(key, b); return b; });
+      return tx('readonly', (s) => s.get(key));
     },
-    del(key) { mem.delete(key); return tx('readwrite', (s) => s.delete(key)); },
-    clear() { mem.clear(); return tx('readwrite', (s) => s.clear()).catch(() => {}); },
+    del(key) { return tx('readwrite', (s) => s.delete(key)); },
+    clear() { return tx('readwrite', (s) => s.clear()).catch(() => {}); },
   };
 
   /** Descarga un Blob con el nombre indicado. */

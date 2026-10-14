@@ -60,7 +60,7 @@ test('Portal: Traer mis estudios desde Pérez Cambet con el asistente (simulado)
       assert.equal(await page.locator('.success-list li').count(), 1);
 
       await page.click('[data-action=see-imported]');
-      await page.waitForSelector('.notice');
+      await page.waitForSelector('.detail-head');
       const importedStudyId = await page.evaluate(() => {
         const db = JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}');
         return db.studies?.find((study: { origin?: string; id?: string }) => study.origin === 'agente')?.id;
@@ -203,6 +203,17 @@ test('Portal: Centro DM conserva y descarga el ZIP DICOM, lo muestra como imáge
     await page.waitForFunction(() => !location.hash.startsWith('#/traer'));
     assert.deepEqual(errors, []);
     assert.equal(manager.activeCount(), 0);
+    await page.evaluate(async () => { await (window as any).P.files.clear(); });
+    await page.goto(base + '/index.html#/traer?inst=cdm');
+    await page.click('[data-action=live-open]'); await page.waitForSelector('.res-list');
+    assert.equal(await page.locator('.res-list li:first-child input').isDisabled(), false, 'sin Blob se puede recuperar el estudio');
+    await page.click('.res-list li:first-child .res-row'); await page.click('#res-save'); await page.waitForSelector('.fv-success');
+    const recovered = await page.evaluate(async () => {
+      const P = (window as any).P;
+      const studies = P.db.studies.filter((item: any) => item.provider === 'centrodm');
+      return { count: studies.length, bytes: (await P.files.get(studies.find((item: any) => item.name === 'Reconstrucción 3D').file.key)).size };
+    });
+    assert.equal(recovered.count, 2, 'recuperar el archivo no duplica las fichas'); assert.ok(recovered.bytes > 128);
   } finally {
     await browser.close();
     server.close();
@@ -253,6 +264,10 @@ test('Portal: RDC Chacabuco conserva fecha y tipo, guarda el PDF como imágenes 
     assert.equal(study.providerDisplayName, 'RDC Chacabuco');
     assert.match(study.sourceKey, /^[a-f0-9]{64}$/);
 
+    // El hashchange de «Ver importados» debe terminar antes de volver al mismo flujo.
+    await page.waitForFunction(() => !location.hash.startsWith('#/traer'));
+    await page.waitForSelector('.shell');
+
     await page.goto(base + '/index.html#/traer?inst=rdc');
     await page.click('[data-action=live-open]');
     await page.waitForSelector('.res-list', { timeout: 10_000 });
@@ -276,14 +291,23 @@ test('Portal: no confirma la importación si no puede persistir el ZIP o sus met
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
   try {
-    for (const persistenceFailure of ['indexeddb', 'metadata'] as const) {
+    for (const persistenceFailure of ['indexeddb', 'indexeddb-quota', 'metadata', 'integrity'] as const) {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
       await page.addInitScript(`
         localStorage.setItem('pp_agent_url', ${JSON.stringify(base)});
         ${persistenceFailure === 'indexeddb'
           ? "Object.defineProperty(IDBFactory.prototype, 'open', { configurable: true, value() { throw new DOMException('blocked', 'SecurityError'); } });"
-          : "const setItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'portal_pacientes_v1') throw new DOMException('quota', 'QuotaExceededError'); return setItem.call(this, key, value); };"}
+          : persistenceFailure === 'indexeddb-quota'
+          ? "IDBObjectStore.prototype.put = function() { throw new DOMException('quota', 'QuotaExceededError'); };"
+          : persistenceFailure === 'metadata'
+          ? "const setItem = Storage.prototype.setItem; Storage.prototype.setItem = function(key, value) { if (key === 'portal_pacientes_v1') throw new DOMException('quota', 'QuotaExceededError'); return setItem.call(this, key, value); };"
+          : ''}
       `);
+      if (persistenceFailure === 'integrity') await page.route('**/api/imports/*/files/*', async route => {
+        if (route.request().method() !== 'GET') return route.continue();
+        const response = await route.fetch();
+        await route.fulfill({ response, headers: { ...response.headers(), 'x-content-sha256': '0'.repeat(64) } });
+      });
       await page.goto(base + '/index.html#/login');
       await page.fill('#dni', '32456789');
       await page.fill('#pass', 'demo1234');

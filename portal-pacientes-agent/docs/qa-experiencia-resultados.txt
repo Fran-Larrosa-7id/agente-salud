@@ -1,0 +1,20 @@
+QA 2026-10-14 — exclusivamente datos sintéticos
+
+TypeScript: PASS
+git diff --check: PASS
+Suite general: 167 pruebas; 166 PASS, 0 FAIL, 1 omitida (remota separada).
+E2E finales frontend/importación activa: 7 PASS, 0 FAIL.
+E2E recuperación de ZIP borrado sin duplicar ficha: 1 PASS, 0 FAIL.
+E2E remotos finales: 2 PASS, 0 FAIL; incluye ancho 390px, ampliación nativa, entrada real VNC, login verificado, cancelación, revocación y 409/503/401/403.
+
+Durabilidad (cliente Chromium independiente, backend ficticio aislado):
+Antes de la espera: Estudios/Documentos/Historial, ZIP CRC, tamaño y SHA-256 correctos
+ACK confirmado; copia temporal eliminada; espera real de 305 segundos
+Después de más de cinco minutos: Estudios/Documentos/Historial, ZIP CRC, tamaño y SHA-256 correctos
+Después de docker compose down/up, mismo navegador y origen: Estudios/Documentos/Historial, ZIP CRC, tamaño y SHA-256 correctos
+PASS: durabilidad y límites del almacenamiento local verificados
+Código de salida del cliente: 0
+ZIP sintético: 602 bytes; SHA-256 df81ce444c63a31b52cdafcf358c1259785b0f5e55ecec5ff35d0341b7733039.
+
+Portal habitual: contenedor saludable, /api/health 200 autenticado con 1234/1234, remoteLogin=true, runner=agent, browserReady=true.
+No se probaron cuentas reales ni despliegue externo HTTPS.

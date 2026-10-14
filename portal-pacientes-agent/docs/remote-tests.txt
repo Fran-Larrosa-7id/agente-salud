@@ -1,0 +1,20 @@
+
+> portal-pacientes-agent@0.1.0 test:remote
+> xvfb-run -a env TEST_REMOTE_DESKTOP=true node --import tsx --test test/e2e/remote-desktop.test.ts
+
+TAP version 13
+# Subtest: noVNC permite login ficticio en el mismo contexto; resume y cancel revocan el escritorio
+ok 1 - noVNC permite login ficticio en el mismo contexto; resume y cancel revocan el escritorio
+  ---
+  duration_ms: 6501.839578
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7101.614538

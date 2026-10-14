@@ -9,7 +9,7 @@ export const rdcChacabuco: ProviderConfig = {
   requireHttps: true,
   staticHosts: [],
   loginPathPattern: /\/patientportal\/(?:index\.php)?$/i,
-  authenticatedHints: ['MIS ESTUDIOS', 'RESULTADOS', 'ESTUDIOS DISPONIBLES', 'CERRAR SESIÓN'],
+  authenticatedHints: ['MIS ESTUDIOS', 'RESULTADOS', 'ESTUDIOS DISPONIBLES', 'CERRAR SESIÓN', 'SUS ESTUDIOS REALIZADOS'],
   expectedPdfLabels: [],
   resultsHints: ['TIPO DE ESTUDIO', 'DESCRIPCIÓN', 'FECHA DEL ESTUDIO'],
   studyExtractor: 'rdcchacabuco',

@@ -1,5 +1,7 @@
 # portal-pacientes-agent
 
+La implementación Docker se documenta en [Auditoría y comandos Docker](docs/docker-mvp.md). Conserva las tres integraciones y el frontend. Usa Chromium con sandbox, reglas sin servicios de IA y un solo job. Con `REMOTE_LOGIN=true`, el Portal ofrece «Abrir navegador» mediante noVNC autenticado; detecta el ingreso y continúa automáticamente en la misma sesión. Ver [Login automático y QA](docs/login-automatico.md) y [QA Docker](docs/docker-qa.md).
+
 MVP de **«Traer mis estudios» con IA** para el Portal de Pacientes. El caso inicial es el **Laboratorio Pérez Cambet** (LabWin Cloud).
 
 > «Solamente tuve que iniciar sesión. Todo lo demás se hizo solo.»
@@ -52,7 +54,7 @@ test/unit, test/e2e, test/fixtures/fake-portal.ts
 cd portal-pacientes-agent
 npm install
 npx playwright install chromium
-cp .env.example .env        # por defecto usa Ollama local (ver abajo); para cloud: ANTHROPIC_API_KEY u OPENAI_API_KEY
+cp .env.example .env        # por defecto usa reglas sin claves ni Ollama; no reemplazar un .env existente
 npm run dev                 # API + frontend en http://127.0.0.1:8787
 ```
 
@@ -223,5 +225,5 @@ CREATED → OPENING_PROVIDER → WAITING_FOR_USER_LOGIN → AUTHENTICATED → AG
 - Se extraen todas las filas de estudios visibles/cargadas en la página actual; no se navega automáticamente por paginación.
 - Para Pérez Cambet prioriza los enlaces `ver_resultado`, conserva estudios con metadata parcial y guarda sus referencias exactas solo en memoria. Si no puede construir una referencia segura, emite `PROVIDER_PARSER_MISMATCH`, muestra un estado recuperable en el Portal y conserva Edge abierto para reintentar sobre la misma sesión, cancelar o esperar el TTL.
 - Si el portal agrega un CAPTCHA en un dominio de terceros, hay que sumarlo a `staticHosts`. Hoy se bloquea.
-- La API no tiene autenticación propia: está pensada para correr en `127.0.0.1`.
+- La API puede protegerse con `PORTAL_AUTH_USER` y `PORTAL_AUTH_PASSWORD`; producción exige contraseña. En Docker solo se publica en loopback. noVNC atraviesa el mismo backend; VNC y websockify solo escuchan en loopback interno. Para acceso desde otra computadora sigue faltando desplegar el proxy HTTPS.
 - Los PDF traídos se guardan en el navegador del paciente (IndexedDB), no en un backend.

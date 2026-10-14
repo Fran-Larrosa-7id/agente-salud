@@ -11,7 +11,7 @@ export const centroDm: ProviderConfig = {
   requireHttps: true,
   staticHosts: ['fonts.googleapis.com', 'fonts.gstatic.com'],
   loginPathPattern: /(?:^\/$|indexp?\.php$|login|acceso)/i,
-  authenticatedHints: ['ESTUDIOS', 'MIS ESTUDIOS', 'RESULTADOS', 'CERRAR SESIÓN', 'PERFIL'],
+  authenticatedHints: ['ESTUDIOS', 'MIS ESTUDIOS', 'RESULTADOS', 'CERRAR SESIÓN', 'PERFIL', 'BIENVENIDO A TU PORTAL DE ESTUDIOS'],
   expectedPdfLabels: [],
   resultsHints: ['ESTUDIOS', 'FECHA', 'MODALIDAD'],
   studyExtractor: 'centrodm',

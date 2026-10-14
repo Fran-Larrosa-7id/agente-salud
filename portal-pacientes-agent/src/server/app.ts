@@ -78,7 +78,7 @@ export function createApp({ config, manager, providers, info, desktop }: AppDeps
         const websocketOrigin = pageOrigin ? new URL(pageOrigin) : null;
         if (websocketOrigin) websocketOrigin.protocol = isSecureRequest(req) ? 'wss:' : 'ws:';
         res.set('content-security-policy', `default-src 'self'; img-src 'self' data:; script-src 'self' 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'${websocketOrigin ? ` ${websocketOrigin.origin}` : ''}; frame-ancestors 'self'`);
-        res.status(job ? 200 : 404).type('html').send(desktopHtml(id, nonce, job?.providerName, job?.provider, !job));
+        res.status(job ? 200 : 404).type('html').send(desktopHtml(id, nonce, job?.providerName, job?.provider, !job, req.query.aux === '1'));
     });
     app.post('/api/imports/:jobId/desktop', async (req, res) => {
       const job = jobParam(req, res);

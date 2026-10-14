@@ -482,7 +482,15 @@
     if (!L || L.closed) return;
     L.closed = true;
     if (L.stop) L.stop();
+    closeRemoteWindow(L);
     if (cancel && L.jobId) P.agent.cancel(L.jobId);
+  }
+
+  function closeRemoteWindow(L) {
+    const remoteWindow = L.remoteWindow;
+    L.remoteWindow = null;
+    try { if (remoteWindow && !remoteWindow.closed) remoteWindow.close(); } catch {}
+    try { window.focus(); } catch {}
   }
 
   function pill(text) {
@@ -561,11 +569,11 @@
     }
     if (token !== F.run) { loginWindow?.close(); P.agent.cancel(res.jobId); return; }
     if (loginWindow && loginWindow.closed) { P.agent.cancel(res.jobId); done(); return; }
-    liveBegin(res.jobId, res.remoteLogin);
+    liveBegin(res.jobId, res.remoteLogin, res.remoteLogin ? loginWindow : null);
     if (res.remoteLogin) {
       const url = P.agent.base() + '/remote/' + res.jobId;
       // Si el navegador bloqueó la pestaña, continuar directamente en esta misma ventana.
-      if (loginWindow && !loginWindow.closed) loginWindow.location.replace(url);
+      if (loginWindow && !loginWindow.closed) loginWindow.location.replace(url + '?aux=1');
       else location.assign(url);
     } else loginWindow?.close();
   };
@@ -592,10 +600,10 @@
     } catch { done(); P.toast('Esta importación ya no está disponible.', { tone: 'danger' }); }
   };
 
-  function liveBegin(jobId, remoteLogin) {
+  function liveBegin(jobId, remoteLogin, remoteWindow = null) {
     const L = (F.live = {
       jobId, remoteLogin: !!remoteLogin, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], importFailures: [], saved: [], existing: [],
-      human: null, error: null, at: 1, completed: false, closed: false, found: null, stop: null, storing: new Set(), sizes: {},
+      human: null, error: null, at: 1, completed: false, closed: false, found: null, stop: null, storing: new Set(), sizes: {}, remoteWindow,
     });
     history.replaceState(null, '', '#/traer?inst=' + encodeURIComponent(F.inst) + '&job=' + encodeURIComponent(jobId));
     L.stop = P.agent.events(jobId, (type, data) => onLiveEvent(L, type, data), () => {
@@ -629,6 +637,9 @@
       L.lastSeq = d.lastSeq;
     }
     if (d.state) L.state = d.state;
+    if (L.remoteLogin && (type === 'authenticated' || !['CREATED', 'OPENING_PROVIDER', 'WAITING_FOR_USER_LOGIN', 'HUMAN_ACTION_REQUIRED'].includes(L.state))) {
+      closeRemoteWindow(L);
+    }
 
     if (type === 'snapshot') {
       if (d.studies && d.studies.length) L.studies = d.studies;
@@ -710,7 +721,7 @@
       liveArt(i) + '<h1 class="flow-title center">Esperando tu inicio de sesión</h1>' +
       '<p class="flow-sub center">Iniciá sesión en la pestaña de ' + i.name + ' que abrimos. Cuando termines, seguimos automáticamente.</p>' +
       '<p class="flow-sub center">Al detectar el ingreso, el Portal mostrará los estudios para que elijas cuáles traer.</p>' +
-      '<p class="flow-foot center">¿No ves la pestaña? <a class="link" target="_blank" rel="noopener" href="' + P.esc(P.agent.base() + '/remote/' + L.jobId) + '">Volver a abrir el navegador' + ic('external', 16) + '</a></p>' +
+      '<p class="flow-foot center">¿No ves la pestaña? <a class="link" target="_blank" rel="noopener" href="' + P.esc(P.agent.base() + '/remote/' + L.jobId + '?aux=1') + '">Volver a abrir el navegador' + ic('external', 16) + '</a></p>' +
       '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>'
     );
     return (
@@ -734,7 +745,7 @@
     if (L && L.remoteLogin) return liveArt(i, 'human') +
       '<h1 class="flow-title center">' + i.name + ' necesita que completes un paso</h1>' +
       '<p class="flow-sub center">Completalo en el navegador seguro. Seguimos automáticamente al detectar que el paso terminó.</p>' +
-      '<div class="flow-actions center"><a class="btn btn-accent btn-lg" target="_blank" rel="noopener" href="' + P.esc(P.agent.base() + '/remote/' + L.jobId) + '">Abrir navegador seguro</a></div>' +
+      '<div class="flow-actions center"><a class="btn btn-accent btn-lg" target="_blank" rel="noopener" href="' + P.esc(P.agent.base() + '/remote/' + L.jobId + '?aux=1') + '">Abrir navegador seguro</a></div>' +
       '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>';
     return (
       liveArt(i, 'human') +

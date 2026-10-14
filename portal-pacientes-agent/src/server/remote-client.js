@@ -21,9 +21,17 @@ function complete(cancelled = false) {
   el('status').className = ''; el('cancel').hidden = true; el('retry').hidden = true;
   if (cancelled) { el('return').hidden = false; el('return').href = '/#/estudios'; el('return').textContent = 'Volver a Estudios'; }
   else {
-    // Solo navegamos esta pestaña auxiliar. La original continúa por su propio SSE.
-    if (window.opener && !window.opener.closed) window.opener.focus();
-    location.replace(config.returnUrl);
+    if (config.auxiliary) {
+      el('message-title').textContent = 'Ingreso detectado';
+      el('message-detail').textContent = 'La importación continúa en la pestaña original del Portal. Si esta pestaña no se cerró automáticamente, volvé a la original.';
+      el('status').textContent = 'Volvé a la pestaña original del Portal para seguir.';
+      el('header-back').hidden = true;
+      el('close-tab').hidden = false;
+      el('close-tab').onclick = () => window.close();
+      window.close();
+    } else {
+      location.replace(config.returnUrl);
+    }
   }
 }
 function accessError(status) {

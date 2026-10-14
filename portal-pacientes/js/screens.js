@@ -23,61 +23,17 @@
   S.inicio = function () {
     const studies = P.studies();
     const docs = P.documents();
-    const meds = P.activeMeds();
-    const allergies = P.db.allergies;
     const sources = P.sourceInstitutions();
-    const last = studies.find((s) => s.status === 'disponible');
-    const empty = !studies.length;
-
-    const stat = (href, icon, label, value, unit, sub) =>
-      '<a class="stat" href="' + href + '"><span class="stat-label">' + ic(icon, 20) + label + '</span>' +
-      '<span class="stat-value"><span class="num">' + value + '</span>' + (unit ? ' <span class="stat-unit">' + unit + '</span>' : '') + '</span>' +
-      '<span class="stat-sub">' + sub + '</span></a>';
-
-    const html =
-      '<header class="home-head">' +
-      '<div><p class="home-date">' + P.fmtToday() + '</p><h1 class="page-title" tabindex="-1">Hola, ' + P.PATIENT.first + '</h1>' +
-      '<p class="page-sub">Este es el resumen de tu salud.</p></div>' +
-      '<a class="sources" href="#/perfil/privacidad"><span class="mono-stack">' + sources.slice(0, 5).map((id) => P.mono(id, 'md')).join('') + '</span>' +
-      '<span class="sources-text"><b>' + P.plural(sources.length, 'institución', 'instituciones') + '</b><span>aportan datos a tu historial</span></span>' + ic('chevron-right', 18, 'chev') + '</a>' +
-      '</header>' +
-
-      '<section class="stats" aria-label="Estado rápido">' +
-      stat('#/salud/alergias', 'alert', 'Alergias', allergies.length, allergies.length === 1 ? 'registrada' : 'registradas', allergies.map((a) => a.name).join(', ')) +
-      stat('#/salud/medicacion', 'pill', 'Medicación', meds.length, meds.length === 1 ? 'activa' : 'activas', meds.map((m) => m.name).join(', ')) +
-      (last
-        ? stat('#/estudios/' + last.id, 'flask', 'Último estudio', P.fmt(last.date), '', P.esc(last.name))
-        : stat('#/estudios', 'flask', 'Estudios', '0', 'guardados', 'Todavía no trajiste estudios')) +
-      stat('#/documentos', 'file', 'Documentos', docs.length, 'disponibles', 'Resultados, informes y recetas') +
-      '</section>' +
-
-      featureCard(empty) +
-
-      '<div class="home-grid">' +
-      '<section class="card" aria-labelledby="h-recientes">' + cardHead('Estudios recientes', studies.length ? ['Ver todos', '#/estudios'] : null, 'h-recientes') +
-      (studies.length
-        ? '<ul class="study-list">' + studies.slice(0, 4).map(P.studyRowCompact).join('') + '</ul>'
-        : P.empty({ compact: true, icon: 'flask', title: 'Todavía no tenés estudios guardados', text: 'Podés incorporarlos desde una institución compatible.', action: '<a class="btn btn-accent" href="#/traer">' + ic('import', 20) + 'Traer mis primeros estudios</a>' })) +
-      '</section>' +
-
-      '<div class="home-side">' +
-      '<section class="card card-key" aria-labelledby="h-importante">' + cardHead('Mi información importante', null, 'h-importante') +
-      '<p class="key-label">Alergias</p>' +
-      '<ul class="allergy-chips">' + allergies.map((a) => '<li><a href="#/salud/alergias" class="allergy-chip">' + ic('alert', 18) + '<span>' + a.name + '</span></a></li>').join('') + '</ul>' +
-      '<p class="key-label">Antecedentes</p>' +
-      '<ul class="key-list">' + P.db.conditions.slice(0, 2).map((c) => '<li><a href="#/salud/antecedentes">' + P.esc(c.name) + '<span>' + (c.since ? 'Desde ' + c.since : c.category) + '</span></a></li>').join('') + '</ul>' +
-      '</section>' +
-
-      '<section class="card" aria-labelledby="h-med">' + cardHead('Medicación actual', ['Ver medicación', '#/salud/medicacion'], 'h-med') +
-      '<ul class="med-list">' + meds.map((m) => P.medRow(m, true)).join('') + '</ul>' +
-      '</section>' +
-      '</div></div>';
-
-    return { title: 'Inicio', html };
+    return { title: 'Inicio', html:
+      '<header class="home-head"><div><p class="home-date">' + P.fmtToday() + '</p><h1 class="page-title" tabindex="-1">Bienvenido</h1><p class="page-sub">Tus estudios importados, en un solo lugar.</p></div></header>' +
+      '<section class="stats" aria-label="Tus archivos"><a class="stat" href="#/estudios"><span class="stat-label">' + ic('flask', 20) + 'Estudios</span><span class="stat-value num">' + studies.length + '</span><span class="stat-sub">guardados en tu portal</span></a><a class="stat" href="#/documentos"><span class="stat-label">' + ic('file', 20) + 'Documentos</span><span class="stat-value num">' + docs.length + '</span><span class="stat-sub">archivos originales disponibles</span></a></section>' +
+      featureCard(!studies.length) +
+      '<section class="card" aria-labelledby="h-recientes">' + cardHead('Tus estudios', studies.length ? ['Ver todos', '#/estudios'] : null, 'h-recientes') +
+      (studies.length ? '<ul class="study-list">' + studies.slice(0, 4).map(P.studyRowCompact).join('') + '</ul>' : P.empty({ compact: true, icon: 'flask', title: 'Todavía no tenés estudios guardados', text: 'Elegí una institución para traer tus archivos originales.', action: '<a class="btn btn-accent" href="#/traer">Traer mis primeros estudios</a>' })) + '</section>'
+    };
   };
-
   function featureCard(empty) {
-    const chips = [['LN', 'sage', 'Laboratorio Norte', 18], ['DM', 'sand', 'Diagnóstico Médico', 78], ['CI', 'sky', 'Centro de Imágenes', 138]];
+    const chips = [['PC', 'teal', 'Pérez Cambet', 18], ['CDM', 'sky', 'Centro DM', 78], ['RDC', 'sky', 'RDC Chacabuco', 138]];
     const art =
       '<svg class="feature-art" viewBox="0 0 380 200" aria-hidden="true" focusable="false">' +
       chips.map((c, i) =>
@@ -322,7 +278,7 @@
      ===================================================================== */
   S.estudio = function (r) {
     const s = P.study(r.parts[1]);
-    if (!s || (P.db.emptyDemo && !s.importedAt)) {
+    if (!s) {
       return {
         title: 'Estudio no encontrado',
         html: '<nav class="crumbs" aria-label="Ruta"><a href="#/estudios">Estudios</a></nav>' +
@@ -503,7 +459,7 @@
     P.db.vaccines.forEach((v) => ev.push({ date: v.date, kind: 'vacuna', icon: 'syringe', title: 'Vacuna aplicada', sub: v.name + ' · ' + v.dose, inst: v.inst, href: '#/salud/vacunas' }));
     P.db.allergies.forEach((a) => ev.push({ date: a.date, kind: 'otros', icon: 'alert', title: 'Alergia registrada', sub: a.name, inst: a.inst, href: '#/salud/alergias' }));
     P.db.conditions.filter((c) => c.inst !== 'yo').forEach((c) => ev.push({ date: c.date, kind: 'otros', icon: 'clipboard', title: 'Antecedente registrado', sub: c.name, inst: c.inst, href: '#/salud/antecedentes' }));
-    if (!P.db.emptyDemo) P.db.documents.filter((d) => d.kind !== 'otros').forEach((d) => ev.push({ date: d.date, kind: 'documento', icon: 'file', title: d.title, sub: P.DOC_KINDS[d.kind], inst: d.inst, docId: d.id }));
+    P.db.documents.filter((d) => d.kind !== 'otros').forEach((d) => ev.push({ date: d.date, kind: 'documento', icon: 'file', title: d.title, sub: P.DOC_KINDS[d.kind], inst: d.inst, docId: d.id }));
     P.db.imports.forEach((im) => ev.push({ date: im.date, kind: 'estudio', icon: 'import', title: 'Trajiste ' + P.plural(im.count, 'estudio', 'estudios'), sub: 'Desde «Traer mis estudios»', inst: im.inst, href: '#/estudios', highlight: true, order: 1 }));
     return ev.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (b.order || 0) - (a.order || 0)));
   }
@@ -653,68 +609,23 @@
       '<a class="tab" role="tab" href="#/perfil/' + t[0] + '" aria-selected="' + (t[0] === tab) + '"' + (t[0] === tab ? ' aria-current="page"' : '') + '>' + t[1] + '</a>').join('') + '</div>';
     const head =
       '<header class="profile-head"><span class="avatar avatar-lg" aria-hidden="true">' + P.PATIENT.initials + '</span>' +
-      '<div><h1 class="page-title" tabindex="-1">Mi perfil</h1><p class="page-sub">' + P.PATIENT.full + ' · DNI <span class="num">' + P.PATIENT.dniFmt + '</span></p></div></header>';
+      '<div><h1 class="page-title" tabindex="-1">Mi cuenta</h1><p class="page-sub">Preferencias y privacidad de tus estudios importados.</p></div></header>';
     const body = { datos: perfilDatos, seguridad: perfilSeguridad, privacidad: perfilPrivacidad }[tab]();
     return { title: PERFIL_TABS.find((t) => t[0] === tab)[1] + ' · Mi perfil', html: head + tabs + '<div class="tab-panel" role="tabpanel">' + body + '</div>' };
   };
 
   function perfilDatos() {
-    const c = P.db.contact;
-    return (
-      '<div class="profile-grid">' +
-      '<section class="card" aria-labelledby="h-datos">' + cardHead('Datos personales', null, 'h-datos') +
-      '<dl class="rows">' +
-      '<div class="row"><dt>Nombre completo</dt><dd>' + P.PATIENT.full + '</dd></div>' +
-      '<div class="row"><dt>DNI</dt><dd class="num">' + P.PATIENT.dniFmt + '</dd></div>' +
-      '<div class="row"><dt>Fecha de nacimiento</dt><dd><span class="num">' + P.fmt(P.PATIENT.birth) + '</span> <span class="muted">· ' + P.age(P.PATIENT.birth) + ' años</span></dd></div>' +
-      '<div class="row"><dt>Email</dt><dd>' + P.esc(c.email) + '</dd><button type="button" class="btn btn-ghost btn-sm" data-action="edit-contact" data-field="email">Editar</button></div>' +
-      '<div class="row"><dt>Teléfono</dt><dd class="num">' + P.esc(c.phone) + '</dd><button type="button" class="btn btn-ghost btn-sm" data-action="edit-contact" data-field="phone">Editar</button></div>' +
-      '</dl>' +
-      '<p class="muted mt-4">Tu nombre, DNI y fecha de nacimiento vienen de tu identificación. Si hay un error, avisale a tu institución de salud.</p>' +
-      '</section>' +
-      '<div class="stack">' +
-      '<section class="card" aria-labelledby="h-lectura">' + cardHead('Tamaño del texto', null, 'h-lectura') +
-      '<p class="muted">Elegí cómo preferís leer el portal. Se aplica en todas las pantallas.</p>' +
-      '<div class="seg seg-lg mt-4" role="radiogroup" aria-label="Tamaño del texto">' +
-      [['normal', 'Normal'], ['grande', 'Grande']].map((o) =>
-        '<button type="button" role="radio" class="seg-btn" data-action="text-size" data-value="' + o[0] + '" aria-checked="' + (P.db.textSize === o[0]) + '">' +
-        '<span class="' + (o[0] === 'grande' ? 'aa-lg' : 'aa') + '" aria-hidden="true">Aa</span>' + o[1] + '</button>').join('') +
-      '</div></section>' +
-      '<section class="card card-demo" aria-labelledby="h-demo">' + cardHead('Opciones de demostración', null, 'h-demo') +
-      '<p class="muted">Solo para presentar el prototipo. No forman parte del producto.</p>' +
-      '<div class="btn-col mt-4">' +
-      '<button type="button" class="btn btn-secondary" data-action="demo-empty">' + ic(P.db.emptyDemo ? 'rotate-ccw' : 'folder', 18) + (P.db.emptyDemo ? 'Volver a la cuenta con datos' : 'Ver como cuenta nueva (sin estudios)') + '</button>' +
-      '<button type="button" class="btn btn-ghost" data-action="demo-reset">' + ic('retry', 18) + 'Restablecer datos de la demo</button>' +
-      '</div></section></div></div>'
-    );
+    return '<section class="card" aria-labelledby="h-lectura">' + cardHead('Tamaño del texto', null, 'h-lectura') +
+      '<p class="muted">Elegí cómo preferís leer el portal.</p><div class="seg seg-lg mt-4" role="radiogroup" aria-label="Tamaño del texto">' +
+      [['normal', 'Normal'], ['grande', 'Grande']].map(o => '<button type="button" role="radio" class="seg-btn" data-action="text-size" data-value="' + o[0] + '" aria-checked="' + (P.db.textSize === o[0]) + '">' + o[1] + '</button>').join('') +
+      '</div><p class="muted mt-4">Tus archivos se guardan en este navegador y dispositivo. Si borrás sus datos, tendrás que volver a importarlos.</p></section>';
   }
-
   function perfilSeguridad() {
-    return (
-      '<div class="profile-grid">' +
-      '<div class="stack">' +
-      '<section class="card" aria-labelledby="h-acceso">' + cardHead('Acceso', null, 'h-acceso') +
-      '<ul class="setting-list">' +
-      '<li class="setting"><span class="setting-icon" aria-hidden="true">' + ic('key', 20) + '</span><div><p class="setting-name">Contraseña</p><p class="muted">Última actualización: <span class="num">' + P.fmt(P.db.passwordChanged) + '</span></p></div>' +
-      '<button type="button" class="btn btn-secondary btn-sm" data-action="change-password">Cambiar contraseña</button></li>' +
-      '<li class="setting"><span class="setting-icon" aria-hidden="true">' + ic('smartphone', 20) + '</span><div><p class="setting-name">Verificación en dos pasos</p><p class="muted">Muy pronto vas a poder sumar un código por SMS o aplicación al ingresar.</p></div>' +
-      P.badge('info', 'Próximamente', 'clock') + '</li>' +
-      '</ul></section>' +
-      '<section class="card" aria-labelledby="h-ses">' + cardHead('Sesiones activas', null, 'h-ses') +
-      '<ul class="setting-list">' + P.db.sessions.map((s) =>
-        '<li class="setting"><span class="setting-icon" aria-hidden="true">' + ic(s.icon, 20) + '</span><div><p class="setting-name">' + s.device + (s.current ? ' ' + P.badge('success', 'Este dispositivo') : '') + '</p><p class="muted">' + s.place + ' · ' + s.when + '</p></div>' +
-        (s.current ? '' : '<button type="button" class="btn btn-danger-ghost btn-sm" data-action="end-session" data-id="' + s.id + '">Cerrar sesión</button>') + '</li>'
-      ).join('') + '</ul></section>' +
-      '</div>' +
-      '<section class="card" aria-labelledby="h-act">' + cardHead('Actividad reciente', null, 'h-act') +
-      '<ol class="activity">' + P.db.activity.slice(0, 8).map((a) =>
-        '<li><span class="activity-dot" aria-hidden="true"></span><div><p>' + P.esc(a.text) + '</p><p class="muted">' + P.esc(a.sub) + ' · <span class="num">' + P.fmtDateTime(a.at) + '</span></p></div></li>'
-      ).join('') + '</ol>' +
-      '<p class="muted mt-4">¿Ves algo que no reconocés? Cambiá tu contraseña y cerrá las otras sesiones.</p></section>' +
-      '</div>'
-    );
+    return '<div class="profile-grid"><section class="card">' + cardHead('Acceso al Portal') +
+      '<p>La sesión del Portal habilita tus importaciones y archivos.</p><button type="button" class="btn btn-secondary mt-4" data-action="logout">Cerrar sesión</button></section>' +
+      '<section class="card">' + cardHead('Actividad reciente') +
+      (P.db.activity.length ? '<ol class="activity">' + P.db.activity.slice(0, 8).map(a => '<li><span class="activity-dot" aria-hidden="true"></span><div><p>' + P.esc(a.text) + '</p><p class="muted">' + P.esc(a.sub) + ' · ' + P.fmtDateTime(a.at) + '</p></div></li>').join('') + '</ol>' : '<p class="muted">Todavía no hay actividad registrada.</p>') + '</section></div>';
   }
-
   function perfilPrivacidad() {
     const active = P.db.shares.filter((s) => P.shareStatus(s) === 'activo');
     const past = P.db.shares.filter((s) => P.shareStatus(s) !== 'activo');
@@ -745,26 +656,6 @@
     document.querySelectorAll('[data-action="text-size"]').forEach((b) => b.setAttribute('aria-checked', b === el));
     P.toast(el.dataset.value === 'grande' ? 'Ahora el texto se ve más grande.' : 'Volviste al tamaño de texto normal.', { icon: 'type' });
   };
-  A['demo-empty'] = () => {
-    P.db.emptyDemo = !P.db.emptyDemo; P.ui.justImported = null; P.save();
-    P.toast(P.db.emptyDemo ? 'Estás viendo la cuenta como si fuera nueva.' : 'Volviste a la cuenta con datos.', { icon: 'info' });
-    location.hash = P.db.emptyDemo ? '#/estudios' : '#/inicio';
-  };
-  A['demo-reset'] = async () => {
-    const ok = await P.confirm({ title: '¿Restablecer la demo?', text: 'Se borran los estudios que trajiste, los accesos que creaste y los cambios de perfil. Seguís con la sesión iniciada.', confirmLabel: 'Restablecer' });
-    if (!ok) return;
-    P.resetDemo(); P.ui.justImported = null;
-    P.toast('Listo, la demo volvió a su estado inicial.');
-    location.hash = '#/inicio';
-  };
-  A['end-session'] = async (el) => {
-    const s = P.db.sessions.find((x) => x.id === el.dataset.id);
-    const ok = await P.confirm({ title: '¿Cerrar esta sesión?', text: 'Se cerrará el acceso en ' + s.device + '. Para volver a entrar desde ahí, habrá que ingresar el DNI y la contraseña.', confirmLabel: 'Cerrar sesión', tone: 'danger' });
-    if (!ok) return;
-    P.db.sessions = P.db.sessions.filter((x) => x !== s); P.save();
-    P.toast('Sesión cerrada en ' + s.device + '.');
-    P.rerender();
-  };
   A['remove-auth'] = async (el) => {
     const i = P.inst(el.dataset.id);
     const ok = await P.confirm({ title: '¿Quitar la autorización a ' + i.name + '?', text: 'No va a enviar información nueva a tu historial. Lo que ya está guardado se mantiene. Podés volver a conectarla cuando quieras.', confirmLabel: 'Quitar autorización', tone: 'danger' });
@@ -776,73 +667,10 @@
     P.rerender();
   };
 
-  A['edit-contact'] = (el) => {
-    const field = el.dataset.field;
-    const isMail = field === 'email';
-    const h = P.overlay({
-      kind: 'modal', size: 'sm',
-      title: isMail ? 'Editar email' : 'Editar teléfono',
-      body:
-        '<form id="contact-form" novalidate><div class="field"><label for="cf-v">' + (isMail ? 'Email' : 'Teléfono celular') + '</label>' +
-        '<input class="input" id="cf-v" name="v" type="' + (isMail ? 'email' : 'tel') + '" value="' + P.esc(P.db.contact[field]) + '" autocomplete="' + (isMail ? 'email' : 'tel') + '" autofocus aria-describedby="cf-h cf-e">' +
-        '<p class="field-hint" id="cf-h">' + (isMail ? 'Lo usamos para avisarte cuando llega un estudio nuevo.' : 'Con código de área, por ejemplo +54 9 11 5555-0142.') + '</p>' +
-        '<p class="field-error" id="cf-e" hidden></p></div></form>',
-      footer: '<button class="btn btn-secondary" type="button" data-ov-close>Cancelar</button><button class="btn btn-primary" type="submit" form="contact-form">Guardar</button>',
-    });
-    h.el.querySelector('form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const input = h.el.querySelector('#cf-v');
-      const v = input.value.trim();
-      const ok = isMail ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) : v.replace(/\D/g, '').length >= 8;
-      const err = h.el.querySelector('#cf-e');
-      if (!ok) {
-        err.hidden = false;
-        err.innerHTML = ic('alert', 16) + (isMail ? 'Revisá el email: parece incompleto.' : 'Revisá el número: debe tener al menos 8 dígitos.');
-        input.setAttribute('aria-invalid', 'true');
-        input.focus();
-        return;
-      }
-      P.db.contact[field] = v; P.save(); h.close();
-      P.toast(isMail ? 'Email actualizado.' : 'Teléfono actualizado.');
-      P.rerender();
-    });
-  };
-
-  A['change-password'] = () => {
-    const h = P.overlay({
-      kind: 'modal', size: 'sm', title: 'Cambiar contraseña',
-      body:
-        '<form id="pw-form" novalidate>' +
-        '<div class="field"><label for="pw-a">Contraseña actual</label><input class="input" id="pw-a" type="password" autocomplete="current-password" autofocus></div>' +
-        '<div class="field"><label for="pw-n">Nueva contraseña</label><input class="input" id="pw-n" type="password" autocomplete="new-password" aria-describedby="pw-h">' +
-        '<p class="field-hint" id="pw-h">Al menos 8 caracteres. Te recomendamos combinar letras y números.</p></div>' +
-        '<div class="field"><label for="pw-r">Repetí la nueva contraseña</label><input class="input" id="pw-r" type="password" autocomplete="new-password"></div>' +
-        '<p class="field-error" id="pw-e" role="alert" hidden></p></form>',
-      footer: '<button class="btn btn-secondary" type="button" data-ov-close>Cancelar</button><button class="btn btn-primary" type="submit" form="pw-form">Guardar contraseña</button>',
-    });
-    h.el.querySelector('form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const a = h.el.querySelector('#pw-a').value, n = h.el.querySelector('#pw-n').value, rr = h.el.querySelector('#pw-r').value;
-      const err = h.el.querySelector('#pw-e');
-      const msg = !a ? 'Ingresá tu contraseña actual.' : n.length < 8 ? 'La nueva contraseña debe tener al menos 8 caracteres.' : n !== rr ? 'Las contraseñas nuevas no coinciden.' : '';
-      if (msg) { err.hidden = false; err.innerHTML = ic('alert', 16) + msg; return; }
-      const done = P.busy(h.el.querySelector('[form="pw-form"]'), 'Guardando…');
-      await P.wait(700); done();
-      P.db.passwordChanged = P.TODAY_ISO;
-      P.db.activity.unshift({ at: P.toISO(P.TODAY), text: 'Cambiaste tu contraseña', sub: 'Chrome en Windows' });
-      P.save(); h.close();
-      P.toast('Contraseña actualizada.');
-      P.rerender();
-    });
-  };
-
-  /* =====================================================================
-     AYUDA
-     ===================================================================== */
   S.ayuda = function () {
     const faq = [
-      ['¿De dónde sale la información de mi portal?', 'De las instituciones de salud donde te atendés y que están conectadas o que vos autorizaste. Cada dato muestra su origen y la fecha en que se registró.'],
-      ['¿Cómo traigo estudios de otro laboratorio?', 'Entrá a Estudios y tocá «Traer mis estudios». Elegís la institución, iniciás sesión en su sitio oficial y elegís qué estudios guardar. Tarda menos de un minuto.'],
+      ['¿De dónde sale la información de mi portal?', 'De los estudios que elegiste importar desde las instituciones disponibles. Cada estudio conserva su origen y su archivo original.'],
+      ['¿Cómo traigo estudios de otro laboratorio?', 'Entrá a Estudios y tocá «Traer mis estudios». Elegís la institución, iniciás sesión en su sitio oficial y elegís qué estudios guardar.'],
       ['¿El portal guarda mi contraseña de otras instituciones?', 'No. La contraseña la escribís solo en el sitio de cada institución. El portal recibe únicamente tu autorización para buscar estudios, y podés quitarla cuando quieras.'],
       ['¿Quién puede ver mis datos?', 'Solo vos. Si compartís un estudio, elegís qué incluir y por cuánto tiempo, y podés revocar el acceso en cualquier momento desde Mi perfil → Privacidad.'],
       ['¿El portal interpreta mis resultados?', 'No. El portal organiza tu información tal como la informan las instituciones. Para entender un resultado, consultá con tu profesional de salud.'],
@@ -854,9 +682,7 @@
         pageHead('Ayuda', 'Respuestas a las preguntas más comunes.') +
         '<div class="help-grid"><div class="faq">' + faq.map((f, i) =>
           '<details class="faq-item"' + (i === 0 ? ' open' : '') + '><summary>' + f[0] + ic('chevron-down', 20) + '</summary><p>' + f[1] + '</p></details>').join('') + '</div>' +
-        '<aside class="card help-contact"><h2 class="card-title">¿Necesitás ayuda con el portal?</h2><p class="muted mt-2">Te respondemos de lunes a viernes de 8 a 20 h.</p>' +
-        '<ul class="contact-list"><li>' + ic('phone', 20) + '<span><b class="num">0800 000 0000</b><span class="muted">Línea de ayuda (demo)</span></span></li>' +
-        '<li>' + ic('mail', 20) + '<span><b>ayuda@portal.ejemplo</b><span class="muted">Respondemos en el día</span></span></li></ul>' +
+        '<aside class="card help-contact"><h2 class="card-title">Empezá con tus estudios</h2><p class="muted mt-2">Elegí una institución disponible e importá los archivos que quieras conservar.</p><a class="btn btn-accent mt-4" href="#/traer">Traer mis estudios</a>' +
         '<p class="muted mt-4">Por consultas médicas, comunicate con tu institución de salud.</p></aside></div>',
     };
   };

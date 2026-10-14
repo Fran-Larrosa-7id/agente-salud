@@ -126,7 +126,7 @@
       '<p class="legend"><span>' + ic('check', 16) + 'Compatible: podemos traer tus estudios automáticamente.</span>' +
       '<span>' + ic('sparkle', 16) + 'Vos iniciás sesión y el asistente trae tus archivos originales.</span></p></div>' +
       '<div id="inst-results">' + instRows() + '</div>' +
-      (F.q || F.more ? '' : '<button type="button" class="more-btn" data-action="inst-more">' + ic('plus', 18) + 'Ver más instituciones <span class="num">(' + hidden + ')</span></button>') +
+      (F.q || F.more || !hidden ? '' : '<button type="button" class="more-btn" data-action="inst-more">' + ic('plus', 18) + 'Ver más instituciones <span class="num">(' + hidden + ')</span></button>') +
       '<p class="flow-foot">¿No encontrás la tuya? <button type="button" class="link" data-action="inst-suggest">Sugerir una institución</button></p>'
     );
   }

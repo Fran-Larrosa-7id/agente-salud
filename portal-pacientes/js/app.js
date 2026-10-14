@@ -34,11 +34,11 @@
       '<a class="nav-link" href="#/ayuda" data-nav="ayuda">' + ic('help', 22) + '<span>Ayuda</span></a>' +
       '<a class="nav-link" href="#/perfil" data-nav="perfil">' + ic('user', 22) + '<span>Mi perfil</span></a>' +
       '<button type="button" class="nav-link" data-action="logout">' + ic('logout', 22) + '<span>Cerrar sesión</span></button></nav>' +
-      '<a class="side-user" href="#/perfil"><span class="avatar" aria-hidden="true">' + P.PATIENT.initials + '</span><span class="side-user-t"><b>' + P.PATIENT.full + '</b><span class="num">DNI ' + P.PATIENT.dniFmt + '</span></span></a>' +
+      '<a class="side-user" href="#/perfil"><span class="avatar" aria-hidden="true">' + ic('user', 20) + '</span><span class="side-user-t"><b>Mi cuenta</b><span>Preferencias y privacidad</span></span></a>' +
       '<p class="side-endorse">Una solución de 7Ideas</p></div>' +
       '</aside>' +
       '<header class="topbar"><a class="brand brand-top" href="#/inicio" aria-label="Portal de Pacientes, ir al inicio">' + P.logo(32) + '<span class="brand-name">Portal de Pacientes</span></a>' +
-      '<a class="avatar avatar-btn" href="#/perfil" aria-label="Mi perfil">' + P.PATIENT.initials + '</a></header>' +
+      '<a class="avatar avatar-btn" href="#/perfil" aria-label="Mi cuenta">' + ic('user', 20) + '</a></header>' +
       '<main class="main" id="main" tabindex="-1"><div class="view" id="view"></div></main>' +
       '<nav class="bottomnav" aria-label="Navegación principal">' +
       MOBILE_NAV.map((k) => { const n = NAV.find((x) => x.key === k); return '<a class="bn" href="#/' + k + '" data-nav="' + k + '">' + ic(n.icon, 24) + '<span>' + n.label + '</span></a>'; }).join('') +

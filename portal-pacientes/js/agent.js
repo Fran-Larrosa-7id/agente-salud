@@ -5,14 +5,11 @@
   const P = window.P;
 
   /* ---------- API del agente ---------- */
-  const DEFAULT_PORT = '8787';
+  // La clave pertenecía al frontend servido por separado. Ignorarla evita que
+  // una URL antigua en localStorage desvíe API, SSE o descargas a otro host.
+  try { localStorage.removeItem('pp_agent_url'); } catch (e) { /* sin storage */ }
   function base() {
-    try {
-      const o = localStorage.getItem('pp_agent_url');
-      if (o) return o.replace(/\/$/, '');
-    } catch (e) { /* sin storage */ }
-    if (location.port === DEFAULT_PORT) return location.origin;
-    return 'http://' + (location.hostname === 'localhost' ? 'localhost' : '127.0.0.1') + ':' + DEFAULT_PORT;
+    return location.origin;
   }
 
   class AgentError extends Error {
@@ -24,6 +21,7 @@
     try {
       res = await fetch(base() + path, {
         method,
+        credentials: 'same-origin',
         headers: body ? { 'content-type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
@@ -90,7 +88,7 @@
     },
     async file(id, fileId, onVerify) {
       let res;
-      try { res = await fetch(base() + '/api/imports/' + id + '/files/' + fileId); } catch (e) { throw new AgentError('AGENT_OFFLINE'); }
+      try { res = await fetch(base() + '/api/imports/' + id + '/files/' + fileId, { credentials: 'same-origin' }); } catch (e) { throw new AgentError('AGENT_OFFLINE'); }
       if (!res.ok) throw new AgentError('FILE_NOT_FOUND', res.status);
       const blob = await res.blob();
       if (onVerify) onVerify();

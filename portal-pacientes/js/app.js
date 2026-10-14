@@ -160,7 +160,7 @@
     if (!ok) return;
     if (P.portalAuthEnabled) {
       try {
-        const response = await fetch(P.agent.base() + '/api/auth/logout', { method: 'POST' });
+        const response = await fetch(P.agent.base() + '/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
         if (!response.ok) throw new Error('LOGOUT_FAILED');
       } catch { P.toast('No pudimos cerrar la sesión. Volvé a intentar.', { tone: 'danger' }); return; }
     }

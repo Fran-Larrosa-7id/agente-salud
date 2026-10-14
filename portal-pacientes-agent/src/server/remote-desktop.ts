@@ -7,6 +7,7 @@ import type { ImportJob } from '../jobs/job.js';
 import { JobState as S } from '../jobs/states.js';
 import type { JobManager } from '../jobs/job-manager.js';
 import { silentLogger, type Logger } from '../security/logger.js';
+import { requestOrigin } from './portal-auth.js';
 
 export function interactive(job: ImportJob | undefined): boolean {
   return !!job && (job.state === S.WAITING_FOR_USER_LOGIN || job.state === S.HUMAN_ACTION_REQUIRED);
@@ -108,7 +109,7 @@ export class RemoteDesktop {
     const desktop = this.active;
     const token = /(?:^|;\s*)portal_remote=([0-9a-f]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
     let originAllowed = false;
-    try { originAllowed = new URL(req.headers.origin || '').host === req.headers.host; } catch {}
+    try { originAllowed = !!req.headers.origin && new URL(req.headers.origin).origin === requestOrigin(req); } catch {}
     if (!match || !desktop || desktop.job.id !== match[1] || !interactive(manager.get(match[1])) || !originAllowed || !token || !timingSafeEqual(Buffer.from(token), Buffer.from(desktop.token))) {
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
       return;

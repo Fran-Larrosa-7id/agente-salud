@@ -1,6 +1,6 @@
 # portal-pacientes-agent
 
-La implementación Docker se documenta en [Auditoría y comandos Docker](docs/docker-mvp.md). Conserva las tres integraciones y el frontend. Usa Chromium con sandbox, reglas sin servicios de IA y un solo job. Con `REMOTE_LOGIN=true`, el Portal ofrece «Abrir navegador» mediante noVNC autenticado; detecta el ingreso y continúa automáticamente en la misma sesión. Ver [Login automático y QA](docs/login-automatico.md) y [QA Docker](docs/docker-qa.md).
+La implementación Docker se documenta en [Auditoría y comandos Docker](docs/docker-mvp.md). Conserva las tres integraciones y el frontend. Usa Chromium con sandbox, reglas sin servicios de IA y un solo job. Con `REMOTE_LOGIN=true`, el Portal ofrece «Abrir navegador» mediante noVNC autenticado; detecta el ingreso y continúa automáticamente en la misma sesión. Ver [Login automático y QA](docs/login-automatico.md), [QA Docker](docs/docker-qa.md) y [despliegue same-origin HTTPS](docs/despliegue-same-origin-https.md).
 
 MVP de **«Traer mis estudios» con IA** para el Portal de Pacientes. El caso inicial es el **Laboratorio Pérez Cambet** (LabWin Cloud).
 
@@ -60,7 +60,7 @@ npm run dev                 # API + frontend en http://127.0.0.1:8787
 
 Abrí `http://127.0.0.1:8787/#/traer?inst=pc`. Para entrar al Portal usá el DNI de la demo, `32.456.789`, y cualquier contraseña.
 
-El frontend también funciona servido aparte (`python -m http.server 8000` desde la raíz del repo): en ese caso llama a `http://127.0.0.1:8787`. Para usar otra URL, ejecutá `localStorage.pp_agent_url = 'http://…'` en la consola del navegador.
+En desarrollo, usá `npm run dev` para que el backend y el frontend compartan el mismo origen. El frontend obtiene automáticamente la URL del agente desde el origen actual; esto también funciona por túnel SSH, otro puerto o detrás de un proxy HTTPS. La antigua clave `pp_agent_url` se ignora y se elimina al cargar el cliente. No sirvas el frontend por separado si necesitás usar la API del agente.
 
 | Comando | Qué hace |
 | --- | --- |

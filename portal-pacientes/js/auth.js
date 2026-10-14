@@ -3,16 +3,24 @@
   const P = window.P;
   const ic = P.icon;
   const rec = (P.ui.rec = { step: 'dni', dni: '' });
+  P.portalAuthEnabled = true;
+  P.portalAuthUnavailable = false;
   P.prepareAuth = async () => {
     try {
-      const response = await fetch(P.agent.base() + '/api/auth/session', { signal: AbortSignal.timeout(5000) });
+      const response = await fetch(P.agent.base() + '/api/auth/session', { credentials: 'same-origin', signal: AbortSignal.timeout(5000) });
       if (!response.ok) throw new Error('AUTH_UNAVAILABLE');
       const session = await response.json();
+      if (typeof session.enabled !== 'boolean' || typeof session.authenticated !== 'boolean') throw new Error('INVALID_AUTH_STATUS');
       P.portalAuthEnabled = session.enabled;
+      P.portalAuthUnavailable = false;
       if (session.enabled) { P.db.session = session.authenticated ? { since: new Date().toISOString() } : null; P.save(); }
+      return true;
     } catch {
-      P.portalAuthEnabled = location.port === '8787';
-      if (P.portalAuthEnabled) { P.db.session = null; P.save(); }
+      // Un error de red nunca habilita el login local de desarrollo.
+      P.portalAuthEnabled = true;
+      P.portalAuthUnavailable = true;
+      if (P.db.session) { P.db.session = null; P.save(); }
+      return false;
     }
   };
 
@@ -44,9 +52,13 @@
 
   P.renderLogin = function () {
     document.title = 'Ingresar · Portal de Pacientes';
+    const connectionAlert = P.portalAuthUnavailable
+      ? '<div class="alert alert-error" role="alert">No pudimos conectar con el Portal. Revisá la conexión y reintentá.<p><button class="btn btn-secondary btn-sm" type="button" data-action="retry-auth">Reintentar conexión</button></p></div>'
+      : '';
     return layout(
       '<h1 class="auth-title" tabindex="-1">Ingresar</h1>' +
       '<p class="muted">Ingresá con la cuenta del piloto.</p>' +
+      connectionAlert +
       '<div class="alert alert-error" id="login-alert" role="alert" hidden></div>' +
       '<form id="login-form" class="auth-form" novalidate>' +
       '<div class="field"><label for="dni">Usuario</label>' +
@@ -81,7 +93,7 @@
       const done = P.busy(f.querySelector('[type="submit"]'), 'Ingresando…');
       if (P.portalAuthEnabled) {
         try {
-          const response = await fetch(P.agent.base() + '/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: dni.value.trim(), password: pass.value }), signal: AbortSignal.timeout(10000) });
+          const response = await fetch(P.agent.base() + '/api/auth/login', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: dni.value.trim(), password: pass.value }), signal: AbortSignal.timeout(10000) });
           if (!response.ok) throw new Error(response.status === 401 ? 'Usuario o contraseña incorrectos.' : response.status === 429 ? 'Esperá un minuto y volvé a intentar.' : 'No pudimos iniciar sesión. Volvé a intentar.');
           P.db.session = { since: new Date().toISOString() }; P.save(); P.ui.fresh = true;
           const returnTo = new URLSearchParams(location.search).get('returnTo');
@@ -117,6 +129,13 @@
     el.setAttribute('aria-pressed', show);
     el.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
     el.innerHTML = ic(show ? 'eye-off' : 'eye', 20);
+  };
+
+  P.actions['retry-auth'] = async (button) => {
+    button.disabled = true;
+    button.textContent = 'Verificando…';
+    await P.prepareAuth();
+    P.route();
   };
 
   P.renderRecover = () => layout('<h1 class="auth-title">Acceso al piloto</h1><p>Usá el usuario 1234 y la contraseña 1234.</p><a class="btn btn-primary" href="#/login">Volver a ingresar</a>');

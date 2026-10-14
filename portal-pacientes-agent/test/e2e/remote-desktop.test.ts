@@ -16,6 +16,7 @@ import { RemoteDesktop } from '../../src/server/remote-desktop.js';
 import { silentLogger } from '../../src/security/logger.js';
 import { startFakePortal, FAKE_USER } from '../fixtures/fake-portal.js';
 import { testConfig, testProvider, waitFor } from '../helpers.js';
+import { testBrowserChannel } from '../browser-channel.js';
 
 // Esta prueba requiere los paquetes de la imagen y DISPLAY: npm run test:remote.
 test('noVNC detecta login automáticamente, conserva contexto y muestra selección en ambas pestañas', {
@@ -34,7 +35,7 @@ test('noVNC detecta login automáticamente, conserva contexto y muestra selecci�
   desktop.attach(server, manager);
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
   try {
     const context = await browser.newContext({ viewport: { width: 1400, height: 1100 } });
     await context.addInitScript(`localStorage.setItem('pp_agent_url', ${JSON.stringify(base)});`);
@@ -164,7 +165,7 @@ test('primera apertura preparada; 409 acotado, 503 recuperable y 401/403 sin cic
   const server = createApp({ config, manager, providers, desktop, info: { runner: 'fake', model: 'rules', modelReady: true } }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
   try {
     const job = manager.create('fake');
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });

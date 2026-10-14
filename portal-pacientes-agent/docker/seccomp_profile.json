@@ -51,6 +51,23 @@
 	],
 	"syscalls": [
 		{
+			"names": ["openat2"],
+			"action": "SCMP_ACT_ALLOW",
+			"args": [],
+			"comment": "Chromium secure file access on current Ubuntu kernels",
+			"includes": {},
+			"excludes": {}
+		},
+		{
+			"names": ["clone3"],
+			"action": "SCMP_ACT_ERRNO",
+			"errnoRet": 38,
+			"args": [],
+			"comment": "Return ENOSYS so glibc can use the clone fallback",
+			"includes": {},
+			"excludes": {}
+		},
+		{
 			"comment": "Playwright user namespaces; chroot needed inside Chromium sandbox with cap_drop ALL",
 			"names": [
 				"clone",

@@ -10,6 +10,7 @@ import { PROVIDERS } from '../../src/providers/index.js';
 import { createApp } from '../../src/server/app.js';
 import { silentLogger } from '../../src/security/logger.js';
 import { testConfig } from '../helpers.js';
+import { testBrowserChannel } from '../browser-channel.js';
 
 test('un único formulario autentica backend, resiste sesión local falsa y revoca acceso al salir', { timeout: 30_000 }, async () => {
   const config = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes'), portalAuth: { username: '1234', password: '1234' } });
@@ -17,7 +18,7 @@ test('un único formulario autentica backend, resiste sesión local falsa y revo
   const server = createApp({ config, manager, providers: PROVIDERS, info: { runner: 'fake', model: 'rules', modelReady: true } }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.addInitScript(`localStorage.setItem('pp_agent_url', ${JSON.stringify(base)});`);

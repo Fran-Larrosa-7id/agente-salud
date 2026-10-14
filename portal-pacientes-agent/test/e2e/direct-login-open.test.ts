@@ -11,6 +11,7 @@ import { createApp } from '../../src/server/app.js';
 import { RemoteDesktop } from '../../src/server/remote-desktop.js';
 import { silentLogger } from '../../src/security/logger.js';
 import { testConfig, waitFor } from '../helpers.js';
+import { testBrowserChannel } from '../browser-channel.js';
 
 test('Abrir institución llega al login en un clic; bloqueo de popup y error de inicio se recuperan', { timeout: 45_000 }, async () => {
   const config = testConfig({ remoteLogin: true, portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes') });
@@ -19,7 +20,7 @@ test('Abrir institución llega al login en un clic; bloqueo de popup y error de 
   const server = createApp({ config, manager, providers: PROVIDERS, desktop, info: { runner: 'fake', model: 'rules', modelReady: true } }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
   try {
     for (const institution of ['pc', 'cdm', 'rdc', 'blocked', 'busy']) {
       const context = await browser.newContext({ viewport: { width: 390, height: 844 } });

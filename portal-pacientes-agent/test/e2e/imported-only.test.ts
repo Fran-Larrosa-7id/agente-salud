@@ -13,6 +13,7 @@ import { PROVIDERS } from '../../src/providers/index.js';
 import { createApp } from '../../src/server/app.js';
 import { silentLogger } from '../../src/security/logger.js';
 import { testConfig } from '../helpers.js';
+import { testBrowserChannel } from '../browser-channel.js';
 
 test('portal sin datos precargados; migración conserva archivo importado y elimina muestras', { timeout: 30_000 }, async () => {
   const config = testConfig({ portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes') });
@@ -20,7 +21,7 @@ test('portal sin datos precargados; migración conserva archivo importado y elim
   const server = createApp({ config, manager, providers: PROVIDERS, info: { runner: 'fake', model: 'rules', modelReady: true } }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
   const pdf = makeDemoPdf(['QA sintético: archivo importado que debe conservarse']);
   const sha256 = createHash('sha256').update(pdf).digest('hex');
   try {

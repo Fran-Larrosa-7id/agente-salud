@@ -51,7 +51,7 @@ test('recargar el enlace de regreso recupera el mismo job sin cancelarlo', { tim
   const server = createApp({ config, manager, providers: PROVIDERS, info: { runner: 'fake', model: 'rules', modelReady: true } }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true, ...(testBrowserChannel ? { channel: testBrowserChannel } : {}) });
   try {
     const page = await browser.newPage();
     await page.addInitScript(`localStorage.setItem('pp_agent_url', ${JSON.stringify(base)});`);

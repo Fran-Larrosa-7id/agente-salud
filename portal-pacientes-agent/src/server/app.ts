@@ -9,7 +9,7 @@ import { ManagerError, type JobManager } from '../jobs/job-manager.js';
 import type { ProviderConfig } from '../providers/types.js';
 import { streamJobEvents } from './sse.js';
 import { desktopHtml, interactive, type RemoteDesktop } from './remote-desktop.js';
-import { installPortalAuth } from './portal-auth.js';
+import { installPortalAuth, isSecureRequest, requestOrigin } from './portal-auth.js';
 
 export interface AppDeps {
   config: Config;
@@ -74,7 +74,10 @@ export function createApp({ config, manager, providers, info, desktop }: AppDeps
         res.set('cache-control', 'no-store');
         res.set('referrer-policy', 'no-referrer');
         // noVNC decodifica tiles PNG/JPEG en imágenes data: antes de dibujarlos en el canvas.
-        res.set('content-security-policy', `default-src 'self'; img-src 'self' data:; script-src 'self' 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self' ws: wss:; frame-ancestors 'self'`);
+        const pageOrigin = requestOrigin(req);
+        const websocketOrigin = pageOrigin ? new URL(pageOrigin) : null;
+        if (websocketOrigin) websocketOrigin.protocol = isSecureRequest(req) ? 'wss:' : 'ws:';
+        res.set('content-security-policy', `default-src 'self'; img-src 'self' data:; script-src 'self' 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'${websocketOrigin ? ` ${websocketOrigin.origin}` : ''}; frame-ancestors 'self'`);
         res.status(job ? 200 : 404).type('html').send(desktopHtml(id, nonce, job?.providerName, job?.provider, !job));
     });
     app.post('/api/imports/:jobId/desktop', async (req, res) => {
@@ -84,7 +87,7 @@ export function createApp({ config, manager, providers, info, desktop }: AppDeps
       try {
         const token = await desktop.start(job);
         if (!interactive(job)) return void res.status(409).json({ error: 'JOB_TERMINAL' });
-        res.cookie('portal_remote', token, { httpOnly: true, sameSite: 'strict', secure: req.secure || req.headers['x-forwarded-proto'] === 'https', path: `/remote/${job.id}/`, maxAge: config.loginTimeoutMs });
+        res.cookie('portal_remote', token, { httpOnly: true, sameSite: 'strict', secure: isSecureRequest(req), path: `/remote/${job.id}/`, maxAge: config.loginTimeoutMs });
         res.json({ ready: true });
       } catch { res.status(503).json({ error: 'DESKTOP_UNAVAILABLE' }); }
     });

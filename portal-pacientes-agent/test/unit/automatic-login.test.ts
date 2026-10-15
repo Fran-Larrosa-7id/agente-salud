@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { evaluateLogin, waitForLogin } from '../../src/browser/login-detector.js';
 import { centroDm } from '../../src/providers/centrodm/centrodm.provider.js';
+import { percamb } from '../../src/providers/percamb/percamb.provider.js';
 import { rdcChacabuco } from '../../src/providers/rdcchacabuco/rdcchacabuco.provider.js';
 import { FakePort, snap, el, testProvider } from '../helpers.js';
 
@@ -14,6 +15,19 @@ test('RDC reconoce Sus estudios realizados en index.php#/grilla sin depender del
   assert.equal(result.authenticated, true); assert.equal(result.signals.leftLoginUrl, false);
   assert.equal(evaluateLogin({ ...grid, hintHits: [], collections: [] }, rdcChacabuco).authenticated, false);
   for (const flag of ['hasPasswordField', 'captcha', 'otp', 'modal']) assert.equal(evaluateLogin({ ...grid, [flag]: true }, rdcChacabuco).authenticated, false);
+});
+test('Pérez Cambet reconoce el ingreso en /rol con RESULTADOS ONLINE y descarta rutas o desafíos ajenos', async () => {
+  const results = snap({
+    url: 'https://www.biodatasa.com.ar/lwcloud/percamb/rol',
+    headings: ['RESULTADOS ONLINE'],
+  });
+  assert.equal(evaluateLogin(results, percamb).authenticated, true);
+  assert.equal(await waitForLogin(new FakePort(results), percamb, { timeoutMs: 1000, pollMs: 1, signal: new AbortController().signal }), 'authenticated');
+  assert.equal(evaluateLogin({ ...results, url: 'https://example.test/lwcloud/percamb/rol' }, percamb).authenticated, false);
+  assert.equal(evaluateLogin({ ...results, url: percamb.loginUrl }, percamb).authenticated, false);
+  for (const flag of ['hasPasswordField', 'captcha', 'otp', 'modal']) {
+    assert.equal(evaluateLogin({ ...results, [flag]: true }, percamb).authenticated, false);
+  }
 });
 test('Centro DM reconoce bienvenida con acciones verificadas aunque el logout sea un ícono', () => {
   const welcome = snap({ url: centroDm.loginUrl, hintHits: ['ESTUDIOS', 'BIENVENIDO A TU PORTAL DE ESTUDIOS'], centroDmStudyList: true });

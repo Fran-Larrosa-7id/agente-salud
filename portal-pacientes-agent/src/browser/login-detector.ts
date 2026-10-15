@@ -21,8 +21,10 @@ const fold = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/
  */
 export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): { authenticated: boolean; score: number; signals: LoginSignals } {
   let path = '';
+  let parsedUrl: URL | null = null;
   try {
-    path = new URL(snap.url).pathname;
+    parsedUrl = new URL(snap.url);
+    path = parsedUrl.pathname;
   } catch {
     /* URL interna */
   }
@@ -41,10 +43,15 @@ export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): 
     return /FECHA/.test(headers) && /MODALIDAD/.test(headers) && /ESTUDIO|DESCRIPCION/.test(headers);
   });
   const centroAction = snap.elements.some(element => /\/funcion\/llamadoURL\.php(?:\?|$)/i.test(element.href));
+  const percambResultsRoute = provider.id === 'percamb' && provider.studyExtractor === 'labwin' && !!parsedUrl &&
+    provider.allowedHosts.some(host => host.toLowerCase() === parsedUrl!.hostname.toLowerCase()) &&
+    (!provider.requireHttps || parsedUrl.protocol === 'https:') &&
+    /^\/lwcloud\/percamb\/rol\/?$/i.test(path) &&
+    [...snap.hintHits, ...snap.headings].some(text => /RESULTADOS ONLINE/i.test(fold(text)));
   const evidence = provider.studyExtractor === 'centrodm'
     ? (specificHint || signals.logoutAction) && (typedStudies || centroAction || snap.centroDmStudyList === true || (snap.noResultsText && signals.logoutAction))
-    : specificHint && (signals.leftLoginUrl || signals.hasCollection || signals.logoutAction);
-  const authenticated = signals.noPasswordField && noChallenge && evidence && score >= 3;
+    : specificHint && (signals.leftLoginUrl || signals.hasCollection || signals.logoutAction) || percambResultsRoute;
+  const authenticated = signals.noPasswordField && noChallenge && evidence && (score >= 3 || percambResultsRoute);
   return { authenticated, score, signals };
 }
 

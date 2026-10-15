@@ -166,10 +166,14 @@ export const COLLECTOR_SOURCE = String.raw`(function (args) {
   var captchaEl = document.querySelector('iframe[src*="recaptcha"],iframe[src*="hcaptcha"],iframe[src*="turnstile"],.g-recaptcha,.h-captcha,.cf-turnstile,img[src*="captcha" i],[id*="captcha" i],[class*="captcha" i]');
   var captcha = !!(captchaEl && visible(captchaEl)) || /NO SOY UN ROBOT|VERIFICA QUE ERES HUMANO|CAPTCHA/.test(bodyText);
   function inputEvidence(el) {
-    var attrs = [el.getAttribute('aria-label'), el.getAttribute('placeholder'), el.getAttribute('name'), el.id, el.getAttribute('autocomplete')].join(' ');
+    // Los nombres/ids de filtros pueden contener "codigo" aunque el campo visible sea
+    // Protocolo o Documento. La MFA se detecta por texto, autocomplete o nombre explícito.
+    var attrs = [el.getAttribute('aria-label'), el.getAttribute('placeholder'), el.getAttribute('autocomplete')].join(' ');
     var label = el.id ? document.querySelector('label[for="' + CSS.escape(el.id) + '"]') : null;
     if (label) attrs += ' ' + textOf(label);
     if (el.closest('label')) attrs += ' ' + textOf(el.closest('label'));
+    var identifier = [el.getAttribute('name'), el.id].join(' ');
+    if (/(?:^|[^a-z0-9])(OTP|ONE[_. -]?TIME[_. -]?CODE|VERIFICATION[_. -]?CODE|CODIGO[_. -]?VERIFICACION|TOKEN[_. -]?VERIFICACION|SECURITY[_. -]?CODE)(?:$|[^a-z0-9])/i.test(identifier)) return true;
     return /\b(OTP|CODIGO|CÓDIGO|VERIFICACION|VERIFICATION|TOKEN|SEGUNDO FACTOR|ONE.TIME.CODE)\b/i.test(attrs);
   }
   var otpInput = Array.prototype.slice.call(document.querySelectorAll('input[autocomplete="one-time-code"]')).some(visible);

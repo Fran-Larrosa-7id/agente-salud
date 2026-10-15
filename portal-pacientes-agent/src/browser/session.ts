@@ -17,7 +17,7 @@ import type { BrowserHost } from './browser-host.js';
 import { probePixeonDownload, handlePixeonCookieConsent, clickPixeonControl } from './pixeon-download.js';
 import { COLLECTOR_SOURCE } from './collector.js';
 import { ProviderParserMismatchError, type BrowserPort, type CentroDmStudyReference, type RdcChacabucoStudyReference, type ProviderStudyList, type ProviderStudyMetadata, type ProviderStructureEvent, type RawElement, type RawPageSnapshot } from './types.js';
-import { evaluateLogin } from './login-detector.js';
+import { evaluateLogin, hasPercambResultsEvidence, isPercambResultsRoute } from './login-detector.js';
 
 export class ProviderUnavailableError extends Error {
   constructor(readonly status: number | null) {
@@ -117,6 +117,7 @@ function isHtmlPayload(buffer: Buffer): boolean {
  */
 export class BrowserSession implements BrowserPort {
   private loginCandidate: { page: Page; id: string } | null = null;
+  private percambLoginProbeSignature = '';
   private readonly loginIds = new WeakMap<Page, string>();
   private page!: Page;
   private mainPage!: Page;
@@ -646,7 +647,9 @@ export class BrowserSession implements BrowserPort {
       let hostname = ''; try { hostname = new URL(page.url()).hostname; } catch { continue; }
       if (!this.provider.allowedHosts.includes(hostname)) continue;
       const value = await this.snapshot(hints, page).catch(() => null);
-      if (!value || !evaluateLogin(value, this.provider).authenticated) continue;
+      const decision = value ? evaluateLogin(value, this.provider) : null;
+      this.logPercambLoginProbe('percamb_login_probe', page.url(), value, !!decision?.authenticated);
+      if (!value || !decision?.authenticated) continue;
       let id = this.loginIds.get(page); if (!id) { id = randomUUID(); this.loginIds.set(page, id); }
       this.loginCandidate = { page, id };
       return { ...value, loginPageId: id };
@@ -657,9 +660,14 @@ export class BrowserSession implements BrowserPort {
 
   async confirmLogin(snapshot: RawPageSnapshot): Promise<boolean> {
     const candidate = this.loginCandidate;
-    if (!candidate || candidate.id !== snapshot.loginPageId || candidate.page.isClosed() || this.closing) return false;
+    if (!candidate || candidate.id !== snapshot.loginPageId || candidate.page.isClosed() || this.closing) {
+      this.logPercambLoginProbe('percamb_login_confirm', snapshot.url, null, false);
+      return false;
+    }
     const value = await this.snapshot(this.provider.authenticatedHints, candidate.page).catch(() => null);
-    if (!value || !evaluateLogin(value, this.provider).authenticated || this.closing) return false;
+    const authenticated = !!value && evaluateLogin(value, this.provider).authenticated;
+    this.logPercambLoginProbe('percamb_login_confirm', candidate.page.url(), value, authenticated && !this.closing);
+    if (!value || !authenticated || this.closing) return false;
     this.page = this.mainPage = candidate.page;
     this.loginCandidate = null;
     return true;
@@ -712,6 +720,28 @@ export class BrowserSession implements BrowserPort {
     return merged;
   }
 
+  /** Registra solo señales booleanas del detector; nunca texto, query ni datos de la página. */
+  private logPercambLoginProbe(event: 'percamb_login_probe' | 'percamb_login_confirm', url: string, snap: RawPageSnapshot | null, authenticated: boolean): void {
+    if (this.provider.id !== 'percamb') return;
+    const fields = {
+      routeMatched: isPercambResultsRoute(url, this.provider),
+      resultsPage: !!snap && hasPercambResultsEvidence(snap, this.provider),
+      snapshotOk: !!snap,
+      ...(snap ? {
+        passwordVisible: snap.hasPasswordField,
+        captcha: snap.captcha,
+        otp: snap.otp,
+        otpSuppressed: snap.otp && hasPercambResultsEvidence(snap, this.provider),
+        modal: snap.modal,
+      } : {}),
+      authenticated,
+    };
+    const signature = `${event}:${Object.values(fields).join(':')}`;
+    if (signature === this.percambLoginProbeSignature) return;
+    this.percambLoginProbeSignature = signature;
+    this.providerStructure(event, undefined, fields);
+  }
+
   private safeUrlParts(url: string): { scheme: string; host: string; port: string } {
     try {
       const scheme = /^[a-z][a-z0-9+.-]*:/i.exec(url)?.[0]?.replace(/:$/, '').toLowerCase() || 'unknown';
@@ -760,6 +790,7 @@ export class BrowserSession implements BrowserPort {
 
   private providerStructure(event: ProviderStructureEvent['event'], count?: number, details: Partial<ProviderStructureEvent> = {}): void {
     const alwaysLog = new Set<ProviderStructureEvent['event']>([
+      'percamb_login_probe', 'percamb_login_confirm',
       'centrodm_metadata_dates_found', 'centrodm_studies_with_date', 'centrodm_study_metadata',
       'pixeon_download_probe_start', 'pixeon_download_probe_end', 'pixeon_download_probe', 'pixeon_frames',
       'pixeon_frame', 'pixeon_text_exact', 'pixeon_text_partial', 'pixeon_attr_candidates', 'pixeon_dom_candidate',
@@ -988,22 +1019,12 @@ export class BrowserSession implements BrowserPort {
 
   /** Señales estructurales para el fast path del proveedor; nunca retorna texto del paciente. */
   async isPercambResultsPage(): Promise<boolean> {
-    if (this.provider.studyExtractor !== 'labwin') return false;
-    let current: URL;
-    let login: URL;
-    try {
-      current = new URL(this.page.url());
-      login = new URL(this.provider.loginUrl);
-    } catch {
-      return false;
-    }
-    const basePath = login.pathname.replace(/login\/?$/i, '');
-    const underProviderPath = current.origin === login.origin && current.pathname.startsWith(basePath) && !this.provider.loginPathPattern.test(current.pathname);
-    if (!underProviderPath) return false;
-    if (this.provider.id === 'percamb' && !/\/lwcloud\/percamb\/rol/i.test(current.pathname)) return false;
+    if (!isPercambResultsRoute(this.page.url(), this.provider)) return false;
     const snap = await this.snapshot(this.provider.authenticatedHints).catch(() => null);
-    if (!snap || snap.hasPasswordField) return false;
-    return [...snap.hintHits, ...snap.headings].some((text) => /RESULTADOS ONLINE/i.test(text));
+    if (!snap || snap.hasPasswordField || snap.captcha || snap.modal) return false;
+    if (snap.otp && !hasPercambResultsEvidence(snap, this.provider)) return false;
+    return [...snap.hintHits, ...snap.headings].some((text) => /RESULTADOS ONLINE/i.test(text)) ||
+      snap.pageType === 'results_list' || snap.collections.length > 0;
   }
 
   async isCentroDmResultsPage(): Promise<boolean> {

@@ -10,8 +10,34 @@ export interface LoginSignals {
   logoutAction: boolean;
 }
 
-const LOGOUT = /cerrar sesi[oó]n|salir|logout|log out|desconectar/i;
 const fold = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+/** Ruta final de ingreso de LabWin. Puede redirigir entre www y el dominio raíz. */
+export function isPercambResultsRoute(url: string, provider: ProviderConfig): boolean {
+  if (provider.id !== 'percamb' || provider.studyExtractor !== 'labwin') return false;
+  try {
+    const parsed = new URL(url);
+    return provider.allowedHosts.some(host => host.toLowerCase() === parsed.hostname.toLowerCase()) &&
+      (!provider.requireHttps || parsed.protocol === 'https:') &&
+      /^\/lwcloud\/percamb\/rol\/?$/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * LabWin sometimes labels ordinary search filters as OTP evidence. Only suppress that
+ * ambiguous signal on the provider's exact results route when its heading or result
+ * list is recognized; login challenges on other pages remain blocking.
+ */
+export function hasPercambResultsEvidence(snap: RawPageSnapshot, provider: ProviderConfig): boolean {
+  return isPercambResultsRoute(snap.url, provider) && (
+    [...snap.hintHits, ...snap.headings].some(text => fold(text).includes('RESULTADOS ONLINE')) ||
+    snap.pageType === 'results_list'
+  );
+}
+
+const LOGOUT = /cerrar sesi[oó]n|salir|logout|log out|desconectar/i;
 
 /**
  * Combina varias señales para decidir si el paciente ya inició sesión. Ninguna alcanza sola:
@@ -36,18 +62,19 @@ export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): 
     logoutAction: snap.elements.some((e) => LOGOUT.test(e.label)),
   };
   const score = Object.values(signals).filter(Boolean).length;
-  const noChallenge = !snap.captcha && !snap.otp && !snap.modal;
+  const percambResultsPage = hasPercambResultsEvidence(snap, provider);
+  const otpChallenge = snap.otp && !percambResultsPage;
+  const noChallenge = !snap.captcha && !otpChallenge && !snap.modal;
   const specificHint = snap.hintHits.some(hint => !/^(ESTUDIOS|PERFIL)$/.test(fold(hint).trim()));
   const typedStudies = snap.collections.some(collection => {
     const headers = fold(collection.headers.join(' '));
     return /FECHA/.test(headers) && /MODALIDAD/.test(headers) && /ESTUDIO|DESCRIPCION/.test(headers);
   });
   const centroAction = snap.elements.some(element => /\/funcion\/llamadoURL\.php(?:\?|$)/i.test(element.href));
-  const percambResultsRoute = provider.id === 'percamb' && provider.studyExtractor === 'labwin' && !!parsedUrl &&
-    provider.allowedHosts.some(host => host.toLowerCase() === parsedUrl!.hostname.toLowerCase()) &&
-    (!provider.requireHttps || parsedUrl.protocol === 'https:') &&
-    /^\/lwcloud\/percamb\/rol\/?$/i.test(path) &&
-    [...snap.hintHits, ...snap.headings].some(text => /RESULTADOS ONLINE/i.test(fold(text)));
+  // LabWin redirige a /rol al terminar el ingreso. En algunas variantes de la página
+  // el listado se dibuja en controles legacy que el colector no reconoce como texto;
+  // el host permitido + esta ruta exacta son la señal específica de autenticación.
+  const percambResultsRoute = isPercambResultsRoute(snap.url, provider);
   const evidence = provider.studyExtractor === 'centrodm'
     ? (specificHint || signals.logoutAction) && (typedStudies || centroAction || snap.centroDmStudyList === true || (snap.noResultsText && signals.logoutAction))
     : specificHint && (signals.leftLoginUrl || signals.hasCollection || signals.logoutAction) || percambResultsRoute;

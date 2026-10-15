@@ -51,7 +51,12 @@ export async function startFakePortal() {
       <button type="button" class="row-action" aria-label="Ver estudio" onclick="window.__studyOpens=(window.__studyOpens||0)+1;sessionStorage.setItem('studyOpens',window.__studyOpens);location.href='/lwcloud/fake/protocolo/${protocol}'">
         <svg class="icon-eye" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path></svg>
       </button></div>`).join('');
-    res.send(page('Resultados', `<main><h1>RESULTADOS ONLINE</h1><p>La cuenta puede usar un segundo factor cuando corresponda.</p><div class="study-list">${content || '<p class="empty">No se encontraron estudios.</p>'}</div></main>`));
+    res.send(page('Resultados', `<main><h1>RESULTADOS ONLINE</h1><p>La cuenta puede usar un segundo factor cuando corresponda.</p>
+      <form class="search-filters"><label>Fecha: <input type="text" name="fechaDesde" placeholder="Desde/Fecha exacta"></label>
+      <label>Protocolo: <input type="text" name="codigo" placeholder="Protocolo"></label>
+      <label>Paciente: <input type="text" name="paciente" placeholder="Nombre"></label>
+      <label>Documento: <input type="text" name="documento" placeholder="Documento"></label></form>
+      <div class="study-list">${content || '<p class="empty">No se encontraron estudios.</p>'}</div></main>`));
   });
 
   app.get('/lwcloud/fake/resultados-links', (req, res) => {

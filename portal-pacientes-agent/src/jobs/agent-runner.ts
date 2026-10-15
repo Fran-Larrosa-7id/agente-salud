@@ -126,6 +126,7 @@ export class AgentImportRunner implements JobRunner {
           job.transition(S.DOWNLOADING, { studyId: job.current?.studyId });
         }
         if (event === 'percamb_page') return log.debug(job.id, event, { provider: provider.id, type: 'results_list' });
+        if (event === 'percamb_login_probe' || event === 'percamb_login_confirm') return log.info(job.id, event, { provider: provider.id, ...fields });
         if (ALWAYS_LOG_PIXEON.has(event)) return log.info(job.id, event, { provider: provider.id, ...fields });
         return log.debug(job.id, event, { provider: provider.id, ...fields });
       };

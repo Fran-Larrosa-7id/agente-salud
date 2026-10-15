@@ -114,7 +114,7 @@ export class ProviderParserMismatchError extends Error {
 }
 
 export interface ProviderStructureEvent {
-  event: 'percamb_page' | 'percamb_result_links' | 'percamb_result_actions' | 'percamb_candidate_rows' | 'percamb_parsed_studies' | 'percamb_metadata_complete' | 'percamb_action' | 'percamb_ancestor' |
+  event: 'percamb_page' | 'percamb_login_probe' | 'percamb_login_confirm' | 'percamb_result_links' | 'percamb_result_actions' | 'percamb_candidate_rows' | 'percamb_parsed_studies' | 'percamb_metadata_complete' | 'percamb_action' | 'percamb_ancestor' |
     'centrodm_page' | 'centrodm_tables' | 'centrodm_rows' | 'centrodm_result_actions' | 'centrodm_minimal_studies' | 'centrodm_metadata_enriched' | 'centrodm_metadata_partial' | 'centrodm_metadata_dates_found' | 'centrodm_studies_with_date' | 'centrodm_study_metadata' | 'centrodm_rows_with_action' | 'centrodm_action' | 'centrodm_parsed_studies' | 'centrodm_results' | 'centrodm_study_action' | 'centrodm_viewer_opened' | 'centrodm_viewer_detected' | 'centrodm_download_button' | 'centrodm_download_options' | 'centrodm_download_choice' | 'centrodm_archive_valid' | 'viewer_opened' | 'viewer_detected' | 'viewer_detection_signals' | 'viewer_reference_check' | 'viewer_download_button' | 'viewer_download_options' | 'viewer_download_strategy' | 'medical_archive_downloaded' |
     'pixeon_frames' | 'pixeon_frame' | 'pixeon_download_probe' | 'pixeon_download_probe_start' | 'pixeon_download_probe_end' | 'pixeon_download_fastpath' | 'pixeon_download_click' | 'pixeon_download_options' | 'pixeon_text_exact' | 'pixeon_text_partial' | 'pixeon_attr_candidates' | 'pixeon_dom_candidate' | 'pixeon_clickable_ancestor' | 'pixeon_structural_fallback' | 'pixeon_toolbar_candidates' | 'toolbar_candidate' | 'pixeon_toolbar_detected' | 'pixeon_download_structural_candidate' | 'find_document_dispatch' | 'centrodm_find_document_enter' | 'pixeon_download_text_matches' | 'pixeon_download_role_matches' | 'pixeon_download_attr_matches' | 'pixeon_download_menu_options' | 'pixeon_probe' | 'pixeon_cookie_consent' | 'pixeon_download_candidate' | 'pixeon_download_button' | 'pixeon_download_menu' | 'pixeon_download_choice' |
     'rdc_page' | 'rdc_rows' | 'rdc_file_icons' | 'rdc_file_icons_fallback' | 'rdc_file_icons_class_fallback' | 'rdc_file_icons_global' | 'rdc_result_actions' | 'rdc_candidate_rows' | 'rdc_parsed_studies' | 'rdc_studies_found' | 'rdc_action_build' | 'rdc_study_action' | 'rdc_study_build' | 'rdc_study_reference_saved' | 'rdc_provider_refs' | 'rdc_open_study' | 'rdc_document_listeners_ready' | 'rdc_study_action_click' | 'rdc_modal_opened' | 'rdc_frame_navigation' | 'rdc_frames' | 'rdc_frame' | 'rdc_modal_probe' | 'rdc_pdf_sources_scan' | 'rdc_pdf_dom_candidate' | 'rdc_embed_candidates' | 'rdc_embed_candidate' | 'rdc_embed_fetch' | 'rdc_nested_source_scan' | 'rdc_pdf_response' | 'rdc_pdf_candidate' | 'rdc_pdf_source' | 'rdc_pdf_full' | 'rdc_pdf_valid' | 'rdc_external_origin' | 'rdc_import_complete';
@@ -126,6 +126,15 @@ export interface ProviderStructureEvent {
   host?: string;
   port?: string;
   found?: boolean;
+  routeMatched?: boolean;
+  resultsPage?: boolean;
+  snapshotOk?: boolean;
+  passwordVisible?: boolean;
+  captcha?: boolean;
+  otp?: boolean;
+  otpSuppressed?: boolean;
+  modal?: boolean;
+  authenticated?: boolean;
   popup?: boolean;
   links?: number;
   textNodes?: number;

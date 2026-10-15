@@ -68,6 +68,10 @@ test('el logger solo acepta campos de la lista blanca y valores con forma de ide
   } as unknown as Parameters<typeof formatLine>[2];
   const line = formatLine('72abcdef-0000', 'studies_found', fields);
   assert.equal(line, '[72abcdef] studies_found provider=percamb state=STUDIES_FOUND count=2 errorCode=[redacted]');
+  assert.equal(formatLine('72abcdef-0000', 'percamb_login_probe', {
+    provider: 'percamb', routeMatched: true, resultsPage: true, snapshotOk: true, passwordVisible: false,
+    captcha: false, otp: true, otpSuppressed: true, modal: false, authenticated: true,
+  }), '[72abcdef] percamb_login_probe provider=percamb routeMatched=true resultsPage=true snapshotOk=true passwordVisible=false captcha=false otp=true otpSuppressed=true modal=false authenticated=true');
 });
 
 test('los diagnósticos estructurales Centro DM permiten forma, no destino ni query', () => {

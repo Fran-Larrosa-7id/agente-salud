@@ -12,6 +12,7 @@ import { rdcChacabuco } from '../../src/providers/rdcchacabuco/rdcchacabuco.prov
 import { silentLogger } from '../../src/security/logger.js';
 import { evaluateLogin } from '../../src/browser/login-detector.js';
 import { testConfig, waitFor } from '../helpers.js';
+import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 
 test('RDC: grilla VisualMedica con Sus estudios realizados y Salir avanza automáticamente', { timeout: 20_000 }, async () => {
   const app = express(); app.use(express.urlencoded({ extended: false }));
@@ -27,7 +28,7 @@ test('RDC: grilla VisualMedica con Sus estudios realizados y Salir avanza autom�
   const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   const provider = { ...rdcChacabuco, loginUrl: base + path, allowedHosts: ['127.0.0.1'], requireHttps: false };
-  const host = new BrowserHost({ headless: true, debugArtifacts: false, debugDir: '' });
+  const host = new BrowserHost({ headless: true, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: '' });
   let runner!: AgentImportRunner;
   const manager = new JobManager({ config: testConfig({ remoteLogin: true, loginTimeoutMs: 10000 }), providers: { rdcchacabuco: provider }, log: silentLogger,
     runnerFactory: (job, deps) => (runner = new AgentImportRunner(job, deps, { host, createModel: () => new RulesModel(), loginPollMs: 50 })),
@@ -67,7 +68,7 @@ test('Centro DM en URL raíz: login inválido, MFA/CAPTCHA humanos y dos lectura
     const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     const provider = { ...centroDm, loginUrl: base + '/', allowedHosts: ['127.0.0.1'], allowedOrigins: [], requireHttps: false };
-    const host = new BrowserHost({ headless: true, debugArtifacts: false, debugDir: '' });
+    const host = new BrowserHost({ headless: true, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: '' });
     let runner!: AgentImportRunner;
     const manager = new JobManager({ config: testConfig({ remoteLogin: true, loginTimeoutMs: 15000 }), providers: { centrodm: provider }, log: silentLogger,
       runnerFactory: (job, deps) => (runner = new AgentImportRunner(job, deps, { host, createModel: () => new RulesModel(), loginPollMs: 50, humanPollMs: 50 })),

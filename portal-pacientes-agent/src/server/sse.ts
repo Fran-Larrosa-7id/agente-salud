@@ -13,7 +13,7 @@ function write(res: Response, id: number | null, type: string, data: unknown): v
  * Primero envía un "snapshot" con el estado completo (para quien se conecta tarde o se reconecta)
  * y después cada evento. Solo estados resumidos: nunca razonamiento interno del agente.
  */
-export function streamJobEvents(req: Request, res: Response, job: ImportJob): void {
+export function streamJobEvents(req: Request, res: Response, job: ImportJob, authorized: () => boolean = () => true): void {
   res.writeHead(200, {
     'content-type': 'text/event-stream; charset=utf-8',
     'cache-control': 'no-store',
@@ -23,9 +23,9 @@ export function streamJobEvents(req: Request, res: Response, job: ImportJob): vo
   res.write('retry: 2000\n\n');
   write(res, null, 'snapshot', job.snapshot());
 
-  const onEvent = (ev: JobEvent) => write(res, ev.seq, ev.type, { state: ev.state, at: ev.at, ...(ev.data ?? {}) });
+  const onEvent = (ev: JobEvent) => { if (!authorized()) { res.end(); return; } write(res, ev.seq, ev.type, { state: ev.state, at: ev.at, ...(ev.data ?? {}) }); };
   job.on('event', onEvent);
-  const beat = setInterval(() => res.write(': ping\n\n'), HEARTBEAT_MS);
+  const beat = setInterval(() => { if (!authorized()) res.end(); else res.write(': ping\n\n'); }, HEARTBEAT_MS);
   beat.unref();
 
   const close = () => {

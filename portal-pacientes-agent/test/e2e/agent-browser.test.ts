@@ -10,7 +10,7 @@ import { JobState as S } from '../../src/jobs/states.js';
 import { RulesModel } from '../../src/llm/rules.js';
 import { createLogger } from '../../src/security/logger.js';
 import { FAKE_USER, startFakePortal } from '../fixtures/fake-portal.js';
-import { testBrowserChannel } from '../browser-channel.js';
+import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 import { testConfig, testProvider, waitFor } from '../helpers.js';
 import { readFile } from 'node:fs/promises';
 
@@ -24,7 +24,7 @@ let host: BrowserHost;
 
 before(async () => {
   portal = await startFakePortal();
-  host = new BrowserHost({ headless: true, channel: testBrowserChannel, debugArtifacts: false, debugDir: path.join(tmpdir(), 'pp-debug') });
+  host = new BrowserHost({ headless: true, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: path.join(tmpdir(), 'pp-debug') });
 });
 after(async () => {
   await host.close();

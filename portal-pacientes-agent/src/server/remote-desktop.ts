@@ -7,7 +7,8 @@ import type { ImportJob } from '../jobs/job.js';
 import { JobState as S } from '../jobs/states.js';
 import type { JobManager } from '../jobs/job-manager.js';
 import { silentLogger, type Logger } from '../security/logger.js';
-import { requestOrigin } from './portal-auth.js';
+import { requestOrigin, type PortalAccess } from './portal-auth.js';
+import type { Config } from '../config.js';
 
 export function interactive(job: ImportJob | undefined): boolean {
   return !!job && (job.state === S.WAITING_FOR_USER_LOGIN || job.state === S.HUMAN_ACTION_REQUIRED);
@@ -42,7 +43,10 @@ async function ready(port: number): Promise<boolean> {
 
 /** Un desktop efímero. Los bytes VNC se transportan sin interpretar ni registrar teclas/pantallas. */
 export class RemoteDesktop {
-  constructor(private readonly log: Logger = silentLogger) {}
+  constructor(private readonly log: Logger = silentLogger, private readonly proxyPort = 6080) {}
+  private access?: PortalAccess;
+  private config?: Config;
+  authorizeWith(access: PortalAccess, config: Config): void { this.access = access; this.config = config; }
   private active: Desktop | null = null;
   private pending: Promise<string> | null = null;
   private stopping: Promise<void> = Promise.resolve();
@@ -109,22 +113,25 @@ export class RemoteDesktop {
     const desktop = this.active;
     const token = /(?:^|;\s*)portal_remote=([0-9a-f]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
     let originAllowed = false;
-    try { originAllowed = !!req.headers.origin && new URL(req.headers.origin).origin === requestOrigin(req); } catch {}
-    if (!match || !desktop || desktop.job.id !== match[1] || !interactive(manager.get(match[1])) || !originAllowed || !token || !timingSafeEqual(Buffer.from(token), Buffer.from(desktop.token))) {
+    try { originAllowed = !!req.headers.origin && new URL(req.headers.origin).origin === requestOrigin(req, this.config); } catch {}
+    const authorized = () => !this.access || (!!desktop && this.access.owner(req) === desktop.job.ownerUserId);
+    if (!match || !desktop || desktop.job.id !== match[1] || !interactive(manager.get(match[1])) || !authorized() || !originAllowed || !token || !timingSafeEqual(Buffer.from(token), Buffer.from(desktop.token))) {
       socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
       return;
     }
     desktop.sockets.add(socket);
+    const guard = setInterval(() => { if (!authorized() || !interactive(desktop.job)) socket.destroy(); }, 1000);
+    guard.unref(); socket.once('close', () => clearInterval(guard));
     const headers: Record<string, string> = { connection: 'Upgrade', upgrade: 'websocket' };
     for (const name of ['sec-websocket-key', 'sec-websocket-version', 'sec-websocket-protocol']) {
       const value = req.headers[name];
       if (typeof value === 'string') headers[name] = value;
     }
-    const upstream = request({ host: '127.0.0.1', port: 6080, path: '/', headers });
+    const upstream = request({ host: '127.0.0.1', port: this.proxyPort, path: '/', headers });
     upstream.on('error', () => socket.destroy());
     upstream.on('response', () => socket.destroy());
     upstream.on('upgrade', (response, remote, initial) => {
-      if (this.active !== desktop || !interactive(desktop.job) || socket.destroyed) return void remote.destroy();
+      if (this.active !== desktop || !interactive(desktop.job) || !authorized() || socket.destroyed) return void remote.destroy();
       desktop.sockets.add(remote);
       this.log.info(desktop.job.id, 'desktop_websocket_connected', { durationMs: Date.now() - desktop.job.createdAt });
       socket.write(`HTTP/1.1 101 Switching Protocols\r\n${Object.entries(response.headers).map(([key, value]) => `${key}: ${value}`).join('\r\n')}\r\n\r\n`);

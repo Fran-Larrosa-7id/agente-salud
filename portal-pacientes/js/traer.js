@@ -420,10 +420,10 @@
       '<p class="flow-sub center">' + (n ? '<b>' + P.plural(n, 'estudio agregado', 'estudios agregados') + '</b> desde ' + i.name + '. También los vas a encontrar en Documentos y en tu Historial.' : 'No creamos copias. Podés consultarlos en Estudios y Documentos.') +
       (existing.length ? '<br>' + P.plural(existing.length, 'Estudio que ya estaba', 'Estudios que ya estaban') + ' guardado' + (existing.length === 1 ? '' : 's') + ' en tu portal.' : '') + '</p>' +
       '<ul class="success-list">' + all.map((s, k) =>
-        '<li style="--i:' + k + '">' + ic('check', 18) + '<span class="sl-name">' + s.name + (F.saved.includes(s) ? '' : ' · Ya estaba guardado') + '</span><span class="num muted">' + P.fmt(s.date) + '</span>' +
+        '<li style="--i:' + k + '">' + ic('check', 18) + '<span class="sl-name">' + P.esc(s.name) + (F.saved.includes(s) ? '' : ' · Ya estaba guardado') + '</span><span class="num muted">' + P.fmt(s.date) + '</span>' +
         (s.file ? '<button type="button" class="btn btn-secondary btn-sm sl-dl" data-action="doc-download" data-id="doc-' + s.id + '" aria-label="Descargar ' + (s.file.kind === 'DICOM_ZIP' ? 'estudio DICOM' : 'PDF') + ' del ' + P.fmt(s.date) + '">' + ic('download', 16) + '<span>' + (s.file.kind === 'DICOM_ZIP' ? 'ZIP DICOM' : 'PDF') + '</span></button>' : '') +
         '</li>').join('') + '</ul>' +
-      '<p class="flow-sub center">Los archivos quedan guardados en este navegador y dispositivo. No se sincronizan con otros equipos; si borrás sus datos, se eliminan.</p>' +
+      '<p class="flow-sub center">' + (P.storageBackend === 'google_drive' ? 'Guardados en tu Google Drive. Podés verlos desde otro dispositivo ingresando con la misma cuenta Google.' : 'Los archivos quedan guardados en este navegador y dispositivo. No se sincronizan con otros equipos; si borrás sus datos, se eliminan.') + '</p>' +
       '<div class="flow-actions center"><a class="btn btn-secondary btn-lg" href="#/estudios">Volver a Estudios</a>' +
       '<a class="btn btn-accent btn-lg" href="' + (F.saved.length === 1 ? '#/estudios/' + encodeURIComponent(F.saved[0].id) : '#/estudios') + '" data-action="see-imported">' + (F.saved.length === 1 ? 'Ver estudio importado' : 'Ver estudios') + ic('arrow-right', 20) + '</a></div>' +
       '<p class="flow-foot center"><button type="button" class="link" data-action="flow-restart">Traer estudios de otra institución</button></p>'
@@ -540,6 +540,7 @@
     const i = P.inst(F.inst);
     const box = document.getElementById('live-open-error');
     box.innerHTML = '';
+    if (P.storageBackend === 'google_drive' && ['disconnected', 'reconnect_required'].includes(P.driveStatus)) { box.innerHTML = P.renderDrivePanel(); return; }
     const done = P.busy(el, 'Abriendo ' + i.name + '…');
     const token = F.run;
     // Reservar la pestaña dentro del clic: abrirla después del POST puede activar el bloqueo de popups.
@@ -560,7 +561,7 @@
       loginWindow?.close();
       done();
       if (token !== F.run) return;
-      const m = OPEN_ERRORS[e.code] || ['No pudimos abrir ' + i.name, 'Probá de nuevo en unos minutos.'];
+      const m = OPEN_ERRORS[e.code] || (P.cloudMessages && P.cloudMessages[e.code] ? ['No pudimos iniciar la importación', P.cloudMessage(e.code)] : ['No pudimos abrir ' + i.name, 'Probá de nuevo en unos minutos.']);
       const cancel = e.code === 'TOO_MANY_JOBS' && e.activeJobId
         ? '<button type="button" class="btn btn-accent mt-4" data-action="live-recover-active" data-job-id="' + P.esc(e.activeJobId) + '">Continuar importación en curso</button> <button type="button" class="btn btn-secondary mt-4" data-action="live-cancel-active" data-job-id="' + P.esc(e.activeJobId) + '">Cancelar importación en curso</button>' : '';
       box.innerHTML = '<div class="error-card mt-4" role="alert" tabindex="-1">' + ic('alert', 22) + '<div><p class="error-t">' + m[0] + '</p><p>' + m[1] + '</p>' + cancel + '</div></div>';
@@ -602,7 +603,7 @@
 
   function liveBegin(jobId, remoteLogin, remoteWindow = null) {
     const L = (F.live = {
-      jobId, remoteLogin: !!remoteLogin, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], importFailures: [], saved: [], existing: [],
+      jobId, scope: P.accountId, remoteLogin: !!remoteLogin, state: 'CREATED', studies: [], selectedIds: [], phase: {}, failures: [], importFailures: [], saved: [], existing: [], progress: {}, storageError: null,
       human: null, error: null, at: 1, completed: false, closed: false, found: null, stop: null, storing: new Set(), sizes: {}, remoteWindow,
     });
     history.replaceState(null, '', '#/traer?inst=' + encodeURIComponent(F.inst) + '&job=' + encodeURIComponent(jobId));
@@ -612,6 +613,18 @@
     });
     go('wait');
   }
+
+  A['live-storage-retry'] = async button => {
+    const L = F.live; if (!L || L.closed || L.scope !== P.accountId) return;
+    const done = P.busy(button, 'Reintentando…');
+    try {
+      const snapshot = await P.agent.job(L.jobId);
+      if (snapshot.state === 'COMPLETED') { onLiveEvent(L, 'snapshot', { ...snapshot, lastSeq: undefined }); return; }
+      L.storageError = null; refreshDownload();
+      await P.agent.retryStorage(L.jobId);
+    } catch (error) { L.storageError = error.code || 'DRIVE_UPLOAD_FAILED'; refreshDownload(); }
+    finally { done(); }
+  };
 
   function liveFail(L, code) {
     L.error = code;
@@ -631,7 +644,7 @@
   const PHASE_OF = { opening_study: 'opening', viewer_ready: 'finding', finding_document: 'finding', downloading: 'downloading', importing: 'verifying' };
 
   function onLiveEvent(L, type, d) {
-    if (L !== F.live || L.closed) return;
+    if (L !== F.live || L.closed || L.scope !== P.accountId) return;
     if (Number.isFinite(d.lastSeq)) {
       if (Number.isFinite(L.lastSeq) && d.lastSeq <= L.lastSeq) return;
       L.lastSeq = d.lastSeq;
@@ -644,7 +657,15 @@
     if (type === 'snapshot') {
       if (d.studies && d.studies.length) L.studies = d.studies;
       L.selectedIds = d.selection || L.selectedIds;
+      if (d.state === 'COMPLETED' && P.storageBackend === 'google_drive') {
+        L.completed = true;
+        (d.failures || []).forEach(failure => { L.phase[failure.studyId] = 'failed'; });
+        go('download');
+        (d.files || []).forEach(file => storeLiveFile(L, { ...file, fileId: file.id }));
+        maybeFinish(L); return;
+      }
       if (d.state === 'COMPLETED') { liveClose(false); location.hash = '#/estudios'; return; }
+      if ('storageError' in d) L.storageError = d.storageError || null;
       if (['OPENING_STUDY', 'VIEWER_READY', 'FINDING_DOCUMENT', 'DOWNLOADING', 'IMPORTING'].includes(d.state)) {
         L.selectedIds.forEach(id => { if (!L.phase[id]) L.phase[id] = 'queued'; });
         if (d.current) L.phase[d.current.studyId] = d.state === 'IMPORTING' ? 'verifying' : d.state === 'DOWNLOADING' ? 'downloading' : 'finding';
@@ -693,6 +714,11 @@
       return;
     }
     if (type === 'file_ready') { storeLiveFile(L, d); return; }
+    if (type === 'storage_uploading') {
+      L.storageError = null; L.phase[d.studyId] = 'importing'; L.progress[d.studyId] = { bytes: d.bytes, total: d.total }; refreshDownload(); return;
+    }
+    if (type === 'storage_stored') { storeLiveFile(L, d); return; }
+    if (type === 'storage_error') { L.storageError = d.code; refreshDownload(); return; }
     if (type === 'study_failed') {
       L.phase[d.studyId] = 'failed';
       L.failures.push(d.studyId);
@@ -863,6 +889,7 @@
   async function refreshAlreadyImported(L) {
     const records = storedAgentStudies();
     const available = await Promise.all(records.map(async record => {
+      if (record.file && record.file.storageBackend === 'google_drive') return record.remoteStatus === 'stored' ? record : null;
       if (!record.file?.key) return null;
       try {
         const blob = await P.files.get(record.file.key);
@@ -958,7 +985,7 @@
     ['finding', () => 'Buscando el archivo original', () => 'Archivo original encontrado'],
     ['downloading', (s) => s.provider === 'centrodm' ? 'Descargando el estudio DICOM ZIP' : 'Descargando el PDF', (s) => s.provider === 'centrodm' ? 'Estudio DICOM ZIP descargado' : 'PDF descargado'],
     ['verifying', () => 'Verificando el archivo original', () => 'Archivo verificado'],
-    ['importing', () => 'Guardándolo en este navegador', () => 'Guardado en este navegador'],
+    ['importing', () => P.storageBackend === 'google_drive' ? 'Guardando en tu Google Drive' : 'Guardándolo en este navegador', () => P.storageBackend === 'google_drive' ? 'Guardado en Drive' : 'Guardado en este navegador'],
   ];
   const ORDER = { queued: -1, opening: 0, finding: 1, downloading: 2, verifying: 3, importing: 4, stored: 5 };
 
@@ -966,19 +993,21 @@
     const failed = phase === 'failed';
     const existing = phase === 'existing';
     const importFailed = failed && F.live && F.live.importFailures.includes(s.id);
+    const storageFailed = phase === 'importing' && F.live && !!F.live.storageError;
     const cur = failed ? -2 : ORDER[phase] === undefined ? -1 : ORDER[phase];
     const st = (n) => (cur > n ? 'done' : cur === n ? 'active' : 'pending');
-    const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', importFailed ? 'No se guardó' : 'No se pudo traer', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
+    const head = phase === 'stored' ? P.badge('success', 'Listo', 'check') : existing ? P.badge('success', 'Ya estaba', 'check') : failed ? P.badge('danger', importFailed ? 'No se guardó' : 'No se pudo traer', 'alert') : storageFailed ? P.badge('danger', 'Guardado pendiente', 'alert') : cur >= 0 ? P.badge('info', 'En curso', 'clock') : P.badge('neutral', 'En espera', 'clock');
     return (
-      '<li class="dl-study' + (cur >= 0 && cur < 5 ? ' is-current' : '') + (failed ? ' is-failed' : '') + '">' +
+      '<li class="dl-study' + (cur >= 0 && cur < 5 && !storageFailed ? ' is-current' : '') + (failed || storageFailed ? ' is-failed' : '') + '">' +
       '<div class="dl-head">' + P.typeTile(s.provider === 'centrodm' || s.provider === 'rdcchacabuco' ? 'imagenes' : 'laboratorio') + '<span class="dl-name">' + studyLabel(s) +
       (s.provider === 'rdcchacabuco' ? (s.studyType ? '<small>' + P.esc(s.studyType) + ' · Documento PDF</small>' : '<small>Documento PDF</small>') : s.provider === 'centrodm' ? (s.modality ? '<small>Modalidad ' + P.esc(s.modality) + '</small>' : '') : s.protocol ? '<small>Protocolo <span class="num">' + P.esc(s.protocol) + '</span></small>' : '') + '</span>' + head + '</div>' +
+      (phase === 'importing' && F.live && F.live.progress[s.id] ? '<p role="status">' + (storageFailed ? 'Confirmado en Drive: ' : 'Guardando en Drive: ') + P.fmtBytes(F.live.progress[s.id].bytes) + ' de ' + P.fmtBytes(F.live.progress[s.id].total) + '</p>' : '') +
       (existing
         ? '<p class="dl-fail">Este estudio ya está en tu portal. No creamos otra copia.</p>'
         : failed
         ? '<p class="dl-fail">' + (importFailed ? 'No pudimos guardar el archivo original junto con su estudio en el Portal.' : 'El asistente no encontró el documento de este estudio. Podés intentarlo de nuevo más tarde.') + '</p>'
         : '<ol class="plist plist-sm">' + DL_STEPS.map((x, n) => {
-          const state = st(n);
+          const state = storageFailed && n === 4 ? 'pending' : st(n);
           return '<li class="pl" data-state="' + state + '"><span class="pl-icon" aria-hidden="true"><span class="pl-spin"></span>' + ic('check', 14) + ic('x', 14) + '</span>' +
             '<span class="pl-text">' + (state === 'done' ? x[2](s) : x[1](s)) + '</span></li>';
         }).join('') + '</ol>') +
@@ -995,6 +1024,8 @@
       '<p class="flow-sub center">Estamos descargando los archivos originales de ' + i.name + '. Los estudios de imágenes pueden tardar unos minutos según su tamaño.</p>' +
       '<p class="dl-count center" id="dl-count" aria-live="polite"><b class="num">' + doneN + '</b> de <span class="num">' + chosen.length + '</span> ' + (chosen.length === 1 ? 'estudio' : 'estudios') + '</p>' +
       '<ul class="dl-list" id="dl-list">' + chosen.map((s) => dlBlock(s, L.phase[s.id])).join('') + '</ul>' +
+      (L.storageError ? '<div class="alert alert-error" role="alert">' + P.esc(P.cloudMessage(L.storageError)) + '<div class="btn-row mt-4"><button class="btn btn-primary" data-action="live-storage-retry">Reintentar guardado</button>' +
+        (['DRIVE_TOKEN_EXPIRED', 'DRIVE_NOT_CONNECTED'].includes(L.storageError) ? '<a class="btn btn-secondary" href="/api/drive/connect?job=' + encodeURIComponent(L.jobId) + '">Reconectar Drive</a>' : '') + '</div><p>El original se conserva temporalmente mientras esta importación esté abierta.</p></div>' : '') +
       '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>'
     );
   }
@@ -1019,6 +1050,19 @@
   }
 
   async function storeLiveFile(L, d) {
+    const identityGeneration = P.identityGeneration;
+    if (L.scope !== P.accountId) return;
+    if (P.storageBackend === 'google_drive') {
+      if (!d.storedStudyId) { if (L.phase[d.studyId] !== 'stored') L.phase[d.studyId] = L.storageError ? 'importing' : 'verifying'; refreshDownload(); return; }
+      if (L.storing.has(d.studyId) || L.phase[d.studyId] === 'stored') return;
+      L.storing.add(d.studyId);
+      await P.syncCloudCatalog(false);
+      if (identityGeneration !== P.identityGeneration || L.closed) return;
+      const saved = P.db.studies.find(study => study.file && study.file.catalogId === d.storedStudyId && study.remoteStatus === 'stored');
+      if (saved) { L.phase[d.studyId] = 'stored'; L.saved.push(saved); }
+      else L.storageError = P.cloudSyncError || 'DRIVE_UPLOAD_FAILED';
+      L.storing.delete(d.studyId); refreshDownload(); maybeFinish(L); return;
+    }
     if (L.storing.has(d.studyId) || ['stored', 'existing'].includes(L.phase[d.studyId])) return;
     L.storing.add(d.studyId);
     L.phase[d.studyId] = 'downloading';
@@ -1031,6 +1075,7 @@
     let metadataChanged = false;
     let committed = false;
     const rollback = async () => {
+      if (identityGeneration !== P.identityGeneration) return;
       if (metadataChanged && targetStudy) {
         if (previous) Object.assign(targetStudy, previous);
         else P.db.studies = P.db.studies.filter((item) => item !== targetStudy);
@@ -1044,6 +1089,7 @@
     };
     try {
       const { blob, sha256, kind, mimeType } = await P.agent.file(L.jobId, d.fileId, () => { L.phase[d.studyId] = 'verifying'; refreshDownload(); });
+      if (identityGeneration !== P.identityGeneration) return;
       if (!ext || !d.studyId) throw new Error('STUDY_METADATA_MISSING');
       const providerId = ext.provider || P.inst(F.inst).live;
       const duplicate = P.db.studies.find((study) => isAgentStudyFromProvider(study, providerId) && sha256 && (study.file && study.file.sha256 || study.pdfSha256) === sha256);
@@ -1059,6 +1105,7 @@
         : (kind === 'DICOM_ZIP' ? 'dicom-' : 'pdf-') + d.fileId;
       L.phase[d.studyId] = 'importing'; refreshDownload();
       fileStored = await P.files.put(fileKey, blob);
+      if (identityGeneration !== P.identityGeneration) return;
       if (!fileStored) throw new Error('ARTIFACT_STORAGE_FAILED');
       const isImage = providerId === 'centrodm' || providerId === 'rdcchacabuco' || kind === 'DICOM_ZIP';
       const study = {

@@ -294,10 +294,14 @@
     const shares = P.db.shares.filter((x) => x.studyId === s.id && P.shareStatus(x) === 'activo');
 
     let main = '';
-    if (!available) {
+    if (s.remoteStatus === 'remote_missing') {
+      main += '<section class="card"><h2 class="card-title">Archivo no disponible en Drive</h2><p>El archivo se eliminó o dejó de estar disponible. Podés revisar la papelera de tu Google Drive. No lo restauramos automáticamente.</p></section>';
+    } else if (!available) {
       main += '<section class="card card-pending"><div class="pending-row">' + ic('clock', 24) + '<div><h2 class="card-title">El resultado todavía no está listo</h2>' +
         '<p>' + inst.name + ' está procesando este estudio. Cuando esté disponible lo vas a ver acá y en Documentos.</p>' +
         '<p class="muted mt-2">Fecha estimada: <b class="num">' + P.fmt(s.expected) + '</b></p></div></div></section>';
+    } else if (s.file && s.file.storageBackend === 'google_drive') {
+      main += '<section class="card"><h2 class="card-title">Original guardado en tu Google Drive</h2><p>' + (isDicomZip ? 'ZIP DICOM original. Este Portal no tiene visor DICOM.' : 'PDF original, sin interpretaciones ni conversiones.') + '</p><div class="btn-row mt-4"><button class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">Abrir en Drive</button><button class="btn btn-danger-ghost" data-action="cloud-trash" data-id="' + P.esc(s.file.catalogId) + '">Enviar a la papelera de Drive</button></div></section>';
     } else if (s.file) {
       main += '<section class="card" aria-labelledby="h-orig">' + cardHead(isDicomZip ? 'Estudio de imágenes' : 'Documento original', null, 'h-orig') +
         (isDicomZip
@@ -341,7 +345,7 @@
         ? isDicomZip
           ? '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Archivo original DICOM', null, 'h-doc') +
             '<p class="file-meta">' + ic('file', 18) + '<span>' + P.fileMeta(s) + '</span></p>' +
-            '<p class="muted">El Portal conserva el ZIP original y no interpreta ni muestra sus imágenes.</p><p class="muted">Guardado en este navegador y dispositivo. No se sincroniza con otros equipos. Si borrás los datos del navegador, este archivo se elimina.</p></section>'
+            '<p class="muted">El Portal conserva el ZIP original y no interpreta ni muestra sus imágenes.</p><p class="muted">' + (s.file && s.file.storageBackend === 'google_drive' ? 'Guardado en tu Google Drive, disponible para esta cuenta desde otros dispositivos.' : 'Guardado en este navegador y dispositivo. No se sincroniza con otros equipos. Si borrás los datos del navegador, este archivo se elimina.') + '</p></section>'
           : '<section class="card doc-card" aria-labelledby="h-doc">' + cardHead('Documento original', null, 'h-doc') +
           '<button type="button" class="doc-preview" data-action="doc-view" data-id="' + doc.id + '" aria-label="Ver documento original">' + P.paper(doc, true) + '<span class="doc-preview-cta">' + ic('eye', 18) + 'Ver documento</span></button>' +
           '<p class="file-meta">' + ic('file', 18) + '<span>' + P.fileMeta(s) + '</span></p>' +
@@ -396,6 +400,7 @@
   A['doc-view'] = (el) => {
     const d = P.doc(el.dataset.id);
     if (!d) return;
+    if (d.file && d.file.storageBackend === 'google_drive') return P.openCloudDocument(d);
     const h = P.overlay({
       kind: 'modal',
       size: 'xl',
@@ -610,7 +615,7 @@
     const head =
       '<header class="profile-head"><span class="avatar avatar-lg" aria-hidden="true">' + P.PATIENT.initials + '</span>' +
       '<div><h1 class="page-title" tabindex="-1">Mi cuenta</h1><p class="page-sub">Preferencias y privacidad de tus estudios importados.</p></div></header>';
-    const body = { datos: perfilDatos, seguridad: perfilSeguridad, privacidad: perfilPrivacidad }[tab]();
+    const body = { datos: perfilDatos, seguridad: perfilSeguridad, privacidad: perfilPrivacidad }[tab]() + (P.renderDrivePanel ? P.renderDrivePanel() : '');
     return { title: PERFIL_TABS.find((t) => t[0] === tab)[1] + ' · Mi perfil', html: head + tabs + '<div class="tab-panel" role="tabpanel">' + body + '</div>' };
   };
 
@@ -618,7 +623,7 @@
     return '<section class="card" aria-labelledby="h-lectura">' + cardHead('Tamaño del texto', null, 'h-lectura') +
       '<p class="muted">Elegí cómo preferís leer el portal.</p><div class="seg seg-lg mt-4" role="radiogroup" aria-label="Tamaño del texto">' +
       [['normal', 'Normal'], ['grande', 'Grande']].map(o => '<button type="button" role="radio" class="seg-btn" data-action="text-size" data-value="' + o[0] + '" aria-checked="' + (P.db.textSize === o[0]) + '">' + o[1] + '</button>').join('') +
-      '</div><p class="muted mt-4">Tus archivos se guardan en este navegador y dispositivo. Si borrás sus datos, tendrás que volver a importarlos.</p></section>';
+      '</div><p class="muted mt-4">' + (P.authMode === 'google' ? 'Los estudios guardados en Drive se sincronizan con tu cuenta Google. Las preferencias se conservan solo en este navegador.' : 'Tus archivos se guardan en este navegador y dispositivo. Si borrás sus datos, tendrás que volver a importarlos.') + '</p></section>';
   }
   function perfilSeguridad() {
     return '<div class="profile-grid"><section class="card">' + cardHead('Acceso al Portal') +

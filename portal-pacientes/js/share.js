@@ -16,6 +16,11 @@
   const expiry = (hours) => new Date(P.TODAY.getTime() + hours * 3600000);
 
   P.openShare = function (studyId) {
+    const cloudStudy = P.study(studyId);
+    if (cloudStudy && cloudStudy.file && cloudStudy.file.storageBackend === 'google_drive') {
+      P.toast('Podés administrar los permisos del archivo desde tu Google Drive. El Portal no crea enlaces públicos.');
+      const doc = P.doc('doc-' + studyId); if (doc) P.openCloudDocument(doc); return;
+    }
     const s = P.study(studyId);
     if (!s) return;
     const inst = P.inst(s.inst);

@@ -1,2 +1,12 @@
 .env.docker
 .docker-local/
+**/private/
+**/*.sqlite
+**/*.sqlite-*
+**/*.db
+**/*.db-*
+**/backups/
+**/.env
+**/.env.*
+!**/.env.example
+**/*secrets*.env

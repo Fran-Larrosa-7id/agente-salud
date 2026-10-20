@@ -16,3 +16,7 @@
 !portal-pacientes/js/**
 !portal-pacientes/css/
 !portal-pacientes/css/**
+**/*.sqlite
+**/*.sqlite-*
+**/private/**
+**/*secrets*.env

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { MAX_PDF_BYTES, validatePdf } from './pdf.js';
 import { MAX_MEDICAL_ARCHIVE_BYTES, validateMedicalArchive } from './medical-archive.js';
@@ -31,6 +31,7 @@ export class JobFileStore {
   private readonly byId = new Map<string, StoredFile>();
   private removed = false;
   private writes: Promise<void> = Promise.resolve();
+  private cleanupWork?: Promise<void>;
 
   constructor(root: string, jobId: string, private readonly maxPdfBytes = MAX_PDF_BYTES, private readonly maxMedicalArchiveBytes = MAX_MEDICAL_ARCHIVE_BYTES) {
     if (!isUuid(jobId)) throw new Error('jobId inválido');
@@ -67,6 +68,17 @@ export class JobFileStore {
     return isUuid(fileId) ? this.byId.get(fileId) : undefined;
   }
 
+  async restore(records: Omit<StoredFile, 'path'>[]): Promise<void> {
+    for (const record of records) {
+      if (!isUuid(record.id) || !/^[a-f0-9]{64}$/.test(record.sha256) || !['PDF', 'DICOM_ZIP'].includes(record.kind) ||
+        record.mimeType !== (record.kind === 'PDF' ? 'application/pdf' : 'application/zip') || record.bytes <= 0 ||
+        record.bytes > (record.kind === 'PDF' ? this.maxPdfBytes : this.maxMedicalArchiveBytes)) throw new Error('INVALID_PENDING_FILE');
+      const file = { ...record, path: path.join(this.dir, record.id + (record.kind === 'PDF' ? '.pdf' : '.zip')) };
+      if ((await stat(file.path)).size !== record.bytes) throw new Error('INVALID_PENDING_FILE');
+      this.byId.set(file.id, file); this.byHash.set(file.sha256, file);
+    }
+  }
+
   get count(): number {
     return this.byId.size;
   }
@@ -76,11 +88,15 @@ export class JobFileStore {
   }
 
   /** Borra la carpeta del job y olvida los archivos. Idempotente. */
-  async cleanup(): Promise<void> {
-    this.removed = true;
-    await this.writes;
-    this.byHash.clear();
-    this.byId.clear();
-    await rm(this.dir, { recursive: true, force: true });
+  cleanup(): Promise<void> {
+    if (!this.cleanupWork) {
+      this.removed = true;
+      this.cleanupWork = (async () => {
+        await this.writes;
+        this.byHash.clear(); this.byId.clear();
+        await rm(this.dir, { recursive: true, force: true, maxRetries: 3, retryDelay: 20 });
+      })();
+    }
+    return this.cleanupWork;
   }
 }

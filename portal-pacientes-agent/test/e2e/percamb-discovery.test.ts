@@ -6,7 +6,7 @@ import { BrowserHost } from '../../src/browser/browser-host.js';
 import { BrowserSession, StudyReferenceMismatchError } from '../../src/browser/session.js';
 import { ProviderParserMismatchError } from '../../src/browser/types.js';
 import { validateHumanActionEvidence } from '../../src/agent/tools/validate.js';
-import { testBrowserChannel } from '../browser-channel.js';
+import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 import { FAKE_USER, startFakePortal } from '../fixtures/fake-portal.js';
 import { testConfig, testProvider } from '../helpers.js';
 
@@ -16,7 +16,7 @@ const sessions: BrowserSession[] = [];
 
 before(async () => {
   portal = await startFakePortal();
-  host = new BrowserHost({ headless: true, channel: testBrowserChannel, debugArtifacts: false, debugDir: path.join(tmpdir(), 'pp-percamb-debug') });
+  host = new BrowserHost({ headless: true, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: path.join(tmpdir(), 'pp-percamb-debug') });
 });
 
 after(async () => {

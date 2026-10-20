@@ -5,21 +5,39 @@
   const rec = (P.ui.rec = { step: 'dni', dni: '' });
   P.portalAuthEnabled = true;
   P.portalAuthUnavailable = false;
+  P.authMode = 'unknown';
+  let check = 0;
   P.prepareAuth = async () => {
+    const request = ++check;
     try {
       const response = await fetch(P.agent.base() + '/api/auth/session', { credentials: 'same-origin', signal: AbortSignal.timeout(5000) });
       if (!response.ok) throw new Error('AUTH_UNAVAILABLE');
       const session = await response.json();
+      if (request !== check) return false;
       if (typeof session.enabled !== 'boolean' || typeof session.authenticated !== 'boolean') throw new Error('INVALID_AUTH_STATUS');
+      const mode = session.mode || 'pilot';
+      if (!['pilot', 'google'].includes(mode)) throw new Error('INVALID_AUTH_STATUS');
+      if (mode === 'google' && (!session.enabled || session.authenticated && (!session.user || !/^[a-f0-9]{64}$/.test(session.user.id)))) throw new Error('INVALID_AUTH_STATUS');
+      const previous = P.accountId;
+      P.authMode = mode;
+      P.storageBackend = session.storageProvider || 'local';
+      P.applyIdentity(mode, session.user || null);
+      P.driveStatus = session.drive || 'disconnected';
       P.portalAuthEnabled = session.enabled;
       P.portalAuthUnavailable = false;
       if (session.enabled) { P.db.session = session.authenticated ? { since: new Date().toISOString() } : null; P.save(); }
+      if (mode === 'google' && previous !== P.accountId) {
+        try { localStorage.setItem('pp_auth_changed', String(Date.now()) + Math.random()); } catch {}
+        if (P.appReady) { P.identityChanged = true; location.reload(); return false; }
+      }
+      if (mode === 'google' && session.authenticated && P.syncCloudCatalog) await P.syncCloudCatalog(true);
       return true;
     } catch {
+      if (request !== check) return false;
       // Un error de red nunca habilita el login local de desarrollo.
       P.portalAuthEnabled = true;
       P.portalAuthUnavailable = true;
-      if (P.db.session) { P.db.session = null; P.save(); }
+      P.applyIdentity('google', null);
       return false;
     }
   };
@@ -51,6 +69,13 @@
   }
 
   P.renderLogin = function () {
+    if (P.authMode === 'google' || P.authMode === 'unknown' && P.portalAuthUnavailable) {
+      const error = new URLSearchParams(location.hash.split('?')[1] || '').get('error');
+      return layout('<h1 class="auth-title" tabindex="-1">Bienvenido</h1><p class="muted">' + (P.authMode === 'google' ? 'Ingresá con tu cuenta de Google para acceder a tus estudios.' : 'Necesitamos verificar el acceso al Portal para continuar.') + '</p>' +
+        (error ? '<div class="alert alert-error" role="alert">' + P.esc(P.cloudMessage(error)) + '</div>' : '') +
+        (P.portalAuthUnavailable ? '<div class="alert alert-error" role="alert">No pudimos conectar con el Portal. <button class="btn btn-secondary" data-action="retry-auth">Reintentar conexión</button></div>' : '<a class="btn btn-primary btn-lg btn-block" href="/api/auth/google/start">Continuar con Google</a>') +
+        '<p class="auth-note">' + (P.authMode === 'google' ? 'Iniciar sesión no autoriza Google Drive. Si querés guardar estudios, te pediremos ese permiso por separado. No necesitamos la contraseña de tu cuenta Google.' : 'Una sesión guardada en el navegador no reemplaza la verificación del servidor.') + '</p>');
+    }
     document.title = 'Ingresar · Portal de Pacientes';
     const connectionAlert = P.portalAuthUnavailable
       ? '<div class="alert alert-error" role="alert">No pudimos conectar con el Portal. Revisá la conexión y reintentá.<p><button class="btn btn-secondary btn-sm" type="button" data-action="retry-auth">Reintentar conexión</button></p></div>'
@@ -77,6 +102,7 @@
 
   P.mountLogin = function () {
     const f = document.getElementById('login-form');
+    if (!f) return;
     const dni = f.querySelector('#dni');
     const pass = f.querySelector('#pass');
     dni.addEventListener('input', () => clearErr(dni));
@@ -138,7 +164,7 @@
     P.route();
   };
 
-  P.renderRecover = () => layout('<h1 class="auth-title">Acceso al piloto</h1><p>Usá el usuario 1234 y la contraseña 1234.</p><a class="btn btn-primary" href="#/login">Volver a ingresar</a>');
+  P.renderRecover = () => layout(P.authMode === 'google' ? '<h1 class="auth-title">Acceso con Google</h1><p>Usá tu cuenta de Google para volver a ingresar.</p><a class="btn btn-primary" href="/api/auth/google/start">Continuar con Google</a>' : '<h1 class="auth-title">Acceso al piloto</h1><p>Usá el usuario 1234 y la contraseña 1234.</p><a class="btn btn-primary" href="#/login">Volver a ingresar</a>');
   P.mountRecover = () => {};
   P.resetRecover = () => {};
 })();

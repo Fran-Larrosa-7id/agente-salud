@@ -10,6 +10,11 @@
 export type LogFields = Partial<Record<AllowedField, string | number | boolean | undefined>>;
 
 const ALLOWED_FIELDS = [
+  'stage',
+  'totalBytes',
+  'retryCount',
+  'sessionState',
+  'transient',
   'provider',
   'state',
   'event',

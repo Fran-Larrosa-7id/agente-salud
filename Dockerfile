@@ -14,8 +14,11 @@ COPY portal-pacientes-agent/tsconfig.json ./
 COPY portal-pacientes/index.html /app/portal-pacientes/index.html
 COPY portal-pacientes/js /app/portal-pacientes/js
 COPY portal-pacientes/css /app/portal-pacientes/css
-RUN npm run typecheck && mkdir -p /var/lib/portal/import-jobs && chown -R pwuser:pwuser /var/lib/portal
-USER pwuser
+RUN npm run typecheck && node -e "const {DatabaseSync}=require('node:sqlite'); new DatabaseSync(':memory:').close()" \
+    && mkdir -p /var/lib/portal/import-jobs /var/lib/portal-data \
+    && chown -R 1000:1000 /var/lib/portal /var/lib/portal-data && chmod 700 /var/lib/portal-data
+# Playwright's pwuser is UID 1001 in this base image. Match Compose's numeric UID/GID.
+USER 1000:1000
 EXPOSE 8787
 # El escritorio se transmite por el backend solo durante login/intervención del job autorizado.
 CMD ["xvfb-run", "-a", "--server-args=-screen 0 1280x900x24 -nolisten tcp", "node", "--import", "tsx", "src/server/index.ts"]

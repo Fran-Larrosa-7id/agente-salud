@@ -64,6 +64,7 @@
   }
 
   function renderView(r, opts) {
+    const identityGeneration = P.identityGeneration;
     const top = r.parts[0];
     const key = top === 'estudios' && r.parts[1] ? 'estudio' : top;
     const screen = P.screens[key];
@@ -78,7 +79,8 @@
     });
 
     const paint = () => {
-      view.innerHTML = out.html;
+      if (identityGeneration !== P.identityGeneration || !P.db.session) return;
+      view.innerHTML = out.html + (P.cloudBanner && ['inicio', 'estudios', 'documentos'].includes(key) ? P.cloudBanner() : '');
       if (!(opts && opts.quiet)) {
         view.classList.remove('is-entering');
         void view.offsetWidth;
@@ -104,6 +106,7 @@
   }
 
   P.route = function () {
+    if (P.identityChanged) return;
     const r = parse();
     const top = r.parts[0];
     const isAuth = top === 'login' || top === 'recuperar';
@@ -164,6 +167,11 @@
         if (!response.ok) throw new Error('LOGOUT_FAILED');
       } catch { P.toast('No pudimos cerrar la sesión. Volvé a intentar.', { tone: 'danger' }); return; }
     }
+    if (P.authMode === 'google') {
+      P.applyIdentity('google', null);
+      try { localStorage.setItem('pp_auth_changed', String(Date.now()) + Math.random()); } catch {}
+      P.identityChanged = true; location.replace('/#/login'); location.reload(); return;
+    }
     P.db.session = null;
     P.save();
     P.ui.navigated = false;
@@ -215,10 +223,16 @@
 
   window.addEventListener('hashchange', P.route);
   window.addEventListener('storage', event => {
+    if (event.key === 'pp_auth_changed') {
+      app.textContent = 'Verificando tu sesión…';
+      P.closeAllOverlays();
+      P.prepareAuth().then(P.route); return;
+    }
     if (!P.portalAuthEnabled || event.key !== P.STORE_KEY) return;
     try {
       if (!JSON.parse(event.newValue || '{}').session) { P.db.session = null; location.hash = '#/login'; }
     } catch {}
   });
-  P.prepareAuth().then(P.route);
+  window.addEventListener('focus', () => { if (P.authMode === 'google') P.prepareAuth().then(P.route); });
+  P.prepareAuth().then(() => { P.appReady = true; P.route(); });
 })();

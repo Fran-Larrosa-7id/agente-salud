@@ -100,5 +100,6 @@ test('cada archivo importado conserva el studyId explícito, aunque se seleccion
 test('el snapshot público no expone internos', () => {
   const job = new ImportJob('percamb', 'Pérez Cambet');
   const snap = job.snapshot() as Record<string, unknown>;
-  assert.deepEqual(Object.keys(snap).sort(), ['current', 'errorCode', 'failures', 'files', 'human', 'jobId', 'lastSeq', 'provider', 'providerName', 'selection', 'state', 'studies'].sort());
+  assert.deepEqual(Object.keys(snap).sort(), ['current', 'errorCode', 'failures', 'files', 'human', 'jobId', 'lastSeq', 'provider', 'providerName', 'selection', 'state', 'storageBackend', 'storageError', 'studies'].sort());
+  assert.ok(!('ownerUserId' in snap));
 });

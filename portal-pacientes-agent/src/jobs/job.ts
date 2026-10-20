@@ -18,6 +18,8 @@ export interface ExternalStudy {
 }
 
 export interface JobFileInfo {
+  storedStudyId?: string;
+  storageBackend?: 'google_drive';
   id: string;
   studyId: string;
   bytes: number;
@@ -59,9 +61,9 @@ export class SelectionError extends Error {
 }
 
 export class ImportJob extends EventEmitter {
-  readonly id = randomUUID();
-  readonly createdAt = Date.now();
-  updatedAt = this.createdAt;
+  readonly id: string;
+  readonly createdAt: number;
+  updatedAt: number;
   state: JobState = JobState.CREATED;
   errorCode: string | undefined;
   studies: ExternalStudy[] = [];
@@ -70,6 +72,8 @@ export class ImportJob extends EventEmitter {
   failures: { studyId: string; code: string }[] = [];
   current: { studyId: string; index: number; total: number } | undefined;
   human: HumanReason | undefined;
+  storageBackend: 'local' | 'google_drive' = 'local';
+  storageError: string | null = null;
   /** Se aborta al llegar a un estado terminal: corta esperas, al agente y al navegador. */
   readonly abort = new AbortController();
   private seq = 0;
@@ -78,8 +82,13 @@ export class ImportJob extends EventEmitter {
   constructor(
     readonly provider: string,
     readonly providerName: string,
+    readonly ownerUserId = 'pilot',
+    restored?: { id: string; createdAt: number },
   ) {
     super();
+    this.id = restored?.id || randomUUID(); this.createdAt = restored?.createdAt ?? Date.now(); this.updatedAt = this.createdAt;
+    // Reconnected browsers must not discard a restored snapshot as an old SSE sequence.
+    if (restored) this.seq = Date.now();
     this.setMaxListeners(50);
   }
 
@@ -168,6 +177,8 @@ export class ImportJob extends EventEmitter {
       files: this.files,
       failures: this.failures,
       lastSeq: this.seq,
+      storageBackend: this.storageBackend,
+      storageError: this.storageError,
     };
   }
 }

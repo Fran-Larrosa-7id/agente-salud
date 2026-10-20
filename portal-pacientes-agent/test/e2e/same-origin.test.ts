@@ -68,15 +68,16 @@ test('si falla la conexión al backend, no acepta la sesión local y ofrece rein
     let offline = true;
     await page.route('**/api/auth/**', route => offline ? route.abort('failed') : route.continue());
     await page.goto(base + '/#/inicio');
-    await page.waitForSelector('#login-form');
+    await page.waitForSelector('[data-action=retry-auth]');
+    assert.equal(await page.locator('#login-form').count(), 0, 'sin conocer el modo del servidor no presenta credenciales piloto');
     await page.getByRole('alert').filter({ hasText: 'No pudimos conectar con el Portal' }).waitFor();
     assert.equal(await page.locator('.home-head').count(), 0, 'no entra con la sesión guardada localmente');
     const cleared = await page.evaluate(() => JSON.parse(localStorage.getItem('portal_pacientes_v1') || '{}'));
-    assert.equal(cleared.session, null);
+    assert.equal(await page.evaluate(() => (window as any).P.db.session), null);
     assert.equal(cleared.studies[0].id, 'estudio-importado-conservado', 'conserva los estudios importados');
 
-    await page.click('#login-form [type=submit]');
-    await page.waitForSelector('#login-alert:not([hidden])');
+    await page.click('[data-action=retry-auth]');
+    await page.getByRole('alert').filter({ hasText: 'No pudimos conectar con el Portal' }).waitFor();
     assert.equal(await page.locator('.home-head').count(), 0, 'un fallo del login tampoco habilita modo demo');
 
     offline = false;

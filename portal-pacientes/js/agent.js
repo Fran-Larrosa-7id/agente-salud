@@ -31,7 +31,7 @@
     let json = null;
     try { json = await res.json(); } catch (e) { /* sin cuerpo */ }
     if (!res.ok) {
-      if (res.status === 401 && P.portalAuthEnabled) { P.db.session = null; P.save(); location.hash = '#/login'; }
+      if (res.status === 401 && P.portalAuthEnabled) { if (P.authMode === 'google') P.applyIdentity('google', null); else { P.db.session = null; P.save(); } location.hash = '#/login?error=SESSION_EXPIRED'; }
       throw new AgentError((json && json.error) || 'HTTP_' + res.status, res.status, json && json.activeJobId);
     }
     return json;
@@ -40,11 +40,15 @@
   const EVENTS = ['snapshot', 'provider_opening', 'provider_opened', 'waiting_user_login', 'authenticated', 'agent_started', 'agent_observing',
     'searching_studies', 'studies_found', 'waiting_selection', 'opening_study', 'viewer_ready', 'finding_document', 'downloading', 'importing',
     'file_ready', 'study_failed', 'human_action_required', 'provider_parser_mismatch', 'completed', 'error'];
+  EVENTS.push('storage_uploading', 'storage_stored', 'storage_error');
 
   P.agent = {
     AgentError,
     base,
     health: () => call('GET', '/api/health'),
+    call,
+    catalog: (sync) => call('GET', '/api/studies' + (sync ? '?sync=1' : '')),
+    retryStorage: (id) => call('POST', '/api/imports/' + id + '/retry-storage'),
     start: (provider) => call('POST', '/api/imports/' + encodeURIComponent(provider)),
     job: (id) => call('GET', '/api/imports/' + id),
     importSelected: (id, studyIds, importedSourceKeys) => call('POST', '/api/imports/' + id + '/import', { studyIds, importedSourceKeys }),
@@ -109,10 +113,12 @@
   };
 
   /* ---------- Archivos locales (IndexedDB) ---------- */
-  const DB_NAME = 'portal_pacientes_files';
+  let DB_NAME = 'portal_pacientes_files';
+  let scopeVersion = 0;
   const STORE = 'files';
   let dbp = null;
   function open() {
+    if (P.accountId === null) return Promise.reject(new Error('SESSION_EXPIRED'));
     if (!('indexedDB' in window)) return Promise.reject(new Error('NO_IDB'));
     if (!dbp) {
       dbp = new Promise((resolve, reject) => {
@@ -126,7 +132,9 @@
     return dbp;
   }
   function tx(mode, fn) {
+    const version = scopeVersion;
     return open().then((db) => new Promise((resolve, reject) => {
+      if (version !== scopeVersion) { reject(new Error('ACCOUNT_CHANGED')); return; }
       const t = db.transaction(STORE, mode);
       const r = fn(t.objectStore(STORE));
       t.oncomplete = () => resolve(r && 'result' in r ? r.result : undefined);
@@ -137,6 +145,12 @@
   // Una importación se confirma únicamente cuando IndexedDB
   // confirmó la escritura, para que el archivo siga disponible después de cerrar o recargar el Portal.
   P.files = {
+    setScope(scope) {
+      scopeVersion++;
+      if (dbp) dbp.then(db => db.close()).catch(() => {});
+      dbp = null;
+      DB_NAME = scope === 'legacy' ? 'portal_pacientes_files' : 'portal_pacientes_files_' + (scope || 'signed_out');
+    },
     put(key, blob) {
       return tx('readwrite', (s) => s.put(blob, key)).then(() => true, () => false);
     },
@@ -160,5 +174,5 @@
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   };
 
-  P.fmtBytes = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+  P.fmtBytes = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : n > 0 ? Math.max(1, Math.round(n / 1024)) + ' KB' : '0 B');
 })();

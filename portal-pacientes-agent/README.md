@@ -1,5 +1,7 @@
 # portal-pacientes-agent
 
+Google Login y almacenamiento personal FREE en Drive se habilitan por flags. Ver [configuración Google/Drive, migración, Ubuntu y rollback](docs/google-drive-alpha.md) y [SQLite Docker: permisos, reconstrucción y prueba de persistencia](docs/sqlite-docker-fix.md). El modo piloto existente sigue siendo el valor por defecto. Requiere Node >=22.13 para SQLite integrado; no se agregan servicios de IA.
+
 La implementación Docker se documenta en [Auditoría y comandos Docker](docs/docker-mvp.md). Conserva las tres integraciones y el frontend. Usa Chromium con sandbox, reglas sin servicios de IA y un solo job. Con `REMOTE_LOGIN=true`, el Portal ofrece «Abrir navegador» mediante noVNC autenticado; detecta el ingreso y continúa automáticamente en la misma sesión. Ver [Login automático y QA](docs/login-automatico.md), [QA Docker](docs/docker-qa.md) y [despliegue same-origin HTTPS](docs/despliegue-same-origin-https.md).
 
 MVP de **«Traer mis estudios» con IA** para el Portal de Pacientes. El caso inicial es el **Laboratorio Pérez Cambet** (LabWin Cloud).

@@ -37,7 +37,22 @@
     return clean;
   }
   P.db = load();
+  P.accountId = 'legacy';
+  P.identityGeneration = 0;
+  P.applyIdentity = function (mode, user) {
+    const id = mode === 'google' ? user && user.id || null : 'legacy';
+    if (id !== P.accountId) {
+      P.identityGeneration++;
+      P.accountId = id;
+      P.STORE_KEY = id === 'legacy' ? 'portal_pacientes_v1' : id ? 'portal_pacientes_google_' + id : null;
+      P.db = P.STORE_KEY ? load() : seed();
+      if (P.files && P.files.setScope) P.files.setScope(id);
+      if (P.closeAllOverlays) P.closeAllOverlays();
+    }
+    P.googleUser = mode === 'google' ? user : null;
+  };
   P.save = function () {
+    if (!P.STORE_KEY) return false;
     try { localStorage.setItem(P.STORE_KEY, JSON.stringify(P.db)); return true; } catch { return false; }
   };
   /* ---------- Selectores ---------- */

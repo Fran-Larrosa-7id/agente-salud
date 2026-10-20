@@ -5,9 +5,10 @@
   "description": "Agente de IA que trae estudios al Portal de Pacientes después de que el paciente inicia sesión manualmente en el portal del laboratorio.",
   "type": "module",
   "engines": {
-    "node": ">=20.12"
+    "node": ">=22.13"
   },
   "scripts": {
+    "test:sqlite:docker": "node scripts/test-sqlite-docker.mjs",
     "test:remote": "xvfb-run -a env TEST_REMOTE_DESKTOP=true node --import tsx --test test/e2e/remote-desktop.test.ts",
     "smoke": "node --import tsx scripts/smoke.ts",
     "dev": "tsx watch src/server/index.ts",

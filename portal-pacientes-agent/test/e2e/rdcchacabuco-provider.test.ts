@@ -6,7 +6,7 @@ import { BrowserSession, RdcChacabucoError, UnexpectedDomainError } from '../../
 import { makeDemoPdf } from '../../src/jobs/pdf.js';
 import { rdcChacabuco } from '../../src/providers/rdcchacabuco/rdcchacabuco.provider.js';
 import { rdcChacabucoSourceKey } from '../../src/providers/rdcchacabuco/source-key.js';
-import { testBrowserChannel } from '../browser-channel.js';
+import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 
 let server: Server;
 let origin = '';
@@ -143,7 +143,7 @@ before(async () => {
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('FIXTURE_SERVER_FAILED');
   origin = `http://127.0.0.1:${address.port}`;
-  host = new BrowserHost({ headless: true, channel: testBrowserChannel, debugArtifacts: false, debugDir: '' });
+  host = new BrowserHost({ headless: true, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: '' });
 });
 
 after(async () => {

@@ -67,6 +67,8 @@
   P.badge = (tone, text, icon) => '<span class="badge b-' + tone + '">' + (icon ? P.icon(icon, 16) : '') + '<span>' + text + '</span></span>';
 
   P.studyStatus = (s) => {
+    if (s.remoteStatus === 'remote_missing') return P.badge('warning', 'No disponible en Drive', 'alert');
+    if (s.file && s.file.storageBackend === 'google_drive') return P.badge('success', 'Guardado en Drive', 'check');
     if (s.status === 'pendiente') return P.badge('warning', 'Resultado pendiente', 'clock');
     if (s.isNew) return P.badge('new', 'Nuevo', 'sparkle');
     return '';
@@ -297,6 +299,7 @@
   };
 
   P.download = function (d) {
+    if (d.file && d.file.storageBackend === 'google_drive') return P.cloudDownload(d);
     const kind = d.file && d.file.kind || d.artifactKind;
     const extension = kind === 'DICOM_ZIP' ? '.zip' : '.pdf';
     const name = d.title.replace(/[^\wÁÉÍÓÚáéíóúñÑ ]+/g, '').trim().replace(/\s+/g, '_') + '_' + P.fmt(d.date).replace(/\//g, '-') + extension;

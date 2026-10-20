@@ -6,7 +6,7 @@ import { after, before, test } from 'node:test';
 import { BrowserHost } from '../../src/browser/browser-host.js';
 import { BrowserSession, MedicalArchiveError, StudyReferenceMismatchError, UnexpectedDomainError } from '../../src/browser/session.js';
 import { centroDm } from '../../src/providers/centrodm/centrodm.provider.js';
-import { testBrowserChannel } from '../browser-channel.js';
+import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 
 let server: Server;
 let viewerServer: Server;
@@ -195,7 +195,7 @@ before(async () => {
   const viewerAddress = viewerServer.address();
   if (!viewerAddress || typeof viewerAddress === 'string') throw new Error('VIEWER_FIXTURE_SERVER_FAILED');
   viewerOrigin = `http://localhost:${viewerAddress.port}`;
-  host = new BrowserHost({ headless: true, channel: testBrowserChannel, debugArtifacts: false, debugDir: path.join(tmpdir(), 'pp-centrodm-debug') });
+  host = new BrowserHost({ headless: true, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: path.join(tmpdir(), 'pp-centrodm-debug') });
 });
 
 test('Centro DM rechaza un visor cuyo metadata explícito no coincide con el estudio elegido', { timeout: 60_000 }, async () => {

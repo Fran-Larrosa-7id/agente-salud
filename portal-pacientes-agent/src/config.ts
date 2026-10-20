@@ -7,6 +7,11 @@ export type LlmProviderName = 'anthropic' | 'openai' | 'ollama' | 'rules';
 export type RunnerMode = 'agent' | 'fake';
 
 export interface Config {
+  authMode: 'pilot' | 'google';
+  storageProvider: 'local' | 'google_drive';
+  publicBaseUrl: string | null;
+  databasePath: string;
+  google: { clientId: string; clientSecret: string; redirectUri: string; sessionSecret: string; encryptionKey: string; allowedEmails: string[]; allowedSubs: string[] } | null;
   port: number;
   host: string;
   allowedOrigins: string[];
@@ -104,12 +109,40 @@ export function loadConfig(env: Env = process.env, argv: string[] = process.argv
   const servePortal = bool(env, 'SERVE_PORTAL', true);
   const password = env.PORTAL_AUTH_PASSWORD || '';
   const username = env.PORTAL_AUTH_USER || '1234';
+  const authMode = env.AUTH_MODE || 'pilot';
+  if (!env.AUTH_MODE && (env.GOOGLE_CLIENT_ID || env.GOOGLE_CLIENT_SECRET)) throw new Error('Credenciales Google requieren AUTH_MODE explicito; no se habilita el piloto implicitamente.');
+  const storageProvider = env.STORAGE_PROVIDER || 'local';
+  if (!['pilot', 'google'].includes(authMode) || !['local', 'google_drive'].includes(storageProvider)) throw new Error('AUTH_MODE o STORAGE_PROVIDER invalido.');
+  if (storageProvider === 'google_drive' && authMode !== 'google') throw new Error('google_drive requiere AUTH_MODE=google.');
+  let publicBaseUrl: string | null = null;
+  let google: Config['google'] = null;
+  const databasePath = path.resolve(AGENT_ROOT, env.DATABASE_PATH || 'private/portal.sqlite');
+  if (authMode === 'google') {
+    if (int(env, 'MAX_CONCURRENT_JOBS', 1) !== 1) throw new Error('Google alpha requiere MAX_CONCURRENT_JOBS=1.');
+    const base = new URL(env.PUBLIC_BASE_URL || 'invalid:');
+    const localHttp = env.NODE_ENV !== 'production' && base.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(base.hostname);
+    if ((!localHttp && base.protocol !== 'https:') || base.username || base.password || base.pathname !== '/' || base.search || base.hash || env.PUBLIC_BASE_URL !== base.origin) throw new Error('PUBLIC_BASE_URL requiere un origen HTTPS exacto, sin slash final.');
+    publicBaseUrl = base.origin;
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) throw new Error('Faltan GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.');
+    if (env.GOOGLE_REDIRECT_URI !== base.origin + '/api/auth/google/callback') throw new Error('GOOGLE_REDIRECT_URI no coincide con PUBLIC_BASE_URL.');
+    if (!env.SESSION_SECRET || Buffer.byteLength(env.SESSION_SECRET) < 32) throw new Error('SESSION_SECRET requiere al menos 32 bytes aleatorios.');
+    if (!env.TOKEN_ENCRYPTION_KEY || !/^[A-Za-z0-9+/]{43}=$/.test(env.TOKEN_ENCRYPTION_KEY) || Buffer.from(env.TOKEN_ENCRYPTION_KEY, 'base64').length !== 32) throw new Error('TOKEN_ENCRYPTION_KEY requiere 32 bytes en base64.');
+    if (!env.DATABASE_PATH || !path.isAbsolute(env.DATABASE_PATH)) throw new Error('DATABASE_PATH requiere una ruta absoluta privada y persistente.');
+    if (env.NODE_ENV === 'production' && !databasePath.startsWith('/var/lib/portal-data/')) throw new Error('DATABASE_PATH en produccion debe usar el volumen /var/lib/portal-data.');
+    const temporary = path.resolve(AGENT_ROOT, env.TMP_DIR || 'tmp/import-jobs');
+    if (databasePath === temporary || databasePath.startsWith(temporary + path.sep)) throw new Error('DATABASE_PATH debe estar fuera de los temporales.');
+    if (provider !== 'rules' || bool(env, 'PLAYWRIGHT_DEBUG_ARTIFACTS', false) || bool(env, 'AGENT_DEBUG_ERRORS', false)) throw new Error('Google requiere LLM_PROVIDER=rules y depuracion desactivada.');
+    if (env.NODE_ENV === 'production' && storageProvider !== 'google_drive') throw new Error('Google en produccion requiere STORAGE_PROVIDER=google_drive.');
+    google = { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET, redirectUri: env.GOOGLE_REDIRECT_URI, sessionSecret: env.SESSION_SECRET,
+      encryptionKey: env.TOKEN_ENCRYPTION_KEY, allowedEmails: (env.GOOGLE_ALLOWED_EMAILS || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean), allowedSubs: (env.GOOGLE_ALLOWED_SUBS || '').split(',').map(s => s.trim()).filter(Boolean) };
+  }
   if (username.includes(':')) throw new Error('PORTAL_AUTH_USER no puede contener dos puntos.');
-  if (env.NODE_ENV === 'production' && !password) throw new Error('Producción requiere PORTAL_AUTH_PASSWORD.');
-  if (bool(env, 'REMOTE_LOGIN', false) && (!password || bool(env, 'HEADLESS', false) || int(env, 'MAX_CONCURRENT_JOBS', 1) !== 1)) throw new Error('REMOTE_LOGIN requiere autenticación, navegador visible y un único job.');
+  if (authMode === 'pilot' && env.NODE_ENV === 'production' && !password) throw new Error('Producción requiere PORTAL_AUTH_PASSWORD.');
+  if (bool(env, 'REMOTE_LOGIN', false) && ((authMode === 'pilot' && !password) || bool(env, 'HEADLESS', false) || int(env, 'MAX_CONCURRENT_JOBS', 1) !== 1)) throw new Error('REMOTE_LOGIN requiere autenticación, navegador visible y un único job.');
   if (env.NODE_ENV === 'production' && (bool(env, 'PLAYWRIGHT_DEBUG_ARTIFACTS', false) || bool(env, 'AGENT_DEBUG_ERRORS', false))) throw new Error('Producción no permite artefactos ni errores de depuración.');
 
   return {
+    authMode: authMode as Config['authMode'], storageProvider: storageProvider as Config['storageProvider'], publicBaseUrl, databasePath, google,
     port: int(env, 'PORT', 8787),
     host: env.HOST || '127.0.0.1',
     allowedOrigins: (env.ALLOWED_ORIGINS ||
@@ -122,7 +155,7 @@ export function loadConfig(env: Env = process.env, argv: string[] = process.argv
     browserChannel: env.BROWSER_CHANNEL?.trim() || undefined,
     chromiumSandbox: bool(env, 'CHROMIUM_SANDBOX', true),
     remoteLogin: bool(env, 'REMOTE_LOGIN', false),
-    portalAuth: password ? { username, password } : null,
+    portalAuth: authMode === 'pilot' && password ? { username, password } : null,
     loginTimeoutMs: int(env, 'LOGIN_TIMEOUT_MINUTES', 10) * 60_000,
     jobTtlMs: int(env, 'JOB_TTL_MINUTES', 20) * 60_000,
     fileRetentionMs: int(env, 'FILE_RETENTION_MINUTES', 5) * 60_000,

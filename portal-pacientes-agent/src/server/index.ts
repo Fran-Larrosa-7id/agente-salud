@@ -11,9 +11,13 @@ import { PROVIDERS } from '../providers/index.js';
 import { createLogger } from '../security/logger.js';
 import { createApp } from './app.js';
 import { RemoteDesktop } from './remote-desktop.js';
+import { createGoogleServices } from './google-services.js';
+import { PendingImports } from '../storage/pending-imports.js';
 
 loadDotEnv();
 const config = loadConfig();
+process.umask(0o077);
+const google = createGoogleServices(config);
 const log = createLogger(config.logLevel);
 log.info(null, 'pixeon_debug_config', { keepViewerOpen: config.pixeonDebugKeepViewerOpen, ttlMs: config.pixeonDebugKeepViewerOpenMs });
 log.info(null, 'rdc_debug_config', { keepModalOpen: config.rdcDebugKeepModalOpen, ttlMs: config.rdcDebugKeepModalOpenMs });
@@ -78,6 +82,8 @@ const manager = new JobManager({
   providers: PROVIDERS,
   runnerFactory,
   log,
+  storage: config.storageProvider === 'google_drive' ? google?.drive : undefined,
+  pendingImports: config.storageProvider === 'google_drive' ? new PendingImports(config.databasePath, config.jobTtlMs) : undefined,
   preflight: () => {
     if (useOllama) {
       if (ollamaOk()) return null;
@@ -96,7 +102,8 @@ const info = {
   browserChannel: config.browserChannel,
 };
 const desktop = config.remoteLogin ? new RemoteDesktop(log) : undefined;
-const app = createApp({ config, manager, providers: PROVIDERS, info, desktop });
+await manager.restorePending();
+const app = createApp({ config, manager, providers: PROVIDERS, info, desktop, google });
 
 const server = app.listen(config.port, config.host, async () => {
   log.info(null, 'server_started', { port: config.port, runner: config.runner, headless: config.headless, model: fake ? 'fake' : config.llm.provider });
@@ -134,6 +141,7 @@ async function shutdown() {
   server.close();
   await desktop?.stop();
   await manager.shutdown();
+  google?.db.close();
   await host.close();
   await rm(config.tmpDir, { recursive: true, force: true });
   process.exit(0);

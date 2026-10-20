@@ -4,7 +4,8 @@ import { PROVIDERS } from '../src/providers/index.js';
 
 const base = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:8787';
 const auth: Record<string, string> = {};
-if (process.env.PORTAL_AUTH_PASSWORD) {
+const googleMode = process.env.AUTH_MODE === 'google';
+if (!googleMode && process.env.PORTAL_AUTH_PASSWORD) {
   const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: process.env.PORTAL_AUTH_USER || '1234', password: process.env.PORTAL_AUTH_PASSWORD }), signal: AbortSignal.timeout(5000) });
   assert.equal(login.status, 200);
   auth.Cookie = login.headers.get('set-cookie')!.split(';')[0];
@@ -13,9 +14,21 @@ const health = await fetch(`${base}/health`, { signal: AbortSignal.timeout(5000)
 assert.equal(health.status, 200);
 assert.deepEqual(await health.json(), { ok: true });
 const api = await fetch(`${base}/api/health`, { headers: auth, signal: AbortSignal.timeout(5000) });
-assert.equal(api.status, 200);
+assert.equal(api.status, googleMode ? 401 : 200);
+if (googleMode) {
+  const session = await (await fetch(`${base}/api/auth/session`, { signal: AbortSignal.timeout(5000) })).json() as { mode: string; authenticated: boolean };
+  assert.equal(session.mode, 'google'); assert.equal(session.authenticated, false);
+  const start = await fetch(`${base}/api/auth/google/start`, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
+  const authorization = new URL(start.headers.get('location')!);
+  assert.equal(authorization.origin, 'https://accounts.google.com');
+  assert.equal(authorization.searchParams.get('scope'), 'openid email profile');
+  console.log(JSON.stringify({ check: 'google_unauthenticated_boundary', ok: true }));
+}
 console.log(JSON.stringify({ check: 'health', ok: true }));
-const host = new BrowserHost({ headless: true, chromiumSandbox: true, debugArtifacts: false, debugDir: '' });
+if (process.env.SMOKE_SKIP_BROWSER === 'true') {
+  console.log(JSON.stringify({ check: 'public_navigation', skipped: true }));
+} else {
+const host = new BrowserHost({ headless: true, channel: process.env.BROWSER_CHANNEL?.trim() || undefined, chromiumSandbox: process.platform !== 'win32', debugArtifacts: false, debugDir: '' });
 let failed = false;
 try {
   for (const target of [{ id: 'example', loginUrl: 'https://example.com' }, ...Object.values(PROVIDERS)]) {
@@ -39,3 +52,4 @@ try {
   console.log(JSON.stringify({ check: 'browser_closed', ok: true }));
 }
 if (failed) process.exitCode = 1;
+}

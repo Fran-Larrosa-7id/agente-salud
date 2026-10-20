@@ -16,7 +16,7 @@ import { RemoteDesktop } from '../../src/server/remote-desktop.js';
 import { silentLogger } from '../../src/security/logger.js';
 import { startFakePortal, FAKE_USER } from '../fixtures/fake-portal.js';
 import { testConfig, testProvider, waitFor } from '../helpers.js';
-import { testBrowserChannel } from '../browser-channel.js';
+import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 
 // Esta prueba requiere los paquetes de la imagen y DISPLAY: npm run test:remote.
 test('noVNC detecta login automáticamente, conserva contexto y muestra selección en ambas pestañas', {
@@ -24,7 +24,7 @@ test('noVNC detecta login automáticamente, conserva contexto y muestra selecci�
 }, async () => {
   const portal = await startFakePortal();
   const config = testConfig({ remoteLogin: true, headless: false, portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes'), portalAuth: { username: '1234', password: '1234' }, loginTimeoutMs: 30_000 });
-  const host = new BrowserHost({ headless: false, debugArtifacts: false, debugDir: '' });
+  const host = new BrowserHost({ headless: false, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: '' });
   const desktop = new RemoteDesktop();
   let runner!: AgentImportRunner;
   const providers = { percamb: { ...testProvider(portal.url + '/lwcloud/fake/login'), id: 'percamb' } };

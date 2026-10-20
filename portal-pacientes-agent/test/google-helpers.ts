@@ -99,7 +99,12 @@ export class MockGoogle {
       const { account: _account, ...metadata } = file; return this.json(metadata);
     }
     const query = url.searchParams.get('q') || '';
-    const all = [...this.files.values()].filter(file => file.account === token && !file.trashed && (!query.includes("mimeType='application/vnd.google-apps.folder'") || file.mimeType === 'application/vnd.google-apps.folder'));
+    const nameMatch = /(?:^| and )name='((?:\\.|[^'])*)'/.exec(query);
+    const parentMatch = /'((?:\\.|[^'])*)' in parents/.exec(query);
+    const unquote = (value: string) => value.replace(/\\(['\\])/g, '$1');
+    const all = [...this.files.values()].filter(file => file.account === token && !file.trashed &&
+      (!query.includes("mimeType='application/vnd.google-apps.folder'") || file.mimeType === 'application/vnd.google-apps.folder') &&
+      (!nameMatch || file.name === unquote(nameMatch[1])) && (!parentMatch || file.parents?.includes(unquote(parentMatch[1]))));
     return this.json({ files: all.map(({ content: _bytes, account: _account, ...file }) => file) });
   };
 }

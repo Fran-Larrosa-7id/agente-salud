@@ -45,7 +45,7 @@ test('Drive: verified private PDF, per-patient deduplication, ownership and orig
     const downloaded = await drive.download(a.id, one.id);
     assert.equal(createHash('sha256').update(Buffer.from(await downloaded.response.arrayBuffer())).digest('hex'), file.sha256);
     const remote = mock.files.get(one.remoteFileId)!;
-    assert.equal(remote.shared, false); assert.match(remote.name!, /^estudio-.*\.pdf$/);
+    assert.equal(remote.shared, false); assert.equal(remote.name, '2026-01-01 - Pérez Cambet - Informe.pdf');
     assert.ok(!JSON.stringify(remote.appProperties).includes(study.title)); assert.ok(mock.calls.every(call => !/permissions/.test(call.url)));
     assert.equal(await drive.open(a.id, one.id), 'https://drive.google.com/file/d/' + one.remoteFileId + '/view');
   } finally { await files.cleanup(); db.close(); }
@@ -60,6 +60,84 @@ test('Drive: bounded original ZIP chunks recover a lost response without resendi
     assert.equal(mock.calls.filter(call => call.chunkBytes > 0).length, 2);
     assert.deepEqual(mock.files.get(saved.remoteFileId)!.content, zip); assert.equal(saved.sha256, file.sha256);
   } finally { await files.cleanup(); db.close(); }
+});
+
+test('readable Drive names disambiguate different originals, preserve retry identity and never rename legacy files', async () => {
+  const { config, mock, db, drive, a } = setup();
+  const first = await source(config, makeDemoPdf(['first synthetic original']));
+  const second = await source(config, makeDemoPdf(['second synthetic original']));
+  const input = { ownerUserId: a.id, jobId: randomUUID(), file: first.file, study, signal: new AbortController().signal };
+  let closed = false;
+  try {
+    const one = await drive.upload(input);
+    const two = await drive.upload({ ...input, file: second.file, study: { ...study, sourceKey: 'b'.repeat(64) } });
+    assert.equal(mock.files.get(one.remoteFileId)!.name, '2026-01-01 - Pérez Cambet - Informe.pdf');
+    assert.equal(mock.files.get(two.remoteFileId)!.name, `2026-01-01 - Pérez Cambet - Informe - ${second.file.sha256.slice(0, 8)}.pdf`);
+    assert.notEqual(one.remoteFileId, two.remoteFileId); assert.equal(mock.uploadStarts, 2);
+    const originalId = one.id;
+    mock.files.get(one.remoteFileId)!.name = 'estudio-legacy-opaque.pdf';
+    const retry = await drive.upload({ ...input, study: { ...study, title: 'Panorámica dental' } });
+    assert.equal(retry.id, originalId); assert.equal(retry.remoteFileId, one.remoteFileId);
+    assert.equal(mock.files.get(one.remoteFileId)!.name, 'estudio-legacy-opaque.pdf');
+    assert.equal(mock.uploadStarts, 2); assert.equal(mock.calls.filter(call => call.method === 'PATCH').length, 0);
+    db.close(); closed = true;
+    const restarted = new PortalDatabase(config.databasePath, new TokenCipher(Buffer.alloc(32, 7)));
+    try { assert.equal(restarted.byHash(a.id, first.file.sha256)!.remoteFileId, one.remoteFileId); }
+    finally { restarted.close(); }
+  } finally { await first.files.cleanup(); await second.files.cleanup(); if (!closed) db.close(); }
+});
+
+test('parallel originals reserve names per account, short-suffix collisions extend safely, and sync uses IDs', async () => {
+  const { config, mock, db, oauth, a, b } = setup();
+  mock.files.set('shared-private-folder', { id: 'shared-private-folder', account: 'account-A', mimeType: 'application/vnd.google-apps.folder',
+    shared: false, appProperties: { pp_app: 'portal-pacientes-v1', pp_owner: a.id }, name: 'Portal Pacientes' });
+  db.folder(a.id, 'shared-private-folder');
+  let namingQueries = 0, release!: () => void;
+  const firstQuery = new Promise<void>(resolve => { release = resolve; });
+  const transport: typeof fetch = async (url, init) => {
+    if ((new URL(String(url)).searchParams.get('q') || '').includes('name=')) {
+      if (++namingQueries === 1) await firstQuery;
+      else release();
+    }
+    return mock.fetch(url, init);
+  };
+  const drive = new GoogleDriveStorage(db, oauth, transport, async () => {});
+  const sources = await Promise.all([source(config, makeDemoPdf(['one'])), source(config, makeDemoPdf(['two'])), source(config, makeDemoPdf(['three']))]);
+  const input = { ownerUserId: a.id, jobId: randomUUID(), study, signal: new AbortController().signal };
+  try {
+    const [one, two] = await Promise.all(sources.slice(0, 2).map((value, index) => drive.upload({ ...input, file: value.file, study: { ...study, sourceKey: String(index).repeat(64) } })));
+    assert.notEqual(mock.files.get(one.remoteFileId)!.name, mock.files.get(two.remoteFileId)!.name);
+    const folder = mock.files.get(one.remoteFileId)!.parents![0];
+    mock.files.set('occupied-short-suffix', { id: 'occupied-short-suffix', account: 'account-A', mimeType: 'application/pdf', parents: [folder], name: `2026-01-01 - Pérez Cambet - Informe - ${sources[2].file.sha256.slice(0, 8)}.pdf` });
+    const three = await drive.upload({ ...input, file: sources[2].file, study: { ...study, sourceKey: 'c'.repeat(64) } });
+    assert.equal(mock.files.get(three.remoteFileId)!.name, `2026-01-01 - Pérez Cambet - Informe - ${sources[2].file.sha256.slice(0, 12)}.pdf`);
+    const other = await drive.upload({ ...input, ownerUserId: b.id, file: sources[2].file });
+    assert.equal(mock.files.get(other.remoteFileId)!.name, '2026-01-01 - Pérez Cambet - Informe.pdf');
+    await drive.reconcile(a.id);
+    assert.equal(drive.list(a.id).length, 3); assert.equal(drive.list(b.id).length, 1);
+    assert.equal(drive.list(a.id).find(item => item.id === three.id)!.sha256, sources[2].file.sha256);
+  } finally { await Promise.all(sources.map(value => value.files.cleanup())); db.close(); }
+});
+
+test('filename collisions remain safe after restart when Drive search has not indexed the first original', async () => {
+  const { config, mock, db, drive, oauth, a } = setup();
+  const first = await source(config, makeDemoPdf(['before restart'])), second = await source(config, makeDemoPdf(['after restart']));
+  const input = { ownerUserId: a.id, jobId: randomUUID(), study, signal: new AbortController().signal };
+  let closed = false;
+  try {
+    const one = await drive.upload({ ...input, file: first.file, study: { ...study, studyDate: 'unrecognized', date: '2026-01-01' } });
+    db.close(); closed = true;
+    const restarted = new PortalDatabase(config.databasePath, new TokenCipher(Buffer.alloc(32, 7)));
+    try {
+      const delayedSearch: typeof fetch = (url, init) => (new URL(String(url)).searchParams.get('q') || '').includes('name=')
+        ? Promise.resolve(Response.json({ files: [] })) : mock.fetch(url, init);
+      const again = new GoogleDriveStorage(restarted, oauth, delayedSearch, async () => {});
+      const two = await again.upload({ ...input, file: second.file, study: { ...study, sourceKey: 'f'.repeat(64) } });
+      assert.notEqual(mock.files.get(one.remoteFileId)!.name, mock.files.get(two.remoteFileId)!.name);
+      assert.match(mock.files.get(two.remoteFileId)!.name!, new RegExp(second.file.sha256.slice(0, 8) + '\\.pdf$'));
+      assert.equal(again.list(a.id).length, 2);
+    } finally { restarted.close(); }
+  } finally { await first.files.cleanup(); await second.files.cleanup(); if (!closed) db.close(); }
 });
 test('Drive: encrypted interrupted resumable session is reused on controlled retry', async () => {
   const { config, mock, db, drive, a } = setup(); const { files, file } = await source(config);

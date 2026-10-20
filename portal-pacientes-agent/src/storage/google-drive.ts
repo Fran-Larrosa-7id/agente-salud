@@ -7,12 +7,13 @@ import { GoogleOAuth } from '../server/google-oauth.js';
 import { PortalDatabase, type StoredStudy } from './database.js';
 import { CloudError } from './errors.js';
 import type { CloudStorageProvider, UploadInput } from './provider.js';
+import { driveFilenameCandidates, studyFilenameDate } from './drive-filename.js';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
 const APP = 'portal-pacientes-v1';
-const FIELDS = 'id,size,mimeType,appProperties,trashed,parents,shared,md5Checksum,createdTime';
+const FIELDS = 'id,name,size,mimeType,appProperties,trashed,parents,shared,md5Checksum,createdTime';
 const CHUNK = 8 * 1024 * 1024; // Multiple of Drive's 256 KiB requirement, bounded memory.
-interface RemoteFile { id: string; size?: string; mimeType: string; appProperties?: Record<string, string>; trashed?: boolean; shared?: boolean; parents?: string[]; md5Checksum?: string; createdTime?: string }
+interface RemoteFile { id: string; name?: string; size?: string; mimeType: string; appProperties?: Record<string, string>; trashed?: boolean; shared?: boolean; parents?: string[]; md5Checksum?: string; createdTime?: string }
 export interface DriveDiagnostic { stage: string; status?: number; reason: string; bytes: number; totalBytes: number; retryCount: number; sessionState: string; transient: boolean }
 const SAFE_REASONS = new Set(['storageQuotaExceeded', 'rateLimitExceeded', 'userRateLimitExceeded', 'quotaExceeded', 'insufficientPermissions', 'authError', 'forbidden', 'notFound', 'fileNotFound', 'backendError', 'internalError', 'invalid', 'badRequest', 'appNotAuthorizedToFile', 'accessNotConfigured', 'domainPolicy']);
 const SAFE_NETWORK_CODES = new Set(['UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_SOCKET', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT']);
@@ -22,6 +23,7 @@ export class GoogleDriveStorage implements CloudStorageProvider {
   private readonly refreshes = new Map<string, Promise<string>>();
   private readonly epochs = new Map<string, number>();
   private readonly uploads = new Map<string, Promise<StoredStudy>>();
+  private readonly reservedNames = new Map<string, string>();
   private readonly context = new AsyncLocalStorage<{ jobId: string; stage: string; bytes: number; totalBytes: number; retryCount: number; sessionState: string; lastTransient?: boolean }>();
   constructor(readonly db: PortalDatabase, readonly oauth: GoogleOAuth, private readonly transport: typeof fetch = fetch,
     private readonly pause: (ms: number, signal?: AbortSignal) => Promise<unknown> = (ms, signal) => delay(ms, undefined, { signal }),
@@ -126,6 +128,50 @@ export class GoogleDriveStorage implements CloudStorageProvider {
       value.appProperties?.pp_app !== APP || value.appProperties?.pp_owner !== ownerUserId || value.appProperties?.pp_sha256 !== file.sha256 ||
       value.md5Checksum && value.md5Checksum !== md5) throw new CloudError('DRIVE_UPLOAD_FAILED');
   }
+  private async uploadName(input: UploadInput, folderId: string, remoteId: string): Promise<string> {
+    const uploadKey = input.ownerUserId + ':' + input.file.sha256;
+    const date = studyFilenameDate(input.study.studyDate) || studyFilenameDate(input.study.date);
+    const knownNames = new Set<string>(), checkedIds = new Set<string>();
+    // Search indexing can lag a completed upload. Direct lookup of the user's matching
+    // catalog entries protects same-day collisions even immediately after restart.
+    for (const stored of this.db.list(input.ownerUserId)) {
+      const storedDate = studyFilenameDate(stored.date);
+      if (stored.remoteFolderId !== folderId || stored.remoteFileId === remoteId || checkedIds.has(stored.remoteFileId) ||
+        stored.providerId !== input.study.provider || stored.kind !== input.file.kind || storedDate !== null && storedDate !== date) continue;
+      checkedIds.add(stored.remoteFileId);
+      const existing = await this.remote(input.ownerUserId, stored.remoteFileId, input.signal).catch(error => {
+        if (error instanceof CloudError && error.code === 'FILE_MISSING') return null;
+        throw error;
+      });
+      if (existing && !existing.trashed && existing.parents?.includes(folderId) && existing.name) knownNames.add(existing.name);
+    }
+    const quote = (value: string) => "'" + value.replace(/\\/g, '\\\\').replace(/'/g, "\\'") + "'";
+    for (const name of driveFilenameCandidates(input.study, input.file)) {
+      if (knownNames.has(name)) continue;
+      const reservation = input.ownerUserId + ':' + folderId + ':' + name;
+      const holder = this.reservedNames.get(reservation);
+      if (holder && holder !== uploadKey) continue;
+      if (holder === uploadKey) return name;
+      // Reserve BEFORE awaiting the query: parallel uploads cannot choose the same name.
+      this.reservedNames.set(reservation, uploadKey);
+      const query = `trashed=false and ${quote(folderId)} in parents and name=${quote(name)}`;
+      let pageToken = '', occupied = false;
+      const seen = new Set<string>();
+      do {
+        const response = await this.request(input.ownerUserId, API + '?' + new URLSearchParams({ q: query, spaces: 'drive',
+          fields: 'nextPageToken,files(id)', pageSize: '100', ...(pageToken ? { pageToken } : {}) }), {}, { signal: input.signal });
+        const data = await response.json() as { files?: { id: string }[]; nextPageToken?: string };
+        occupied = (data.files || []).some(file => file.id !== remoteId);
+        if (occupied) break;
+        pageToken = data.nextPageToken || '';
+        if (pageToken && seen.has(pageToken)) throw new CloudError('DRIVE_UPLOAD_FAILED');
+        if (pageToken) seen.add(pageToken);
+      } while (pageToken);
+      if (!occupied) return name;
+      this.reservedNames.delete(reservation);
+    }
+    throw new CloudError('DRIVE_UPLOAD_FAILED');
+  }
   upload(input: UploadInput): Promise<StoredStudy> {
     const key = input.ownerUserId + ':' + input.file.sha256;
     const pending = this.uploads.get(key); if (pending) return pending;
@@ -135,7 +181,10 @@ export class GoogleDriveStorage implements CloudStorageProvider {
       if (error instanceof CloudError && !['FILE_MISSING', 'DRIVE_TOKEN_EXPIRED', 'DRIVE_NOT_CONNECTED', 'DRIVE_STORAGE_FULL'].includes(error.code)) this.db.driveStatus(input.ownerUserId, 'temporary_error');
       throw error;
       }
-    }).finally(() => this.uploads.delete(key));
+    }).finally(() => {
+      this.uploads.delete(key);
+      for (const [name, holder] of this.reservedNames) if (holder === key) this.reservedNames.delete(name);
+    });
     this.uploads.set(key, promise); return promise;
   }
   private async uploadOne(input: UploadInput): Promise<StoredStudy> {
@@ -174,11 +223,13 @@ export class GoogleDriveStorage implements CloudStorageProvider {
         for (let sessionAttempt = 0; sessionAttempt < 2 && !complete; sessionAttempt++) {
           let session = record.session;
           if (!session) {
+            this.stage('filename_lookup');
+            const name = await this.uploadName(input, folderId, record.remoteId);
             this.stage('session_create');
             this.context.getStore()!.sessionState = 'creating';
             const response = await this.request(owner, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id', { method: 'POST', headers: {
               'content-type': 'application/json', 'x-upload-content-type': file.mimeType, 'x-upload-content-length': String(file.bytes),
-            }, body: JSON.stringify({ id: record.remoteId, name: 'estudio-' + record.remoteId + (file.kind === 'PDF' ? '.pdf' : '.zip'), mimeType: file.mimeType, parents: [folderId],
+            }, body: JSON.stringify({ id: record.remoteId, name, mimeType: file.mimeType, parents: [folderId],
               appProperties: { pp_app: APP, pp_owner: owner, pp_sha256: file.sha256, pp_md5: md5, pp_kind: file.kind, pp_provider: input.study.provider,
                 ...(input.study.sourceKey ? { pp_source: input.study.sourceKey } : {}) } }) }, { signal, retry: false, accepted: [409] });
             if (response.status === 409) { remote = await this.remote(owner, record.remoteId, signal); complete = true; break; }

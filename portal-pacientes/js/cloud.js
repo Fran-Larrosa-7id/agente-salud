@@ -27,7 +27,7 @@
         return { id: 'drive-' + record.id, name: record.title || (record.providerId === 'percamb' ? 'Resultados de laboratorio' : 'Estudio de imágenes'),
           type: record.providerId === 'percamb' ? 'laboratorio' : 'imagenes', date: record.date || '', studyDate: record.date || '', reportDate: null,
           inst: institution ? institution.id : 'yo', provider: record.providerId, sourceKey: record.sourceStudyKey,
-          status: record.status === 'stored' ? 'disponible' : 'no_disponible', remoteStatus: record.status,
+          status: record.status === 'stored' ? 'disponible' : 'no_disponible', remoteStatus: record.status, hidden: !!record.hidden,
           pages: 0, images: 0, results: null, size: P.fmtBytes(record.bytes), importedAt: record.createdAt, importedBy: 'agent',
           origin: 'google_drive', requestedBy: 'Sin dato', protocol: '', artifactKind: record.kind,
           file: { storageBackend: 'google_drive', catalogId: record.id, key: 'drive:' + record.id, bytes: record.bytes, kind: record.kind, mimeType: record.mimeType, sha256: record.sha256 } };
@@ -50,7 +50,7 @@
       '<div class="btn-row mt-4">' + (status === 'disconnected' || reconnect ? '<a class="btn btn-primary" href="/api/drive/connect">' + (reconnect ? 'Reconectar Google Drive' : 'Conectar mi Google Drive') + '</a>' : '') +
       '<button type="button" class="btn btn-secondary" data-action="cloud-sync"' + (P.cloudSyncBusy ? ' disabled' : '') + '>Actualizar mis estudios</button>' +
       (status !== 'disconnected' ? '<button type="button" class="btn btn-secondary" data-action="drive-disconnect">Desconectar Drive</button>' : '') + '</div>' +
-      '<p class="muted mt-4">Tus medicamentos, alergias, vacunas y preferencias de esta cuenta permanecen en este navegador. Esta versión sincroniza los estudios guardados en Drive.</p>' +
+      '<p class="muted mt-4">Tus medicamentos, alergias y vacunas de esta cuenta permanecen en este navegador. Los estudios de Drive y la opción de ocultarlos de tu biblioteca se sincronizan con tu cuenta.</p>' +
       '<p class="muted">Los archivos anteriores del piloto quedan separados. No se asignan ni se suben automáticamente a esta cuenta.</p></section>';
   };
   P.cloudBanner = function () {
@@ -85,5 +85,15 @@
     if (!await P.confirm({ title: '¿Enviar el archivo a la papelera de tu Drive?', text: 'El original dejará de estar disponible desde el Portal. Podés restaurarlo desde la papelera de Google Drive. No se borran otros estudios.', confirmLabel: 'Enviar a la papelera', tone: 'danger' })) return;
     try { await P.agent.call('DELETE', '/api/studies/' + encodeURIComponent(button.dataset.id), { confirm: true }); P.closeAllOverlays(); await P.syncCloudCatalog(false); P.rerender(); }
     catch (error) { P.toast(P.cloudMessage(error.code), { tone: 'danger' }); }
+  };
+  P.actions['cloud-visibility'] = async button => {
+    const hidden = button.dataset.hidden === 'true';
+    if (hidden && !await P.confirm({ title: '¿Ocultar de mi biblioteca?', text: 'Conservamos el historial y los metadatos. El archivo de Google Drive no se elimina. Podés volver a mostrarlo desde Estudios ocultos.', confirmLabel: 'Ocultar de mi biblioteca' })) return;
+    const generation = P.identityGeneration;
+    try {
+      await P.agent.call('POST', '/api/studies/' + encodeURIComponent(button.dataset.id) + '/visibility', { hidden, confirm: hidden });
+      if (generation !== P.identityGeneration) return;
+      await P.syncCloudCatalog(false); P.rerender();
+    } catch (error) { if (generation === P.identityGeneration) P.toast(P.cloudMessage(error.code), { tone: 'danger' }); }
   };
 })();

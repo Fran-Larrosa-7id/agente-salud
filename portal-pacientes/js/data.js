@@ -60,10 +60,13 @@
 
   P.inst = (id) => P.INSTITUTIONS.find((i) => i.id === id) || P.SELF;
   P.studies = () => {
-    const all = P.db.studies;
+    const all = P.db.studies.filter(s => !s.hidden && s.remoteStatus !== 'remote_missing');
     return all.slice().sort(byDateDesc);
   };
   P.study = (id) => P.db.studies.find((s) => s.id === id);
+  P.unavailableStudies = () => P.db.studies.filter(s => !s.hidden && s.remoteStatus === 'remote_missing').slice().sort(byDateDesc);
+  P.hiddenStudies = () => P.db.studies.filter(s => s.hidden).slice().sort(byDateDesc);
+  P.studyHistory = () => P.db.studies.slice().sort(byDateDesc);
   P.activeMeds = () => P.db.meds.filter((m) => m.status === 'activa');
   P.pastMeds = () => P.db.meds.filter((m) => m.status !== 'activa');
   P.authorization = (instId) => P.db.authorizations.find((a) => a.inst === instId);

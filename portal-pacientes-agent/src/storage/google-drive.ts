@@ -191,15 +191,20 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     const { ownerUserId: owner, file, signal } = input;
     const existing = this.db.byHash(owner, file.sha256);
     if (existing) {
-      if (existing.status === 'remote_missing') throw new CloudError('FILE_MISSING', 404);
       this.stage('remote_verify');
-      const verified = await this.getMetadata(owner, existing.id);
-      if (verified.kind !== file.kind || verified.mimeType !== file.mimeType || verified.bytes !== file.bytes) throw new CloudError('ARTIFACT_INTEGRITY_FAILED', 409);
-      const ctx = this.context.getStore()!; ctx.bytes = file.bytes; ctx.sessionState = 'complete';
-      this.stage('catalog_commit');
-      const saved = this.db.commitStudy({ ...verified, providerId: input.study.provider, sourceStudyKey: input.study.sourceKey,
-        date: input.study.studyDate || input.study.date || '', title: input.study.title || '' });
-      this.db.driveStatus(owner, 'connected'); this.report('stored'); return saved;
+      const verified = await this.getMetadata(owner, existing.id).catch(error => {
+        if (error instanceof CloudError && error.code === 'FILE_MISSING') return null;
+        throw error; // An outage or expired authorization never creates a replacement.
+      });
+      if (verified) {
+        if (verified.kind !== file.kind || verified.mimeType !== file.mimeType || verified.bytes !== file.bytes) throw new CloudError('ARTIFACT_INTEGRITY_FAILED', 409);
+        const ctx = this.context.getStore()!; ctx.bytes = file.bytes; ctx.sessionState = 'complete';
+        this.stage('catalog_commit');
+        const saved = this.db.commitStudy({ ...verified, providerId: input.study.provider, sourceStudyKey: input.study.sourceKey,
+          date: input.study.studyDate || input.study.date || '', title: input.study.title || '' });
+        this.db.driveStatus(owner, 'connected'); this.report('stored'); return saved;
+      }
+      this.db.resetMissingUpload(owner, file.sha256, existing.remoteFileId);
     }
     if ((await stat(file.path)).size !== file.bytes) throw new CloudError('ARTIFACT_INTEGRITY_FAILED', 409);
     const sha = createHash('sha256'), md = createHash('md5');
@@ -280,7 +285,7 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     const saved = this.db.commitStudy({ ownerUserId: owner, providerId: input.study.provider, sourceStudyKey: input.study.sourceKey,
       sha256: file.sha256, kind: file.kind, bytes: file.bytes, mimeType: file.mimeType, remoteFileId: remote.id, remoteFolderId: folderId,
       storageBackend: 'google_drive', date: input.study.studyDate || input.study.date || '', title: input.study.title || '',
-      createdAt: new Date().toISOString(), status: 'stored', md5Checksum: md5 });
+      createdAt: existing?.createdAt || new Date().toISOString(), status: 'stored', md5Checksum: md5 });
     this.db.driveStatus(owner, 'connected'); this.report('stored'); return saved;
   }
   list(owner: string): StoredStudy[] { return this.db.list(owner); }
@@ -293,6 +298,7 @@ export class GoogleDriveStorage implements CloudStorageProvider {
       stored.md5Checksum && remote.md5Checksum && stored.md5Checksum !== remote.md5Checksum) {
       this.db.markMissing(owner, id); throw new CloudError('FILE_MISSING', 404);
     }
+    if (stored.status === 'remote_missing') return this.db.commitStudy({ ...stored, status: 'stored' });
     return stored;
   }
   async open(owner: string, id: string): Promise<string> { const file = await this.getMetadata(owner, id); return 'https://drive.google.com/file/d/' + encodeURIComponent(file.remoteFileId) + '/view'; }
@@ -323,6 +329,7 @@ export class GoogleDriveStorage implements CloudStorageProvider {
         !['PDF', 'DICOM_ZIP'].includes(props.pp_kind) || file.mimeType !== (props.pp_kind === 'PDF' ? 'application/pdf' : 'application/zip') || !(Number(file.size) > 0)) continue;
       remoteIds.add(file.id);
       const aliases = this.db.list(owner).filter(value => value.remoteFileId === file.id);
+      if (!aliases.length && this.db.wasReplaced(owner, file.id)) continue; // Restoring an older original must not undo a successful reimport.
       if (props.pp_md5 && file.md5Checksum && props.pp_md5 !== file.md5Checksum) { for (const alias of aliases) this.db.markMissing(owner, alias.id); continue; }
       if (aliases.length) {
         for (const alias of aliases) this.db.commitStudy({ ...alias, status: 'stored' });
@@ -338,7 +345,7 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     // Only mark missing after every page succeeded. An outage must not erase the catalog.
     for (const file of this.db.list(owner)) if (!remoteIds.has(file.remoteFileId)) {
       // Search indexing may lag a completed upload: direct lookup distinguishes lag from deletion.
-      try { const value = await this.remote(owner, file.remoteFileId); if (value.trashed) this.db.markMissing(owner, file.id); }
+      try { await this.getMetadata(owner, file.id); }
       catch (error) { if (error instanceof CloudError && error.code === 'FILE_MISSING') this.db.markMissing(owner, file.id); else throw error; }
     }
     this.db.driveStatus(owner, 'connected');

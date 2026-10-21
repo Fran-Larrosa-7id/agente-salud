@@ -25,6 +25,9 @@ try {
     const user = db.upsertUser('container-regression', 'fixture@example.test', 'Synthetic fixture');
     db.saveCredentials(user.id, { accessToken: 'synthetic-access', refreshToken: 'synthetic-refresh' });
     db.createSession('synthetic-session', user.id, Date.now() + 3600_000);
+    const study = db.commitStudy({ ownerUserId: user.id, providerId: 'centrodm', sha256: 'a'.repeat(64), kind: 'PDF', bytes: 40, mimeType: 'application/pdf',
+      remoteFileId: 'synthetic-only', remoteFolderId: 'synthetic-folder', storageBackend: 'google_drive', date: '2026-01-01', title: 'Synthetic fixture', createdAt: '2026-01-01', status: 'remote_missing' });
+    db.setHidden(user.id, study.id, true);
   }
   assert.equal(db.sql.prepare('PRAGMA journal_mode').get()?.journal_mode, 'wal');
   assert.ok(existsSync(filename + '-wal'), 'SQLite must create WAL on the persistent volume');
@@ -38,6 +41,8 @@ try {
   const user = db.session('synthetic-session');
   assert.equal(user?.email, 'fixture@example.test');
   assert.equal(db.credentials(user!.id)?.refreshToken, 'synthetic-refresh');
+  assert.equal(db.list(user!.id)[0].hidden, true, 'Visibility preference must survive container recreation');
+  assert.equal(db.list(user!.id)[0].status, 'remote_missing');
   assert.equal(db.sql.prepare('SELECT COUNT(*) AS n FROM users').get()?.n, 1);
   assert.ok(!readFileSync(filename + '-wal').includes(Buffer.from('synthetic-refresh')));
   console.log('SQLITE_CONTAINER_OK: ' + phase + '; UID/GID 1000, read-only root, seccomp, no capabilities, WAL/SHM and encrypted fixture verified.');

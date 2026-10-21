@@ -74,6 +74,9 @@ export function createApp({ config, manager, providers, info, desktop, google }:
     app.get('/remote-assets/portal-login.js', (_req, res) => {
       res.set('cache-control', 'no-store').sendFile(path.join(AGENT_ROOT, 'src/server/remote-client.js'));
     });
+    app.get('/remote-assets/portal-keyboard.js', (_req, res) => {
+      res.set('cache-control', 'no-store').sendFile(path.join(AGENT_ROOT, 'src/server/remote-keyboard.js'));
+    });
     app.use('/remote-assets', (_req, res, next) => { res.set('cache-control', 'no-store'); next(); }, express.static('/usr/share/novnc', { etag: false, maxAge: 0 }));
     app.get('/remote/:jobId', async (req, res) => {
         const id = String(req.params.jobId);
@@ -262,6 +265,13 @@ export function createApp({ config, manager, providers, info, desktop, google }:
       res.json({ studies: google.drive.list(owner(req)).map(publicStudy), syncError, drive: google.db.connection(owner(req)).status });
     });
     app.get('/api/studies/:id', async (req, res) => res.json(publicStudy(await google.drive.getMetadata(owner(req), String(req.params.id)))));
+    app.post('/api/studies/:id/visibility', (req, res) => {
+      if (typeof req.body?.hidden !== 'boolean') return void res.status(400).json({ error: 'INVALID_VISIBILITY' });
+      if (req.body.hidden && req.body.confirm !== true) return void res.status(400).json({ error: 'CONFIRMATION_REQUIRED' });
+      const study = google.db.setHidden(owner(req), String(req.params.id), req.body.hidden);
+      if (!study) return void res.status(404).json({ error: 'FILE_MISSING' });
+      res.json(publicStudy(study));
+    });
     app.get('/api/studies/:id/open', async (req, res) => {
       const url = await google.drive.open(owner(req), String(req.params.id));
       if (!access.owner(req)) return void res.status(401).json({ error: 'SESSION_EXPIRED' });

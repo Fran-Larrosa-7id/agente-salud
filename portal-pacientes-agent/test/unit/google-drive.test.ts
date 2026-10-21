@@ -187,16 +187,75 @@ test('Drive: catalog reconstruction, missing-file handling and SQLite restart pr
     const storage = new GoogleDriveStorage(recovered, oauth, mock.fetch, async () => {});
     await storage.reconcile(user.id); assert.equal(recovered.list(user.id).length, 1); assert.equal(user.id, a.id); assert.equal(recovered.list(user.id)[0].title, ''); recovered.close();
     await drive.trash(a.id, saved.id); await drive.reconcile(a.id); assert.equal(db.list(a.id)[0].status, 'remote_missing');
-    await assert.rejects(drive.upload({ ownerUserId: a.id, jobId: randomUUID(), file, study, signal: new AbortController().signal }), /FILE_MISSING/); assert.equal(mock.uploadStarts, 1);
+    db.setHidden(a.id, saved.id, true);
     db.close(); closed = true;
     const restarted = new PortalDatabase(config.databasePath, cipher);
-    assert.equal(restarted.session('synthetic-session-hash')!.id, a.id); assert.equal(restarted.list(a.id)[0].status, 'remote_missing'); restarted.close();
+    assert.equal(restarted.session('synthetic-session-hash')!.id, a.id); assert.equal(restarted.list(a.id)[0].status, 'remote_missing');
+    assert.equal(restarted.list(a.id)[0].hidden, true); restarted.close();
   } finally { await files.cleanup(); if (!closed) db.close(); }
+});
+
+test('Drive lifecycle: hidden preferences survive sync, restore, safe reimport and retries without crossing accounts', async () => {
+  const { config, mock, db, drive, a, b, oauth } = setup(); const { files, file } = await source(config);
+  try {
+    const input = { ownerUserId: a.id, jobId: randomUUID(), file, study, signal: new AbortController().signal };
+    const saved = await drive.upload(input);
+    assert.equal(db.setHidden(b.id, saved.id, true), null);
+    assert.equal(db.setHidden(a.id, saved.id, true)!.hidden, true);
+    await drive.reconcile(a.id); assert.equal(db.study(a.id, saved.id)!.hidden, true);
+    await drive.trash(a.id, saved.id);
+    mock.files.get(saved.remoteFileId)!.trashed = false;
+    const delayedIndex = new GoogleDriveStorage(db, oauth, async (url, init) => {
+      if (new URL(String(url)).pathname === '/drive/v3/files') return new Response(JSON.stringify({ files: [] }), { status: 200 });
+      return mock.fetch(url, init);
+    }, async () => {});
+    await delayedIndex.reconcile(a.id);
+    assert.equal(db.study(a.id, saved.id)!.status, 'stored');
+    assert.equal(db.study(a.id, saved.id)!.hidden, true);
+    assert.equal((await drive.upload(input)).remoteFileId, saved.remoteFileId);
+    assert.equal(mock.uploadStarts, 1);
+    await drive.trash(a.id, saved.id);
+    const offline = new GoogleDriveStorage(db, oauth, async () => new Response('{}', { status: 503 }), async () => {});
+    await assert.rejects(offline.upload(input)); assert.equal(mock.uploadStarts, 1);
+    mock.failTransfers = true;
+    await assert.rejects(drive.upload(input));
+    const newId = db.upload(a.id, file.sha256)!.remoteId;
+    assert.notEqual(newId, saved.remoteFileId);
+    mock.failTransfers = false;
+    const [replacement, duplicate] = await Promise.all([drive.upload(input), drive.upload(input)]);
+    assert.equal(replacement.id, saved.id); assert.equal(replacement.remoteFileId, newId);
+    assert.equal(duplicate.remoteFileId, newId); assert.equal(replacement.sha256, saved.sha256);
+    assert.equal(replacement.hidden, true); assert.equal(mock.uploadStarts, 2);
+    assert.equal(db.wasReplaced(a.id, saved.remoteFileId), true);
+    assert.equal(db.wasReplaced(b.id, saved.remoteFileId), false);
+    // A later restoration of the older generation never replaces the current original.
+    mock.files.get(saved.remoteFileId)!.trashed = false;
+    await drive.reconcile(a.id); assert.equal(db.study(a.id, saved.id)!.remoteFileId, newId);
+    assert.equal(db.list(a.id).length, 1); assert.equal(db.list(b.id).length, 0);
+    assert.equal(db.setHidden(a.id, saved.id, false)!.hidden, false);
+    await assert.rejects(offline.reconcile(a.id)); assert.equal(db.study(a.id, saved.id)!.status, 'stored');
+  } finally { await files.cleanup(); db.close(); }
 });
 test('AES-GCM rejects another patient context or wrong key and never stores a plaintext token', () => {
   const cipher = new TokenCipher(Buffer.alloc(32, 4)); const encrypted = cipher.seal({ refreshToken: 'never-plaintext' }, 'drive:A');
   assert.ok(!encrypted.includes('never-plaintext')); assert.throws(() => cipher.open(encrypted, 'drive:B'), /CREDENTIALS_UNREADABLE/);
   assert.throws(() => new TokenCipher(Buffer.alloc(32, 5)).open(encrypted, 'drive:A'), /CREDENTIALS_UNREADABLE/);
+});
+
+test('SQLite additive preference extension opens an existing v1 catalog without changing credentials or originals', () => {
+  const { config, db, cipher, a } = setup();
+  const original = db.commitStudy({ ownerUserId: a.id, providerId: 'percamb', sha256: 'a'.repeat(64), kind: 'PDF', bytes: 40, mimeType: 'application/pdf',
+    remoteFileId: 'synthetic-original', remoteFolderId: 'synthetic-folder', storageBackend: 'google_drive', date: '', title: '', createdAt: '', status: 'stored' });
+  const encrypted = db.sql.prepare('SELECT credentials FROM google_drive_connections WHERE owner_id=?').get(a.id)!.credentials;
+  // Synthetic old schema: the previous release has neither additive table.
+  db.sql.exec('DROP TABLE study_preferences; DROP TABLE study_originals;'); db.close();
+  const reopened = new PortalDatabase(config.databasePath, cipher);
+  try {
+    assert.equal(reopened.study(a.id, original.id)!.remoteFileId, original.remoteFileId);
+    assert.equal(reopened.sql.prepare('SELECT credentials FROM google_drive_connections WHERE owner_id=?').get(a.id)!.credentials, encrypted);
+    assert.equal(reopened.setHidden(a.id, original.id, true)!.hidden, true);
+    assert.equal(reopened.sql.prepare('SELECT MAX(version) AS v FROM schema_migrations').get()!.v, 1);
+  } finally { reopened.close(); }
 });
 
 test('Drive: identical originals keep distinct study references; modified remote bytes become unavailable', async () => {

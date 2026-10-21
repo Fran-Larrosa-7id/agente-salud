@@ -532,3 +532,6 @@
 @media (max-width: 380px) {
   .doc-grid { grid-template-columns: 1fr; }
 }
+.study-archive summary { cursor: pointer; font-weight: 650; min-height: 44px; padding: 10px 0; }
+.study-archive li { padding: 16px 0; overflow-wrap: anywhere; }
+.study-archive button { white-space: normal; scroll-margin-block: 100px; }

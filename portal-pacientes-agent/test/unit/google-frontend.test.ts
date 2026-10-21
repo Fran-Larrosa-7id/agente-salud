@@ -56,3 +56,16 @@ test('Frontend Google session and API outage never authenticate via demo or rend
   assert.equal(await P.prepareAuth(), false); assert.equal(P.portalAuthEnabled, true); assert.equal(P.db.session, null); assert.equal(P.googleUser, null);
   assert.equal(P.portalAuthUnavailable, true); assert.ok(!P.renderLogin().includes('1234'));
 });
+
+test('Library separates missing and hidden originals while retaining the full study history and metadata', async () => {
+  const { P } = await frontend();
+  P.applyIdentity('google', { id: 'a'.repeat(64) });
+  P.db.studies = [
+    { id: 'available', date: '', status: 'disponible', remoteStatus: 'stored' },
+    { id: 'missing', date: '', status: 'no_disponible', remoteStatus: 'remote_missing' },
+    { id: 'hidden', date: '', status: 'disponible', remoteStatus: 'stored', hidden: true },
+  ];
+  assert.equal(P.studies().length, 1); assert.equal(P.documents().length, 1);
+  assert.equal(P.unavailableStudies()[0].id, 'missing'); assert.equal(P.hiddenStudies()[0].id, 'hidden');
+  assert.equal(P.studyHistory().length, 3); assert.equal(P.study('missing').id, 'missing');
+});

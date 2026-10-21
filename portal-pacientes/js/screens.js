@@ -230,6 +230,14 @@
     ).join('');
   }
 
+  function archivedStudies() {
+    const section = (title, list, hidden) => !list.length ? '' : '<details class="card mt-4 study-archive"><summary>' + title + ' (' + list.length + ')</summary>' +
+      '<p>' + (hidden ? 'Podés volver a mostrar estos estudios. No eliminamos sus archivos de Drive.' : 'Conservamos sus metadatos. Si restaurás el original desde la papelera de Drive, usá Actualizar para volver a verlo disponible.') + '</p><ul class="study-list">' + list.map(s =>
+        '<li><a class="link" href="#/estudios/' + P.esc(s.id) + '">' + P.esc(s.name) + '</a><p>' + P.esc(P.inst(s.inst).name) + ' · ' + P.esc(P.fmt(s.date)) + '</p>' +
+        '<button class="btn btn-secondary" data-action="cloud-visibility" data-id="' + P.esc(s.file.catalogId) + '" data-hidden="' + !hidden + '">' + (hidden ? 'Volver a mostrar' : 'Ocultar de mi biblioteca') + '</button></li>'
+      ).join('') + '</ul></details>';
+    return section('Estudios no disponibles', P.unavailableStudies(), false) + section('Estudios ocultos', P.hiddenStudies(), true);
+  }
   S.estudios = function () {
     const all = P.studies();
     const years = Array.from(new Set(all.map((s) => (s.date || '').slice(0, 4)).filter(Boolean))).sort().reverse();
@@ -256,7 +264,7 @@
             '<button type="button" class="chip" data-action="est-type" data-value="' + t[0] + '" aria-pressed="' + (est.type === t[0]) + '">' + t[1] + ' <span class="chip-count num">' + count(t[0]) + '</span></button>'
           ).join('') + '</div>'
         : '') +
-      '<div id="est-results">' + studiesResults() + '</div>';
+      '<div id="est-results">' + studiesResults() + '</div>' + archivedStudies();
     return { title: 'Estudios', html, skeleton: 'list' };
   };
 
@@ -294,6 +302,7 @@
     const shares = P.db.shares.filter((x) => x.studyId === s.id && P.shareStatus(x) === 'activo');
 
     let main = '';
+    if (s.file?.storageBackend === 'google_drive') main += '<section class="card"><button class="btn btn-secondary" data-action="cloud-visibility" data-id="' + P.esc(s.file.catalogId) + '" data-hidden="' + !s.hidden + '">' + (s.hidden ? 'Volver a mostrar en mi biblioteca' : 'Ocultar de mi biblioteca') + '</button><p class="muted">Esta preferencia se sincroniza con tu cuenta y no elimina el archivo de Drive.</p></section>';
     if (s.remoteStatus === 'remote_missing') {
       main += '<section class="card"><h2 class="card-title">Archivo no disponible en Drive</h2><p>El archivo se eliminó o dejó de estar disponible. Podés revisar la papelera de tu Google Drive. No lo restauramos automáticamente.</p></section>';
     } else if (!available) {
@@ -456,7 +465,7 @@
 
   function events() {
     const ev = [];
-    P.studies().forEach((s) => ev.push({ date: s.date, kind: 'estudio', icon: P.TYPES[s.type].icon, title: s.name, sub: P.TYPES[s.type].label, inst: s.inst, href: '#/estudios/' + s.id, tag: s.status === 'pendiente' ? 'Resultado pendiente' : s.importedAt ? 'Traído por vos' : '' }));
+    P.studyHistory().forEach((s) => ev.push({ date: s.date, kind: 'estudio', icon: P.TYPES[s.type].icon, title: s.name, sub: P.TYPES[s.type].label, inst: s.inst, href: '#/estudios/' + s.id, tag: s.hidden ? 'Oculto de biblioteca' : s.remoteStatus === 'remote_missing' ? 'No disponible en Drive' : s.status === 'pendiente' ? 'Resultado pendiente' : s.importedAt ? 'Traído por vos' : '' }));
     P.db.meds.forEach((m) => {
       ev.push({ date: m.start, kind: 'medicacion', icon: 'pill', title: 'Nueva medicación registrada', sub: m.name + ' ' + m.dose + ' · ' + m.how, inst: m.inst, href: '#/salud/medicacion' });
       if (m.end) ev.push({ date: m.end, kind: 'medicacion', icon: 'pill', title: 'Medicación finalizada', sub: m.name + ' ' + m.dose, inst: m.inst, href: '#/salud/medicacion' });

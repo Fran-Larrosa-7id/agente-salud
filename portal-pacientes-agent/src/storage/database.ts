@@ -12,6 +12,7 @@ export interface StoredStudy {
   remoteFileId: string; remoteFolderId: string; storageBackend: 'google_drive';
   date: string; title: string; createdAt: string; status: 'stored' | 'remote_missing';
   md5Checksum?: string;
+  hidden?: boolean;
 }
 export interface OAuthAttempt { purpose: 'login' | 'drive'; nonce: string; verifier: string; ownerId?: string; sessionHash?: string; jobId?: string }
 export interface UploadRecord { remoteId: string; session?: string; status: string }
@@ -74,6 +75,10 @@ export class PortalDatabase {
       CREATE INDEX IF NOT EXISTS sessions_owner ON sessions(owner_id);
       CREATE INDEX IF NOT EXISTS studies_owner ON studies(owner_id);
       CREATE INDEX IF NOT EXISTS studies_hash ON studies(owner_id,sha256);
+      CREATE TABLE IF NOT EXISTS study_preferences(owner_id TEXT NOT NULL REFERENCES users(id), study_id TEXT NOT NULL REFERENCES studies(id),
+        hidden INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(owner_id,study_id));
+      CREATE TABLE IF NOT EXISTS study_originals(owner_id TEXT NOT NULL REFERENCES users(id), study_id TEXT NOT NULL REFERENCES studies(id),
+        remote_id TEXT NOT NULL, record TEXT NOT NULL, PRIMARY KEY(owner_id,study_id,remote_id));
       INSERT OR IGNORE INTO schema_migrations VALUES(1,datetime('now'));
       COMMIT;`);
     } catch (error) {
@@ -144,15 +149,30 @@ export class PortalDatabase {
       DO UPDATE SET session_cipher=excluded.session_cipher,status='uploading'`).run(userId, key, remoteId, session ? this.cipher.seal(session, 'upload:' + userId + ':' + key) : null, jobId);
   }
   byHash(userId: string, sha256: string): StoredStudy | null {
-    const row = this.sql.prepare('SELECT record FROM studies WHERE owner_id=? AND sha256=?').get(userId, sha256);
+    const row = this.sql.prepare('SELECT record FROM studies WHERE owner_id=? AND sha256=? ORDER BY json_extract(record,\'$.status\')=\'stored\' DESC,rowid DESC').get(userId, sha256);
     return row ? JSON.parse(String(row.record)) as StoredStudy : null;
   }
   study(userId: string, id: string): StoredStudy | null {
     const row = this.sql.prepare('SELECT record FROM studies WHERE owner_id=? AND id=?').get(userId, id);
-    return row ? JSON.parse(String(row.record)) as StoredStudy : null;
+    return row ? this.withPreference(userId, JSON.parse(String(row.record)) as StoredStudy) : null;
   }
   list(userId: string): StoredStudy[] {
-    return this.sql.prepare('SELECT record FROM studies WHERE owner_id=? ORDER BY rowid DESC').all(userId).map(row => JSON.parse(String(row.record)) as StoredStudy);
+    return this.sql.prepare('SELECT record FROM studies WHERE owner_id=? ORDER BY rowid DESC').all(userId).map(row => this.withPreference(userId, JSON.parse(String(row.record)) as StoredStudy));
+  }
+  private withPreference(userId: string, record: StoredStudy): StoredStudy {
+    return { ...record, hidden: this.sql.prepare('SELECT hidden FROM study_preferences WHERE owner_id=? AND study_id=?').get(userId, record.id)?.hidden === 1 };
+  }
+  setHidden(userId: string, id: string, hidden: boolean): StoredStudy | null {
+    if (!this.study(userId, id)) return null;
+    this.sql.prepare('INSERT INTO study_preferences VALUES(?,?,?) ON CONFLICT(owner_id,study_id) DO UPDATE SET hidden=excluded.hidden').run(userId, id, hidden ? 1 : 0);
+    return this.study(userId, id);
+  }
+  resetMissingUpload(userId: string, sha256: string, remoteId: string): void {
+    // Only retire the confirmed unavailable generation, never a newly reserved retry.
+    this.sql.prepare('DELETE FROM file_uploads WHERE owner_id=? AND idempotency_key=? AND remote_id=?').run(userId, sha256, remoteId);
+  }
+  wasReplaced(userId: string, remoteId: string): boolean {
+    return !!this.sql.prepare('SELECT 1 FROM study_originals WHERE owner_id=? AND remote_id=?').get(userId, remoteId);
   }
   commitStudy(record: Omit<StoredStudy, 'id'> & { id?: string }): StoredStudy {
     const sourceIdentity = createHash('sha256').update(JSON.stringify([record.providerId, record.sourceStudyKey || [record.date, record.title]])).digest('hex');
@@ -160,10 +180,13 @@ export class PortalDatabase {
     const saved: StoredStudy = { ...record, id: row ? String(row.id) : randomUUID() };
     this.sql.exec('BEGIN IMMEDIATE');
     try {
+      const previous = row ? this.study(saved.ownerUserId, saved.id) : null;
+      if (previous && previous.remoteFileId !== saved.remoteFileId) this.sql.prepare('INSERT OR IGNORE INTO study_originals VALUES(?,?,?,?)')
+        .run(saved.ownerUserId, saved.id, previous.remoteFileId, JSON.stringify(previous));
       this.sql.prepare(`INSERT INTO studies VALUES(?,?,?,?,?,?) ON CONFLICT(owner_id,source_identity,sha256)
         DO UPDATE SET remote_id=excluded.remote_id,record=excluded.record`).run(saved.id, saved.ownerUserId, saved.sha256, saved.remoteFileId, sourceIdentity, JSON.stringify(saved));
       this.sql.prepare("UPDATE file_uploads SET status='stored',session_cipher=NULL WHERE owner_id=? AND idempotency_key=?").run(saved.ownerUserId, saved.sha256);
-      this.sql.exec('COMMIT'); return saved;
+      this.sql.exec('COMMIT'); return this.withPreference(saved.ownerUserId, saved);
     } catch (error) { this.sql.exec('ROLLBACK'); throw error; }
   }
   markMissing(userId: string, id: string): void {

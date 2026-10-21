@@ -1,11 +1,13 @@
 import RFB from '/remote-assets/core/rfb.js';
+import { mobileKeyboard } from '/remote-assets/portal-keyboard.js';
 const config = JSON.parse(document.querySelector('#remote-config').textContent);
 const el = id => document.getElementById(id);
 let rfb, stream, state, preparing = false, finished = false, connected = false, awaitingRetry = false, attempts = 0, timer, lastSeq = -1;
+const keyboard = mobileKeyboard({ input: el('keyboard-input'), toggle: el('keyboard-toggle'), tools: el('keyboard-tools'), desktop: el('desktop'), connection: () => connected && !finished ? rfb : null });
 const interactive = value => ['WAITING_FOR_USER_LOGIN', 'HUMAN_ACTION_REQUIRED'].includes(value);
 const opening = value => ['CREATED', 'OPENING_PROVIDER'].includes(value);
 const failed = value => ['CANCELLED', 'EXPIRED', 'AUTH_TIMEOUT', 'ERROR', 'PROVIDER_UNAVAILABLE', 'PROVIDER_CHANGED', 'AGENT_UNABLE_TO_CONTINUE'].includes(value);
-function resetConnection() { const previous = rfb; rfb = null; connected = false; previous?.disconnect(); el('desktop').hidden = true; el('fullscreen').hidden = true; }
+function resetConnection() { keyboard.close(); const previous = rfb; rfb = null; connected = false; previous?.disconnect(); el('desktop').hidden = true; el('fullscreen').hidden = true; el('keyboard-toggle').hidden = true; }
 function message(title, detail, retry = false) {
   awaitingRetry = true;
   resetConnection(); el('message-panel').hidden = false; el('spinner').hidden = true;
@@ -90,6 +92,7 @@ async function prepare() {
     current.addEventListener('connect', () => {
       if (rfb !== current || finished) return;
       connected = true; clearTimeout(timer); el('fullscreen').hidden = false;
+      el('keyboard-toggle').hidden = false;
       el('status').textContent = 'Ingresá en el sitio de la institución. Detectaremos el acceso automáticamente.';
     });
     current.addEventListener('disconnect', () => {
@@ -115,8 +118,13 @@ function watch() {
   void snapshot();
 }
 el('retry').onclick = () => { attempts = 0; finished = false; awaitingRetry = false; resetConnection(); watch(); };
-el('fullscreen').onclick = () => el('desktop').requestFullscreen?.().catch(() => {});
-document.addEventListener('fullscreenchange', () => { if (rfb) rfb.scaleViewport = !document.fullscreenElement; });
+el('fullscreen').onclick = () => {
+  keyboard.close();
+  if (document.fullscreenElement) { void document.exitFullscreen(); return; }
+  const expand = () => { document.body.classList.toggle('viewer-expanded'); el('fullscreen').textContent = document.body.classList.contains('viewer-expanded') ? 'Reducir navegador' : 'Ampliar navegador'; };
+  if (el('viewer').requestFullscreen) void el('viewer').requestFullscreen().catch(expand); else expand();
+};
+document.addEventListener('fullscreenchange', () => { if (rfb) rfb.scaleViewport = !document.fullscreenElement || matchMedia('(pointer:coarse)').matches; el('fullscreen').textContent = document.fullscreenElement ? 'Reducir navegador' : 'Ampliar navegador'; });
 el('cancel').onclick = async () => {
   el('cancel').disabled = true;
   try {

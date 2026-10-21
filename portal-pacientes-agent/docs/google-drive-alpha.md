@@ -82,7 +82,7 @@ Con un editor local, incorporar esas claves y los datos OAuth a `.env.docker`, c
 
 ## DB, sesiones, recuperación y datos locales
 
-El esquema versión 1 se crea transaccionalmente y se registra en `schema_migrations`. Las tablas son `users`, `sessions`, `oauth_states`, `google_drive_connections`, `studies` y `file_uploads`; hay claves foráneas e índices/constraints por dueño, sub, identidad de estudio y hash. SQLite usa WAL y busy_timeout. No contiene PDFs, ZIP, contraseñas de laboratorios, capturas ni resultados extraídos.
+El esquema versión 1 se crea transaccionalmente y se registra en `schema_migrations`. Las tablas son `users`, `sessions`, `oauth_states`, `google_drive_connections`, `studies` y `file_uploads`; se agregan de forma compatible `study_preferences` (visibilidad por cuenta) y `study_originals` (referencias anteriores). Hay claves foráneas e índices/constraints por dueño, sub, identidad de estudio y hash. SQLite usa WAL y busy_timeout. No contiene PDFs, ZIP, contraseñas de laboratorios, capturas ni resultados extraídos.
 
 El directorio del volumen se prepara para UID 1000, modo 0700; el archivo DB usa 0600 y el proceso umask 077. La raíz read-only, cap_drop, no-new-privileges, seccomp, tmpfs, shm y el puerto loopback permanecen. No publicar puertos VNC/WebSocket auxiliares. El único volumen nuevo es `portal-data`.
 
@@ -92,7 +92,7 @@ Para reconstruir un catálogo perdido: restaurar primero una copia válida de DB
 
 En Google, localStorage/IndexedDB se particionan por identidad opaca. A→B→A mantiene espacios distintos; los datos en memoria se vacían al salir/cambiar y las pestañas se revalidan. El contenido previo del piloto no se asigna a la primera cuenta Google. Se preserva en el espacio legacy y solo vuelve a consultarse al habilitar deliberadamente el modo piloto. **La migración de originales legacy a una cuenta Google queda fuera de esta versión**: requiere un flujo de titularidad/confirmación explícita. No se borran ni se suben silenciosamente.
 
-El perfil explica que medicamentos, alergias, vacunas y preferencias siguen siendo locales por cuenta/dispositivo. Solamente se sincronizan los estudios de Drive. Abrir en Drive conduce a un enlace privado bajo sus permisos; Descargar original requiere sesión y propiedad en el backend. Para ZIP grandes se recomienda abrir/descargar desde Drive, evitando retransmitir el archivo por ngrok. No se implementa visor DICOM.
+El perfil explica que medicamentos, alergias y vacunas siguen siendo locales por cuenta/dispositivo. Se sincronizan los estudios de Drive y su preferencia de visibilidad en la biblioteca. El Historial conserva los metadatos de estudios ocultos o ausentes. Ver [biblioteca y teclado móvil](mobile-keyboard-library.md) para restauración, reimportación y aceptación física. Abrir en Drive conduce a un enlace privado bajo sus permisos; Descargar original requiere sesión y propiedad en el backend. Para ZIP grandes se recomienda abrir/descargar desde Drive, evitando retransmitir el archivo por ngrok. No se implementa visor DICOM.
 
 Desconectar cancela los trabajos propios, revoca cuando Google responde y elimina credenciales locales; conserva catálogo y archivos. Si Google no confirma la revocación, la UI avisa que se quite el acceso desde la cuenta Google. **Enviar a la papelera de Drive** es otra acción, con confirmación explícita, y no vuelve a crear automáticamente el original. No se implementa borrado permanente.
 

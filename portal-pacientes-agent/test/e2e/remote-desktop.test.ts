@@ -118,6 +118,20 @@ test('noVNC detecta login automáticamente, conserva contexto y muestra selecci�
       assert.ok(box);
       await canvas.click({ position: { x: (chrome.x + element.x + element.width / 2) * box.width / size.width, y: (chrome.y + element.y + element.height / 2) * box.height / size.height } });
     }
+    await client.setViewportSize({ width: 390, height: 844 });
+    await clickRemote('input[name=usuario]');
+    await client.click('#keyboard-toggle');
+    await client.keyboard.insertText('áñ@9');
+    await client.click('[data-remote-key=backspace]');
+    await worker.waitForFunction(() => (document.querySelector('input[name=usuario]') as HTMLInputElement).value === 'áñ@');
+    await client.click('[data-remote-key=tab]');
+    await client.keyboard.insertText('Ficticia!7');
+    await worker.waitForFunction(() => (document.querySelector('input[name=pass]') as HTMLInputElement).value === 'Ficticia!7');
+    assert.equal(await client.locator('#keyboard-input').inputValue(), '\u200b');
+    await client.click('[data-remote-key=close]');
+    assert.equal(await client.locator('#keyboard-input').inputValue(), '');
+    await worker.locator('input[name=usuario]').fill(''); await worker.locator('input[name=pass]').fill('');
+    await client.setViewportSize({ width: 1400, height: 1100 });
     await clickRemote('input[name=usuario]');
     await client.keyboard.type(FAKE_USER.usuario);
     await clickRemote('input[name=pass]');

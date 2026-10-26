@@ -14,6 +14,8 @@ import { parseDate } from '../agent/studies.js';
 import { DomainPolicy } from '../security/domain-policy.js';
 import { sleep } from '../util.js';
 import type { BrowserHost } from './browser-host.js';
+import { DISPLAY_COMPATIBILITY } from './display-profile.js';
+import { CENTRODM_RESPONSIVE_LOGIN_SOURCE } from './centrodm-login.js';
 import { probePixeonDownload, handlePixeonCookieConsent, clickPixeonControl } from './pixeon-download.js';
 import { COLLECTOR_SOURCE } from './collector.js';
 import { ProviderParserMismatchError, type BrowserPort, type CentroDmStudyReference, type RdcChacabucoStudyReference, type ProviderStudyList, type ProviderStudyMetadata, type ProviderStructureEvent, type RawElement, type RawPageSnapshot } from './types.js';
@@ -209,8 +211,8 @@ export class BrowserSession implements BrowserPort {
     this.maxMedicalArchiveBytes = maxMedicalArchiveBytes;
   }
 
-  static async open(host: BrowserHost, provider: ProviderConfig, headless: boolean, maxPdfBytes = MAX_PDF_BYTES, providerDebugStructure = false, pdfDownloadTimeoutMs = 60_000, maxMedicalArchiveBytes = MAX_MEDICAL_ARCHIVE_BYTES, extraAllowedOrigins: string[] = [], pixeonViewerReadyTimeoutMs = 30_000, pixeonToolbarTimeoutMs = 30_000): Promise<BrowserSession> {
-    const context = await host.newContext();
+  static async open(host: BrowserHost, provider: ProviderConfig, headless: boolean, maxPdfBytes = MAX_PDF_BYTES, providerDebugStructure = false, pdfDownloadTimeoutMs = 60_000, maxMedicalArchiveBytes = MAX_MEDICAL_ARCHIVE_BYTES, extraAllowedOrigins: string[] = [], pixeonViewerReadyTimeoutMs = 30_000, pixeonToolbarTimeoutMs = 30_000, responsive = false): Promise<BrowserSession> {
+    const context = await host.newContext(responsive && DISPLAY_COMPATIBILITY[provider.id]?.responsive ? 'responsive' : 'desktop');
     const s = new BrowserSession(context, provider, headless, maxPdfBytes, providerDebugStructure, pdfDownloadTimeoutMs, maxMedicalArchiveBytes, extraAllowedOrigins, pixeonViewerReadyTimeoutMs, pixeonToolbarTimeoutMs);
     try {
       await s.install();
@@ -708,6 +710,11 @@ export class BrowserSession implements BrowserPort {
     if (this.provider.studyExtractor === 'centrodm') {
       const list = await this.extractCentroDmRows(page);
       merged.centroDmStudyList = list.recognized && list.resultActions > 0 && list.actions.some(({ action }) => !!action.studyDate || !!action.date);
+      merged.centroDmResponsiveStudyList = false;
+      for (const frame of page.frames()) {
+        if (!this.policy.isAllowedNavigation(frame.url())) continue;
+        if (await frame.evaluate<boolean>(CENTRODM_RESPONSIVE_LOGIN_SOURCE).catch(() => false)) { merged.centroDmResponsiveStudyList = true; break; }
+      }
     }
     if (this.provider.studyExtractor === 'labwin') {
       const resultsHint = merged.hintHits.some((h) => /RESULTADOS ONLINE/i.test(h));

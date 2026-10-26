@@ -80,7 +80,7 @@ export class JobManager {
     }
   }
 
-  create(providerId: string, ownerUserId = 'pilot'): ImportJob {
+  create(providerId: string, ownerUserId = 'pilot', layout: 'mobile' | 'desktop' = 'desktop'): ImportJob {
     const { config, providers, log } = this.deps;
     const provider = providers[providerId];
     if (!provider) throw new ManagerError('UNKNOWN_PROVIDER', 404);
@@ -90,6 +90,7 @@ export class JobManager {
 
     if (config.authMode === 'google' && ownerUserId === 'pilot') throw new ManagerError('SESSION_EXPIRED', 401);
     const job = new ImportJob(provider.id, provider.name, ownerUserId);
+    job.remoteLayout = layout;
     job.storageBackend = config.storageProvider;
     const files = new JobFileStore(config.tmpDir, job.id, config.maxPdfBytes, config.maxMedicalArchiveBytes);
     const runner = this.deps.runnerFactory(job, { config, provider, files, log });
@@ -111,6 +112,7 @@ export class JobManager {
   get(jobId: string): ImportJob | undefined {
     return this.jobs.get(jobId)?.job;
   }
+  remotePage(jobId: string) { return this.jobs.get(jobId)?.runner.remotePage?.(); }
 
   getForOwner(jobId: string, ownerUserId: string | null): ImportJob | undefined {
     const job = this.get(jobId); return job && ownerUserId && job.ownerUserId === ownerUserId ? job : undefined;

@@ -49,7 +49,7 @@
     call,
     catalog: (sync) => call('GET', '/api/studies' + (sync ? '?sync=1' : '')),
     retryStorage: (id) => call('POST', '/api/imports/' + id + '/retry-storage'),
-    start: (provider) => call('POST', '/api/imports/' + encodeURIComponent(provider)),
+    start: (provider) => call('POST', '/api/imports/' + encodeURIComponent(provider), { layout: window.innerWidth <= 600 || window.matchMedia?.('(pointer: coarse)').matches && Math.min(window.innerWidth, window.innerHeight) <= 600 ? 'mobile' : 'desktop' }),
     job: (id) => call('GET', '/api/imports/' + id),
     importSelected: (id, studyIds, importedSourceKeys) => call('POST', '/api/imports/' + id + '/import', { studyIds, importedSourceKeys }),
     async acknowledgePortalImport(id, fileId, studyId, persisted) {

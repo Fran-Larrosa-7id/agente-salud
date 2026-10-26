@@ -3,9 +3,11 @@ import type { ProviderConfig } from '../providers/types.js';
 import type { Logger } from '../security/logger.js';
 import type { JobFileStore } from './file-store.js';
 import type { ImportJob } from './job.js';
+import type { Page } from 'playwright';
 
 /** Ejecuta un job de importación. El gestor de jobs no sabe si detrás hay un navegador real o un simulador. */
 export interface JobRunner {
+  remotePage?(): Page | undefined;
   /** Abre el portal, espera el login del paciente y descubre estudios (hasta WAITING_SELECTION). */
   start(): Promise<void>;
   /** Reintenta el discovery manteniendo navegador y sesiÃ³n autenticada cuando sea posible. */

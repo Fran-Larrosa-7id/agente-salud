@@ -8,6 +8,7 @@ export function mobileKeyboard({ input, toggle, tools, desktop, connection }) {
   let composing = false, pending;
   const reset = () => { input.value = sentinel; input.setSelectionRange(1, 1); };
   const send = keysym => connection()?.sendKey(keysym);
+  const label = text => { const caption = toggle.querySelector('.control-label'); (caption || toggle).textContent = caption ? 'Teclado' : text; toggle.setAttribute('aria-label', text); toggle.title = text; };
   function commit() {
     clearTimeout(pending);
     if (composing) return;
@@ -20,13 +21,15 @@ export function mobileKeyboard({ input, toggle, tools, desktop, connection }) {
   }
   function close() {
     clearTimeout(pending); composing = false; input.value = ''; input.blur();
-    tools.hidden = true; toggle.setAttribute('aria-expanded', 'false'); toggle.textContent = 'Abrir teclado';
+    tools.hidden = true; toggle.setAttribute('aria-expanded', 'false'); label('Abrir teclado');
+    document.body.classList.remove('remote-keyboard-open');
     const current = connection(); if (current) current.focusOnClick = true;
   }
   function focus() {
     // Must be synchronous in the user's tap for Safari/Chrome's native keyboard.
     if (!connection()) return;
-    tools.hidden = false; toggle.setAttribute('aria-expanded', 'true'); toggle.textContent = 'Cerrar teclado';
+    tools.hidden = false; toggle.setAttribute('aria-expanded', 'true'); label('Cerrar teclado');
+    document.body.classList.add('remote-keyboard-open');
     connection().focusOnClick = false;
     reset(); input.focus({ preventScroll: true });
   }

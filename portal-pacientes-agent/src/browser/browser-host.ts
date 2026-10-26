@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { chromium, type Browser, type BrowserContext } from 'playwright';
+import { contextDisplayOptions } from './display-profile.js';
 
 export interface BrowserHostOptions {
   headless: boolean;
@@ -80,7 +81,7 @@ export class BrowserHost {
     await this.getBrowser();
   }
 
-  async newContext(): Promise<BrowserContext> {
+  async newContext(profile: 'desktop' | 'responsive' | 'mobile-emulation' = 'desktop'): Promise<BrowserContext> {
     this.pendingContexts++;
     try {
       const browser = await this.getBrowser();
@@ -88,7 +89,7 @@ export class BrowserHost {
         acceptDownloads: true,
         locale: 'es-AR',
         timezoneId: 'America/Argentina/Buenos_Aires',
-        viewport: { width: 1180, height: 820 },
+        ...contextDisplayOptions(profile),
         serviceWorkers: 'block',
       });
       this.contexts.add(context);

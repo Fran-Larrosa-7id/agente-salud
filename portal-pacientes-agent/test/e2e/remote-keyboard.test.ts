@@ -18,6 +18,7 @@ for (const engine of ['chromium', 'webkit'] as const) test(`mobile keyboard: ${e
     await context.route('http://keyboard.test/**', async route => {
       const pathname = new URL(route.request().url()).pathname;
       let body: string;
+      if (pathname.endsWith('portal-view.css')) { await route.fulfill({ contentType: 'text/css', body: readFileSync(path.join(AGENT_ROOT, 'src/server/remote-view.css'), 'utf8') }); return; }
       if (pathname.endsWith('portal-keyboard.js')) body = readFileSync(path.join(AGENT_ROOT, 'src/server/remote-keyboard.js'), 'utf8');
       else if (pathname.endsWith('keysymdef.js')) body = 'export default { lookup: cp => cp };';
       else if (pathname.endsWith('keysym.js')) body = 'export default { XK_BackSpace: 65288, XK_Tab: 65289, XK_Return: 65293, XK_Escape: 65307 };';

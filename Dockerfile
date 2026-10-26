@@ -1,5 +1,5 @@
 FROM mcr.microsoft.com/playwright:v1.55.1-noble
-RUN apt-get update && apt-get install -y --no-install-recommends x11vnc novnc websockify && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends x11vnc novnc websockify xdotool && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     HOST=0.0.0.0 PORT=8787 HEADLESS=false CHROMIUM_SANDBOX=true \
     LLM_PROVIDER=rules MAX_CONCURRENT_JOBS=1 TMP_DIR=/var/lib/portal/import-jobs
@@ -21,4 +21,4 @@ RUN npm run typecheck && node -e "const {DatabaseSync}=require('node:sqlite'); n
 USER 1000:1000
 EXPOSE 8787
 # El escritorio se transmite por el backend solo durante login/intervención del job autorizado.
-CMD ["xvfb-run", "-a", "--server-args=-screen 0 1280x900x24 -nolisten tcp", "node", "--import", "tsx", "src/server/index.ts"]
+CMD ["xvfb-run", "-a", "--server-args=-screen 0 1280x1000x24 -nolisten tcp", "node", "--import", "tsx", "src/server/index.ts"]

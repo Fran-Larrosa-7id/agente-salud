@@ -74,6 +74,7 @@ export class ImportJob extends EventEmitter {
   human: HumanReason | undefined;
   storageBackend: 'local' | 'google_drive' = 'local';
   storageError: string | null = null;
+  remoteLayout: 'mobile' | 'desktop' = 'desktop';
   /** Se aborta al llegar a un estado terminal: corta esperas, al agente y al navegador. */
   readonly abort = new AbortController();
   private seq = 0;

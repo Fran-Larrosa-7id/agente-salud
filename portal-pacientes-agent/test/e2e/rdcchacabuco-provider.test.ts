@@ -7,6 +7,7 @@ import { makeDemoPdf } from '../../src/jobs/pdf.js';
 import { rdcChacabuco } from '../../src/providers/rdcchacabuco/rdcchacabuco.provider.js';
 import { rdcChacabucoSourceKey } from '../../src/providers/rdcchacabuco/source-key.js';
 import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
+import { configurePageDisplay, DESKTOP_VIEWPORT } from '../../src/browser/display-profile.js';
 
 let server: Server;
 let origin = '';
@@ -14,6 +15,16 @@ let host: BrowserHost;
 const sessions: BrowserSession[] = [];
 const pdf = makeDemoPdf(['Documento original de prueba RDC']);
 const invalidPdf = Buffer.from('no-es-un-pdf');
+
+test('RDC: responsive portrait/landscape and desktop fallback preserve study references and context', async () => {
+  const session = await openSession(), page = session.activePage(), context = page.context();
+  const desktop = await session.listStudies(); assert.equal(desktop?.studies.length, 2);
+  for (const size of [{ width: 390, height: 720 }, { width: 844, height: 390 }]) {
+    await configurePageDisplay(page, 'mobile', size.width, size.height);
+    assert.deepEqual((await session.listStudies())?.studies.map(s => s.sourceKey), desktop!.studies.map(s => s.sourceKey));
+  }
+  await page.setViewportSize(DESKTOP_VIEWPORT); assert.equal(page.context(), context);
+});
 
 function send(res: import('node:http').ServerResponse, type: string, body: string | Buffer, headers: Record<string, string> = {}) {
   res.writeHead(200, { 'content-type': type, ...headers });

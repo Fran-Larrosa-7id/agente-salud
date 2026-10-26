@@ -153,7 +153,9 @@ test('A/B isolation covers every job API, SSE, desktop HTML, busy response and l
     const created = await (await f.api('/api/imports/percamb', a.cookie, 'POST')).json() as { jobId: string }; const id = created.jobId;
     await waitFor(() => f.manager.get(id)?.state === 'WAITING_FOR_USER_LOGIN');
     for (const route of [`/api/imports/${id}`, `/api/imports/${id}/events`, `/api/imports/${id}/studies`, `/api/imports/${id}/files/${randomUUID()}`, `/remote/${id}`]) assert.equal((await f.api(route, b.cookie)).status, 404, route);
-    for (const route of ['import', 'desktop', 'resume', 'retry-discovery', 'retry-storage', 'files/' + randomUUID() + '/ack']) assert.equal((await f.api(`/api/imports/${id}/${route}`, b.cookie, 'POST', { studyIds: [], persisted: true })).status, 404, route);
+    for (const route of ['import', 'desktop', 'navigation', 'resume', 'retry-discovery', 'retry-storage', 'files/' + randomUUID() + '/ack']) assert.equal((await f.api(`/api/imports/${id}/${route}`, b.cookie, 'POST', { studyIds: [], persisted: true })).status, 404, route);
+    assert.equal((await f.api(`/api/imports/${id}/display`, b.cookie)).status, 404);
+    assert.equal((await f.api(`/api/imports/${id}/desktop`, a.cookie, 'POST', { layout: 'mobile', width: -5 })).status, 400);
     assert.equal((await f.api(`/api/imports/${id}`, b.cookie, 'DELETE')).status, 404);
     const busy = await f.api('/api/imports/percamb', b.cookie, 'POST'); assert.equal(busy.status, 429); assert.deepEqual(await busy.json(), { error: 'IMPORT_BUSY' });
     await f.api(`/api/imports/${id}`, a.cookie, 'DELETE'); await waitFor(() => f.manager.activeCount() === 0);

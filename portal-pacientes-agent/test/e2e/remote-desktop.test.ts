@@ -91,9 +91,9 @@ test('noVNC detecta login automáticamente, conserva contexto y muestra selecci�
     assert.ok(await client.locator('#desktop canvas').isVisible());
     assert.equal(await client.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     if (process.env.QA_SCREENSHOTS) await client.screenshot({ path: path.join(process.env.QA_SCREENSHOTS, 'remote-mobile.png'), fullPage: true });
-    await client.click('#fullscreen');
+    await client.click('#more-controls'); await client.click('#fullscreen');
     await client.waitForFunction(() => !!document.fullscreenElement);
-    await client.waitForFunction(() => (document.querySelector('#desktop canvas')?.getBoundingClientRect().width || 0) >= 1000);
+    await client.waitForFunction(() => (document.querySelector('#desktop canvas')?.getBoundingClientRect().width || 0) > 300);
     await client.evaluate(() => document.exitFullscreen());
     await client.setViewportSize({ width: 1400, height: 1100 });
     assert.equal(await client.locator('#resume').count(), 0);
@@ -110,6 +110,9 @@ test('noVNC detecta login automáticamente, conserva contexto y muestra selecci�
     assert.equal(await upgradeStatus(`/remote/${job.id}/socket`, base), 403);
     assert.equal(await upgradeStatus(`/remote/${job.id}/socket`, 'https://other.example', cookie.value), 403);
     async function clickRemote(selector: string) {
+      await canvas.scrollIntoViewIfNeeded();
+      // ResizeObserver -> noVNC autoscale runs on animation frames after viewport changes.
+      await client.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
       const element = await worker.locator(selector).boundingBox();
       assert.ok(element);
       const chrome = await worker.evaluate(() => ({ x: screenX + (outerWidth - innerWidth) / 2, y: screenY + outerHeight - innerHeight }));
@@ -123,7 +126,7 @@ test('noVNC detecta login automáticamente, conserva contexto y muestra selecci�
     await client.click('#keyboard-toggle');
     await client.keyboard.insertText('áñ@9');
     await client.click('[data-remote-key=backspace]');
-    await worker.waitForFunction(() => (document.querySelector('input[name=usuario]') as HTMLInputElement).value === 'áñ@');
+    await worker.waitForFunction(() => (document.querySelector('input[name=usuario]') as HTMLInputElement).value === 'áñ@', undefined, { timeout: 4000 });
     await client.click('[data-remote-key=tab]');
     await client.keyboard.insertText('Ficticia!7');
     await worker.waitForFunction(() => (document.querySelector('input[name=pass]') as HTMLInputElement).value === 'Ficticia!7');
@@ -200,7 +203,7 @@ test('primera apertura preparada; 409 acotado, 503 recuperable y 401/403 sin cic
       await new Promise(resolve => setTimeout(resolve, 700));
       assert.equal(count, 1);
       assert.equal(await page.locator('#retry').isVisible(), value === 503);
-      assert.equal(await page.locator('#cancel').isVisible(), true);
+      assert.equal(await page.locator('#exit-remote').isVisible(), true, 'Compact view keeps cancellation in its header');
     }
     const missing = await page.request.get(`${base}/remote/00000000-0000-4000-8000-000000000000`);
     assert.equal(missing.status(), 404); assert.match(missing.headers()['content-type'], /text\/html/);

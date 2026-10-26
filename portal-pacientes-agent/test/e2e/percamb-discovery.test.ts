@@ -9,10 +9,21 @@ import { validateHumanActionEvidence } from '../../src/agent/tools/validate.js';
 import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 import { FAKE_USER, startFakePortal } from '../fixtures/fake-portal.js';
 import { testConfig, testProvider } from '../helpers.js';
+import { configurePageDisplay, DESKTOP_VIEWPORT } from '../../src/browser/display-profile.js';
 
 let portal: Awaited<ReturnType<typeof startFakePortal>>;
 let host: BrowserHost;
 const sessions: BrowserSession[] = [];
+
+test('Pérez Cambet: responsive portrait/landscape and desktop fallback preserve authenticated catalog', async () => {
+  const session = await openResults('/lwcloud/fake/resultados-div?count=2'), page = session.activePage(), context = page.context();
+  const original = await session.listStudies(); assert.equal(original?.studies.length, 2);
+  for (const size of [{ width: 390, height: 720 }, { width: 844, height: 390 }]) {
+    await configurePageDisplay(page, 'mobile', size.width, size.height);
+    assert.deepEqual((await session.listStudies())?.studies.map(s => s.sourceKey), original!.studies.map(s => s.sourceKey));
+  }
+  await page.setViewportSize(DESKTOP_VIEWPORT); assert.equal(page.context(), context);
+});
 
 before(async () => {
   portal = await startFakePortal();

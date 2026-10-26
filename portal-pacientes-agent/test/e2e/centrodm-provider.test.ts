@@ -7,6 +7,7 @@ import { BrowserHost } from '../../src/browser/browser-host.js';
 import { BrowserSession, MedicalArchiveError, StudyReferenceMismatchError, UnexpectedDomainError } from '../../src/browser/session.js';
 import { centroDm } from '../../src/providers/centrodm/centrodm.provider.js';
 import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
+import { configurePageDisplay, DESKTOP_VIEWPORT } from '../../src/browser/display-profile.js';
 
 let server: Server;
 let viewerServer: Server;
@@ -16,6 +17,21 @@ let host: BrowserHost;
 const sessions: BrowserSession[] = [];
 const archiveRequests: string[] = [];
 const externalArchiveRequests: string[] = [];
+
+test('Centro DM: responsive viewport keeps login, study identity and same-context desktop fallback', async () => {
+  const provider = { ...centroDm, loginUrl: origin + '/', allowedHosts: ['127.0.0.1'], allowedOrigins: [viewerOrigin], requireHttps: false, loginPathPattern: /\/$/ };
+  const session = await BrowserSession.open(host, provider, true); sessions.push(session);
+  const page = session.activePage(), context = page.context();
+  await configurePageDisplay(page, 'mobile', 390, 720); await session.gotoLogin();
+  await page.fill('input[type=password]', 'manual-test-entry'); await page.click('#enter'); await page.waitForSelector('table tbody tr');
+  assert.equal(await session.isCentroDmResultsPage(), true);
+  const mobile = await session.listStudies(); assert.equal(mobile?.studies.length, 3);
+  await configurePageDisplay(page, 'mobile', 844, 390);
+  assert.deepEqual((await session.listStudies())?.studies.map(s => s.sourceKey), mobile!.studies.map(s => s.sourceKey));
+  await page.setViewportSize(DESKTOP_VIEWPORT);
+  assert.equal(page.context(), context);
+  assert.deepEqual((await session.listStudies())?.studies.map(s => s.sourceKey), mobile!.studies.map(s => s.sourceKey));
+});
 const archiveZip = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x10, 0x20, 0x30, 0x40]);
 
 function send(res: import('node:http').ServerResponse, type: string, body: string | Buffer) {

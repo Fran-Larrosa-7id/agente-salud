@@ -8,6 +8,14 @@ import { FakePort, snap, el, testProvider } from '../helpers.js';
 
 const table = { id: 'c', frame: 0, kind: 'table' as const, headers: ['Fecha del estudio', 'Estudio', 'Modalidad'], rows: [['01/01/2026', 'QA sintético', 'SC']], rowCount: 1 };
 const inside = snap({ url: centroDm.loginUrl, hintHits: ['MIS ESTUDIOS'], collections: [table] });
+
+test('Centro responsive list evidence does not bypass password, MFA, CAPTCHA or modal guards', () => {
+  const mobile = snap({ url: centroDm.loginUrl, centroDmResponsiveStudyList: true });
+  assert.equal(evaluateLogin(mobile, centroDm).authenticated, true);
+  assert.equal(evaluateLogin({ ...mobile, centroDmResponsiveStudyList: false }, centroDm).authenticated, false);
+  for (const flag of ['hasPasswordField', 'captcha', 'otp', 'modal']) assert.equal(evaluateLogin({ ...mobile, [flag]: true }, centroDm).authenticated, false);
+  assert.equal(evaluateLogin(mobile, rdcChacabuco).authenticated, false);
+});
 test('RDC reconoce Sus estudios realizados en index.php#/grilla sin depender del cambio de ruta', () => {
   const grid = snap({ url: rdcChacabuco.loginUrl + '#/grilla', hintHits: ['SUS ESTUDIOS REALIZADOS'], elements: [el('out', 'Salir')],
     collections: [{ ...table, headers: ['Tipo de Estudio', 'Descripción', 'Fecha del Estudio', 'Acciones'] }] });

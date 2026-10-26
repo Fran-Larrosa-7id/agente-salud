@@ -43,7 +43,8 @@ const LOGOUT = /cerrar sesi[oó]n|salir|logout|log out|desconectar/i;
  * Combina varias señales para decidir si el paciente ya inició sesión. Ninguna alcanza sola:
  * - no hay campo de contraseña visible (obligatoria), y
  * - salió de la URL de ingreso o aparece una pista del área autenticada, y
- * - en total, al menos 3 de las 5 señales.
+ * - en total, al menos 3 de las 5 señales, o evidencia específica compuesta
+ *   del proveedor (ruta LabWin/listado responsive Centro DM).
  */
 export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): { authenticated: boolean; score: number; signals: LoginSignals } {
   let path = '';
@@ -58,7 +59,7 @@ export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): 
     leftLoginUrl: !!path && !provider.loginPathPattern.test(path),
     noPasswordField: !snap.hasPasswordField,
     authHint: snap.hintHits.length > 0,
-    hasCollection: snap.collections.length > 0 || (provider.studyExtractor === 'centrodm' && snap.centroDmStudyList === true),
+    hasCollection: snap.collections.length > 0 || (provider.studyExtractor === 'centrodm' && (snap.centroDmStudyList === true || snap.centroDmResponsiveStudyList === true)),
     logoutAction: snap.elements.some((e) => LOGOUT.test(e.label)),
   };
   const score = Object.values(signals).filter(Boolean).length;
@@ -75,10 +76,14 @@ export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): 
   // el listado se dibuja en controles legacy que el colector no reconoce como texto;
   // el host permitido + esta ruta exacta son la señal específica de autenticación.
   const percambResultsRoute = isPercambResultsRoute(snap.url, provider);
+  // Composite evidence: visible study headers + valid dated row + same-origin
+  // study link, even when Bootstrap hides its action menu on narrow screens.
+  // Password/challenge guards and consecutive confirmation still apply.
+  const centroResponsive = provider.studyExtractor === 'centrodm' && snap.centroDmResponsiveStudyList === true;
   const evidence = provider.studyExtractor === 'centrodm'
-    ? (specificHint || signals.logoutAction) && (typedStudies || centroAction || snap.centroDmStudyList === true || (snap.noResultsText && signals.logoutAction))
+    ? centroResponsive || (specificHint || signals.logoutAction) && (typedStudies || centroAction || snap.centroDmStudyList === true || (snap.noResultsText && signals.logoutAction))
     : specificHint && (signals.leftLoginUrl || signals.hasCollection || signals.logoutAction) || percambResultsRoute;
-  const authenticated = signals.noPasswordField && noChallenge && evidence && (score >= 3 || percambResultsRoute);
+  const authenticated = signals.noPasswordField && noChallenge && evidence && (score >= 3 || percambResultsRoute || centroResponsive);
   return { authenticated, score, signals };
 }
 

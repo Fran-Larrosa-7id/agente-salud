@@ -9,7 +9,7 @@
   },
   "scripts": {
     "test:sqlite:docker": "node scripts/test-sqlite-docker.mjs",
-    "test:remote": "xvfb-run -a env TEST_REMOTE_DESKTOP=true node --import tsx --test test/e2e/remote-desktop.test.ts",
+    "test:remote": "xvfb-run -a --server-args=\"-screen 0 1280x1000x24 -nolisten tcp\" env TEST_REMOTE_DESKTOP=true node --import tsx --test --test-concurrency=1 test/e2e/remote-desktop.test.ts test/e2e/remote-immersive.test.ts",
     "smoke": "node --import tsx scripts/smoke.ts",
     "dev": "tsx watch src/server/index.ts",
     "start": "tsx src/server/index.ts",

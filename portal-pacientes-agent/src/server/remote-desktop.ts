@@ -1,5 +1,8 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { promisify } from 'node:util';
+import type { Page } from 'playwright';
+import { configurePageDisplay, DISPLAY_COMPATIBILITY, DESKTOP_VIEWPORT, type DisplayLayout, type DisplayGeometry } from '../browser/display-profile.js';
 import { connect } from 'node:net';
 import { request, type Server, type IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
@@ -21,6 +24,8 @@ interface Desktop {
   sockets: Set<Duplex>;
   listener: () => void;
 }
+const execute = promisify(execFile);
+interface View { jobId: string; page: Page; layout: DisplayLayout; geometry: DisplayGeometry; fallback: boolean }
 
 async function stopChild(child: ChildProcess): Promise<void> {
   if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
@@ -50,6 +55,47 @@ export class RemoteDesktop {
   private active: Desktop | null = null;
   private pending: Promise<string> | null = null;
   private stopping: Promise<void> = Promise.resolve();
+  private view?: View;
+  private resizing: Promise<unknown> = Promise.resolve();
+
+  async configure(job: ImportJob, page: Page | undefined, layout: DisplayLayout, width?: number, height?: number) {
+    const task = this.resizing.catch(() => {}).then(async () => {
+      if (!interactive(job) || !page) throw new Error('DESKTOP_NOT_AVAILABLE');
+      const allowed = DISPLAY_COMPATIBILITY[job.provider]?.responsive ?? false;
+      let actual: DisplayLayout = layout === 'mobile' && allowed ? 'mobile' : 'desktop', fallback = actual !== layout;
+      let geometry: DisplayGeometry = { width: 1280, height: 1000, x: 0, y: 0 };
+      try {
+        if (actual === 'mobile') geometry = await configurePageDisplay(page, actual, width, height);
+        else await page.setViewportSize(DESKTOP_VIEWPORT);
+        if (!interactive(job)) { await page.setViewportSize(DESKTOP_VIEWPORT); throw new Error('DESKTOP_NOT_AVAILABLE'); }
+        if (this.active?.job.id === job.id) await this.clip(geometry);
+      } catch {
+        await page.setViewportSize(DESKTOP_VIEWPORT).catch(() => {});
+        actual = 'desktop'; fallback = true; geometry = { width: 1280, height: 1000, x: 0, y: 0 };
+        if (this.active?.job.id === job.id) await this.clip(geometry);
+      }
+      if (!interactive(job)) throw new Error('DESKTOP_NOT_AVAILABLE');
+      job.remoteLayout = actual;
+      this.view = { jobId: job.id, page, layout: actual, geometry, fallback };
+      return this.displayInfo(job, page);
+    });
+    this.resizing = task; return task;
+  }
+  private async clip(geometry: DisplayGeometry) {
+    // Fixed executable and validated numeric geometry. No shell or VNC client resize commands.
+    await execute('x11vnc', ['-display', process.env.DISPLAY!, '-R', `clip:${geometry.width}x${geometry.height}+${geometry.x}+${geometry.y}`], { timeout: 2500, maxBuffer: 1024 });
+  }
+  displayInfo(job: ImportJob, page?: Page) {
+    let origin = '';
+    try { const url = new URL(page?.url() || ''); if (['https:', 'http:'].includes(url.protocol)) origin = url.origin; } catch {}
+    const view = this.view?.jobId === job.id ? this.view : undefined;
+    return { layout: view?.layout || 'desktop', width: view?.geometry.width || 1280, height: view?.geometry.height || 1000, fallback: view?.fallback || false, origin };
+  }
+  async refresh(job: ImportJob, page?: Page) {
+    const view = this.view;
+    if (view?.jobId === job.id && view.layout === 'mobile' && page && page !== view.page) return this.configure(job, page, 'mobile', view.geometry.width, view.geometry.height);
+    return this.displayInfo(job, page);
+  }
 
   async start(job: ImportJob): Promise<string> {
     if (!interactive(job)) throw new Error('DESKTOP_NOT_AVAILABLE');
@@ -72,7 +118,7 @@ export class RemoteDesktop {
     desktop.listener = () => { if (!interactive(job)) void this.stop(job.id); };
     job.on('event', desktop.listener);
     for (const [command, args] of [
-      ['x11vnc', ['-display', process.env.DISPLAY, '-localhost', '-rfbport', '5900', '-forever', '-nopw', '-quiet', '-noxdamage', '-noshm']],
+      ['x11vnc', ['-display', process.env.DISPLAY, '-localhost', '-rfbport', '5900', '-forever', '-nopw', '-quiet', '-noxdamage', '-noshm', ...(this.view?.jobId === job.id && this.view.layout === 'mobile' ? ['-clip', `${this.view.geometry.width}x${this.view.geometry.height}+${this.view.geometry.x}+${this.view.geometry.y}`] : [])]],
       ['websockify', ['127.0.0.1:6080', '127.0.0.1:5900']],
     ] as [string, string[]][]) {
       const child = spawn(command, args, { stdio: 'ignore' });
@@ -97,6 +143,7 @@ export class RemoteDesktop {
     const desktop = this.active;
     if (!desktop || (jobId && desktop.job.id !== jobId)) return this.stopping;
     this.active = null;
+    if (this.view?.jobId === desktop.job.id) this.view = undefined;
     this.log.info(desktop.job.id, 'desktop_closed', { state: desktop.job.state });
     desktop.job.off('event', desktop.listener);
     for (const socket of desktop.sockets) socket.destroy();
@@ -155,10 +202,10 @@ export function desktopHtml(jobId: string, nonce: string, institution = 'tu inst
   <style>
   *{box-sizing:border-box}body{margin:0;background:#f4f8fa;color:#173248;font:16px/1.5 system-ui,sans-serif}header{background:#fff;border-bottom:1px solid #d7e6eb;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-weight:750}.brand span{display:inline-grid;place-items:center;background:#078489;color:white;border-radius:10px;width:34px;height:34px;margin-right:10px}.step{color:#547080;font-size:14px}main{max-width:1300px;margin:auto;padding:24px}h1{font-size:clamp(22px,3vw,30px);margin:4px 0 8px}p{margin:8px 0}.eyebrow{color:#078489;font-weight:650}.panel{background:#fff;border:1px solid #d7e6eb;border-radius:16px;padding:20px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}button,.button{font:inherit;border:1px solid #bfd6dc;border-radius:10px;padding:11px 18px;cursor:pointer;text-decoration:none;background:#fff;color:#173248;font-weight:650}button.primary,.button.primary{background:#087d83;color:#fff;border-color:#087d83}button:disabled{opacity:.55;cursor:wait}button:focus-visible,a:focus-visible{outline:3px solid #148f9b;outline-offset:3px}[hidden]{display:none!important}#desktop{height:min(70vh,820px);min-height:300px;background:#e7eef1;border-radius:12px;overflow:auto}#message-panel{text-align:center;min-height:220px;display:grid;place-content:center;padding:30px}#status{color:#46616e}#status.error{color:#9c2735}.privacy{background:#eaf7f5;border-radius:10px;padding:12px;color:#345b60;font-size:14px;margin-top:16px}.back{color:#087d83}.spinner{width:30px;height:30px;border:3px solid #d3e7e8;border-top-color:#087d83;border-radius:50%;margin:8px auto;animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@media(max-width:600px){header{padding:12px;flex-wrap:wrap}main{padding:14px}.panel{padding:14px}.actions button{flex:1}#desktop{height:58vh}}@media(prefers-reduced-motion:reduce){.spinner{animation:none}}
   #keyboard-tools{position:sticky;bottom:0;z-index:2;background:#fff;border:1px solid #bfd6dc;border-radius:10px;padding:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}#keyboard-input{font:16px system-ui;width:68px;height:44px;resize:none;-webkit-text-security:disc;caret-color:transparent;border:1px solid #bfd6dc;border-radius:6px}#viewer:fullscreen{background:#f4f8fa;padding:12px;overflow:auto}#viewer:fullscreen #desktop{height:calc(var(--remote-viewport,100dvh) - 155px);min-height:120px}.viewer-expanded main{max-width:none}.viewer-expanded #desktop{height:calc(var(--remote-viewport,100dvh) - 160px);min-height:120px}@media(max-width:600px),(pointer:coarse){#desktop{height:clamp(140px,calc(var(--remote-viewport,100dvh) - 280px),620px);min-height:140px}.actions{position:sticky;top:0;z-index:1;background:#fff;padding:8px 0}#keyboard-tools button{padding:10px}main{padding-bottom:env(safe-area-inset-bottom,14px)}}
-  </style></head><body><header><div class="brand"><span aria-hidden="true">✚</span>Portal de Pacientes</div><div class="step">Traer mis estudios · Paso 2 de 4</div><a class="back" id="header-back" href="${esc(`/#/traer?inst=${inst}&job=${jobId}`)}">Volver al Portal</a></header>
+  </style><link rel="stylesheet" href="/remote-assets/portal-view.css"></head><body><header><div class="remote-identity"><strong>${esc(institution)}</strong><span id="external-origin">Sitio externo</span></div><button type="button" id="exit-remote" aria-label="Salir y cancelar importación">Salir</button><div class="brand"><span aria-hidden="true">✚</span>Portal de Pacientes</div><div class="step">Traer mis estudios · Paso 2 de 4</div><a class="back" id="header-back" href="${esc(`/#/traer?inst=${inst}&job=${jobId}`)}">Volver al Portal</a></header>
   <main><p class="eyebrow">Ingreso a ${esc(institution)}</p><h1 id="title">Preparando el acceso seguro…</h1><p id="instructions">Estamos conectando el navegador de la institución. Mantené esta pestaña abierta.</p>
-  <section class="panel"><div id="message-panel"><div class="spinner" id="spinner" aria-hidden="true"></div><h2 id="message-title">Preparando el acceso seguro al centro médico…</h2><p id="message-detail">Podés cancelar si preferís intentarlo más tarde.</p><a id="return" class="button primary" hidden href="${esc(`/#/traer?inst=${inst}&job=${jobId}`)}">Volver al Portal</a><button id="close-tab" class="primary" hidden type="button">Cerrar esta pestaña</button></div>
-  <div id="viewer"><div class="actions"><button id="keyboard-toggle" hidden type="button" aria-expanded="false" aria-controls="keyboard-tools">Abrir teclado</button><button id="fullscreen" hidden>Ampliar navegador</button></div><div id="keyboard-tools" hidden><label for="keyboard-input">Teclado remoto</label><textarea id="keyboard-input" rows="1" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="text" enterkeyhint="go" aria-label="Escribir en el campo seleccionado del navegador remoto"></textarea><button type="button" data-remote-key="tab">Tab</button><button type="button" data-remote-key="backspace">Borrar</button><button type="button" data-remote-key="enter">Enter</button><button type="button" data-remote-key="close">Cerrar teclado</button></div><div id="desktop" hidden aria-label="Navegador de la institución"></div></div><p id="status" role="status" aria-live="polite">Preparando…</p><div class="actions"><button id="retry" hidden>Reintentar conexión</button><button id="cancel">Cancelar y cerrar</button></div>
+  <section class="panel"><div id="message-panel"><div class="spinner" id="spinner" aria-hidden="true"></div><h2 id="message-title">Preparando el acceso seguro al centro médico…</h2><p id="message-detail">Podés cancelar si preferís intentarlo más tarde.</p><button id="retry" hidden>Reintentar conexión</button><a id="return" class="button primary" hidden href="${esc(`/#/traer?inst=${inst}&job=${jobId}`)}">Volver al Portal</a><button id="close-tab" class="primary" hidden type="button">Cerrar esta pestaña</button></div>
+  <div id="viewer"><div class="actions" id="remote-controls" aria-label="Controles del navegador"><button type="button" id="nav-back" hidden aria-label="Atrás en el sitio externo" title="Atrás en el sitio externo" ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span class="control-label">Atrás en el sitio externo</span></button><button type="button" id="nav-forward" hidden aria-label="Adelante en el sitio externo" title="Adelante en el sitio externo" ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg><span class="control-label">Adelante en el sitio externo</span></button><button type="button" id="keyboard-toggle" hidden aria-label="Abrir teclado" title="Abrir teclado" aria-expanded="false" aria-controls="keyboard-tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v14H3z M7 9h.01 M11 9h.01 M15 9h.01 M7 13h.01 M11 13h.01 M15 13h.01 M7 16h10"/></svg><span class="control-label">Abrir teclado</span></button><button type="button" id="more-controls" hidden aria-label="Más opciones" title="Más opciones" aria-expanded="false" aria-controls="remote-more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h.01 M12 12h.01 M19 12h.01"/></svg><span class="control-label">Más opciones</span></button><div id="remote-more" hidden role="group" aria-label="Opciones de visualización"><p>Vista del navegador</p><button type="button" id="zoom-out" hidden aria-label="Alejar" title="Alejar" ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg><span class="control-label">Alejar</span></button><button type="button" id="zoom-fit" hidden aria-label="Ajustar pantalla" title="Ajustar pantalla" ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5 M16 3h5v5 M21 16v5h-5 M3 16v5h5"/></svg><span class="control-label">Ajustar pantalla</span></button><button type="button" id="zoom-in" hidden aria-label="Acercar" title="Acercar" ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14 M12 5v14"/></svg><span class="control-label">Acercar</span></button><button type="button" id="display-layout" hidden aria-label="Cambiar a vista escritorio" title="Cambiar a vista escritorio" ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v12H3z M8 21h8 M12 16v5"/></svg><span class="control-label">Cambiar a vista escritorio</span></button><button type="button" id="fullscreen" hidden aria-label="Ampliar navegador" title="Ampliar navegador" ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5 M16 3h5v5 M21 16v5h-5 M3 16v5h5"/></svg><span class="control-label">Ampliar navegador</span></button></div></div><div id="keyboard-tools" hidden><label for="keyboard-input">Teclado remoto</label><textarea id="keyboard-input" rows="1" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="text" enterkeyhint="go" aria-label="Escribir en el campo seleccionado del navegador remoto"></textarea><button type="button" data-remote-key="tab">Tab</button><button type="button" data-remote-key="backspace">Borrar</button><button type="button" data-remote-key="enter">Enter</button><button type="button" data-remote-key="close">Cerrar teclado</button></div><div id="remote-surface"><div id="desktop" hidden aria-label="Navegador de la institución"></div></div></div><p id="status" role="status" aria-live="polite">Preparando…</p><div class="actions"><button id="cancel">Cancelar y cerrar</button></div>
   <p class="privacy">Escribí tus credenciales únicamente en el sitio de ${esc(institution)}. No las guardamos ni las enviamos a modelos de IA.</p></section></main>
   <script id="remote-config" type="application/json" nonce="${nonce}">${settings}</script><script type="module" src="/remote-assets/portal-login.js"></script></body></html>`;
 }

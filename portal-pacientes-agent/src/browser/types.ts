@@ -36,6 +36,7 @@ export interface RawCollection {
 export interface RawPageSnapshot {
   /** Señal booleana del extractor Centro DM; sin filas ni identificadores añadidos. */
   centroDmStudyList?: boolean;
+  centroDmResponsiveStudyList?: boolean;
   /** Identificador efímero de la pestaña candidata; solo lo usa el detector de login. */
   loginPageId?: string;
   url: string;

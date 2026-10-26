@@ -1,5 +1,7 @@
 # Biblioteca y teclado móvil — cambios locales
 
+Actualización 2026-10-26: ver [Modo móvil inmersivo](immersive-mobile.md) para la nueva vista, geometría remota, validación Docker actual y procedimiento de despliegue/rollback. Los resultados del 2026-10-21 de esta guía se conservan como registro de aquella entrega.
+
 ## Diagnóstico y comportamiento
 
 El visor integraba únicamente `RFB` y su canvas. Un toque remoto no enfoca un campo HTML del teléfono. Se consultó el [fallback de teclado de noVNC](https://github.com/novnc/noVNC/blob/v1.3.0/app/ui.js) y su [API RFB](https://github.com/novnc/noVNC/blob/v1.3.0/core/rfb.js): se reutilizan `sendKey`, la conversión Unicode de noVNC, `focusOnClick` y los gestos que ya maneja RFB. No se incorpora un teclado dibujado ni otro transporte.

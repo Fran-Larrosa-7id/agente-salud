@@ -77,6 +77,9 @@ export function createApp({ config, manager, providers, info, desktop, google }:
     app.get('/remote-assets/portal-keyboard.js', (_req, res) => {
       res.set('cache-control', 'no-store').sendFile(path.join(AGENT_ROOT, 'src/server/remote-keyboard.js'));
     });
+    app.get('/remote-assets/portal-view.css', (_req, res) => {
+      res.set('cache-control', 'no-store').sendFile(path.join(AGENT_ROOT, 'src/server/remote-view.css'));
+    });
     app.use('/remote-assets', (_req, res, next) => { res.set('cache-control', 'no-store'); next(); }, express.static('/usr/share/novnc', { etag: false, maxAge: 0 }));
     app.get('/remote/:jobId', async (req, res) => {
         const id = String(req.params.jobId);
@@ -88,7 +91,7 @@ export function createApp({ config, manager, providers, info, desktop, google }:
         const pageOrigin = requestOrigin(req, config);
         const websocketOrigin = pageOrigin ? new URL(pageOrigin) : null;
         if (websocketOrigin) websocketOrigin.protocol = isSecureRequest(req, config) ? 'wss:' : 'ws:';
-        res.set('content-security-policy', `default-src 'self'; img-src 'self' data:; script-src 'self' 'nonce-${nonce}'; style-src 'unsafe-inline'; connect-src 'self'${websocketOrigin ? ` ${websocketOrigin.origin}` : ''}; frame-ancestors 'self'`);
+        res.set('content-security-policy', `default-src 'self'; img-src 'self' data:; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; connect-src 'self'${websocketOrigin ? ` ${websocketOrigin.origin}` : ''}; frame-ancestors 'self'`);
         res.status(job ? 200 : 404).type('html').send(desktopHtml(id, nonce, job?.providerName, job?.provider, !job, req.query.aux === '1'));
     });
     app.post('/api/imports/:jobId/desktop', async (req, res) => {
@@ -96,12 +99,32 @@ export function createApp({ config, manager, providers, info, desktop, google }:
       if (!job) return;
       if (!interactive(job)) return void res.status(409).json({ error: job.isTerminal ? 'JOB_TERMINAL' : 'DESKTOP_PREPARING' });
       try {
+        if (req.body?.layout !== undefined) {
+          if (!['mobile', 'desktop'].includes(req.body.layout) || ['width', 'height'].some(key => req.body[key] !== undefined && (!Number.isFinite(req.body[key]) || req.body[key] < 1 || req.body[key] > 2000))) return void res.status(400).json({ error: 'INVALID_DISPLAY' });
+          await desktop.configure(job, manager.remotePage(job.id), req.body.layout, req.body.width, req.body.height);
+        }
         const token = await desktop.start(job);
         if (access.owner(req) !== job.ownerUserId) { await desktop.stop(job.id); return void res.status(401).json({ error: 'SESSION_EXPIRED' }); }
         if (!interactive(job)) return void res.status(409).json({ error: 'JOB_TERMINAL' });
         res.cookie('portal_remote', token, { httpOnly: true, sameSite: 'strict', secure: isSecureRequest(req, config), path: `/remote/${job.id}/`, maxAge: config.loginTimeoutMs });
-        res.json({ ready: true });
+        res.json({ ready: true, display: desktop.displayInfo(job, manager.remotePage(job.id)) });
       } catch { res.status(503).json({ error: 'DESKTOP_UNAVAILABLE' }); }
+    });
+    app.get('/api/imports/:jobId/display', async (req, res) => {
+      const job = jobParam(req, res); if (!job) return;
+      if (!interactive(job)) return void res.status(409).json({ error: 'DESKTOP_NOT_AVAILABLE' });
+      const display = await desktop.refresh(job, manager.remotePage(job.id));
+      if (access.owner(req) !== job.ownerUserId) return void res.status(401).json({ error: 'SESSION_EXPIRED' });
+      res.json(display);
+    });
+    app.post('/api/imports/:jobId/navigation', async (req, res) => {
+      const job = jobParam(req, res); if (!job) return;
+      if (!interactive(job)) return void res.status(409).json({ error: 'DESKTOP_NOT_AVAILABLE' });
+      if (!['back', 'forward'].includes(req.body?.action)) return void res.status(400).json({ error: 'INVALID_NAVIGATION' });
+      const page = manager.remotePage(job.id); if (!page) return void res.status(409).json({ error: 'DESKTOP_NOT_AVAILABLE' });
+      await (req.body.action === 'back' ? page.goBack({ waitUntil: 'commit', timeout: 5000 }) : page.goForward({ waitUntil: 'commit', timeout: 5000 })).catch(() => {});
+      if (access.owner(req) !== job.ownerUserId) return void res.status(401).json({ error: 'SESSION_EXPIRED' });
+      res.json({ accepted: true });
     });
     app.post('/api/imports/:jobId/resume', async (req, res) => {
       const job = jobParam(req, res);
@@ -138,7 +161,8 @@ export function createApp({ config, manager, providers, info, desktop, google }:
         if (status === 'disconnected') return void res.status(409).json({ error: 'DRIVE_NOT_CONNECTED' });
         if (status === 'reconnect_required') return void res.status(409).json({ error: 'DRIVE_TOKEN_EXPIRED' });
       }
-      const job = manager.create(String(req.params.provider), owner);
+      if (req.body?.layout !== undefined && !['mobile', 'desktop'].includes(req.body.layout)) return void res.status(400).json({ error: 'INVALID_DISPLAY' });
+      const job = manager.create(String(req.params.provider), owner, req.body?.layout === 'mobile' ? 'mobile' : 'desktop');
       res.status(201).json({ jobId: job.id, remoteLogin: config.remoteLogin, storageBackend: config.storageProvider });
     } catch (e) {
       if (e instanceof ManagerError) {

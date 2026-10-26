@@ -9,6 +9,7 @@ import { sleep } from '../util.js';
 import type { HumanReason, ImportJob } from './job.js';
 import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
 import { JobState } from './states.js';
+import { DESKTOP_VIEWPORT } from '../browser/display-profile.js';
 
 const S = JobState;
 const importMetadata = () => ({ importedAt: new Date().toISOString(), importedBy: 'agent' as const });
@@ -35,6 +36,7 @@ export interface AgentRunnerOptions {
  * La contraseña la escribe el paciente en la ventana del laboratorio; este runner nunca la ve.
  */
 export class AgentImportRunner implements JobRunner {
+  remotePage() { return this.session?.activePage(); }
   session: BrowserSession | null = null;
   private agent: HealthPortalAgent | null = null;
   private readonly locators = new Map<string, TargetLocator>();
@@ -85,6 +87,7 @@ export class AgentImportRunner implements JobRunner {
         provider.id === 'centrodm' ? config.centroDmAllowedOrigins : [],
         provider.id === 'centrodm' ? config.pixeonViewerReadyTimeoutMs : undefined,
         provider.id === 'centrodm' ? config.pixeonToolbarTimeoutMs : undefined,
+        config.remoteLogin && job.remoteLayout === 'mobile',
       );
       const session = await this.openingSession;
       this.session = session;
@@ -144,6 +147,8 @@ export class AgentImportRunner implements JobRunner {
       if (login === 'timeout') return void job.fail(S.AUTH_TIMEOUT, 'LOGIN_TIMEOUT');
       if (this.signal.aborted) return;
       job.transition(S.AUTHENTICATED);
+      // Return the same authenticated page to the proven extraction geometry.
+      if (config.remoteLogin) await session.activePage().setViewportSize(DESKTOP_VIEWPORT);
       await this.discover(session);
     } catch (e) {
       this.handleError(e);

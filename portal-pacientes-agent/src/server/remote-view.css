@@ -1,0 +1,261 @@
+.remote-identity {
+  display:flex;
+  flex-direction:column;
+  min-width:0}
+
+.remote-identity strong {
+  font-size:15px}
+
+.remote-identity span {
+  font-size:12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:70vw}
+
+#exit-remote {
+  margin-left:auto}
+
+header .brand,header .step {
+  display:none}
+
+#remote-surface {
+  overflow:auto;
+  min-height:0;
+  flex:1;
+  background:#e7eef1}
+
+#remote-controls {
+  gap:4px}
+
+#remote-controls button {
+  min-width:44px;
+  min-height:44px;
+  padding:8px}
+
+#desktop {
+  border-radius:0}
+
+#viewer {
+  min-height:0}
+
+#status {
+  overflow-wrap:anywhere}
+
+
+body.immersive {
+  position:fixed;
+  inset:0;
+  overflow:hidden;
+  background:#e7eef1}
+
+body.immersive header {
+  position:absolute;
+  top:var(--remote-top,0px);
+  left:var(--remote-left,0px);
+  width:var(--remote-width,100%);
+  height:56px;
+  padding:4px max(8px,env(safe-area-inset-right)) 4px max(8px,env(safe-area-inset-left));
+  z-index:4;
+  flex-wrap:nowrap}
+
+body.immersive header #header-back {
+  display:none}
+
+body.immersive main,body.immersive .panel {
+  display:contents}
+
+body.immersive main>.eyebrow,body.immersive h1,body.immersive #instructions,body.immersive .privacy,body.immersive .panel>.actions {
+  display:none}
+
+body.immersive #viewer {
+  position:absolute;
+  left:var(--remote-left,0px);
+  top:calc(var(--remote-top,0px) + 56px);
+  width:var(--remote-width,100%);
+  height:calc(var(--remote-viewport,100dvh) - 112px - env(safe-area-inset-bottom,0px));
+  display:flex;
+  flex-direction:column;
+  padding:0;
+  background:#e7eef1}
+
+body.immersive #desktop {
+  height:100%;
+  min-height:0;
+  width:100%;
+  overflow:hidden}
+
+body.immersive #remote-controls {
+  position:fixed;
+  left:var(--remote-left,0px);
+  top:calc(var(--remote-top,0px) + var(--remote-viewport,100dvh) - 56px - env(safe-area-inset-bottom,0px));
+  width:var(--remote-width,100%);
+  height:calc(56px + env(safe-area-inset-bottom,0px));
+  padding:4px 6px env(safe-area-inset-bottom,0px);
+  margin:0;
+  display:flex;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  background:#fff;
+  border-top:1px solid #bfd6dc;
+  z-index:4}
+
+body.immersive #remote-controls button {
+  flex:none;
+  width:44px;
+  height:44px;
+  font-size:18px}
+
+body.immersive #keyboard-toggle,body.immersive #fullscreen {
+  font-size:0!important}
+
+body.immersive #keyboard-toggle::before {
+  content:'⌨';
+  font-size:22px}
+
+body.immersive #fullscreen::before {
+  content:'⛶';
+  font-size:22px}
+
+body.immersive #display-layout {
+  font-size:12px!important}
+
+body.immersive #keyboard-tools {
+  position:fixed;
+  left:var(--remote-left,0px);
+  top:calc(var(--remote-top,0px) + var(--remote-viewport,100dvh) - 112px - env(safe-area-inset-bottom,0px));
+  width:var(--remote-width,100%);
+  height:56px;
+  padding:4px;
+  gap:4px;
+  border-radius:0;
+  border-width:1px 0;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  z-index:4}
+
+body.immersive #keyboard-tools label {
+  position:absolute;
+  width:1px;
+  height:1px;
+  clip-path:inset(50%);
+  overflow:hidden}
+
+body.immersive #keyboard-tools button {
+  font-size:13px;
+  min-height:44px;
+  padding:6px;
+  white-space:nowrap}
+
+body.immersive #keyboard-input {
+  width:44px;
+  min-width:44px;
+  height:44px}
+
+body.immersive.remote-keyboard-open #viewer {
+  height:calc(var(--remote-viewport,100dvh) - 168px - env(safe-area-inset-bottom,0px))}
+
+body.immersive #status {
+  position:absolute;
+  top:calc(var(--remote-top,0px) + 56px);
+  left:12px;
+  right:12px;
+  z-index:3;
+  background:#fff;
+  padding:6px;
+  font-size:13px;
+  border-radius:6px}
+
+body.immersive.connected #status:not(.error) {
+  display:none}
+
+body.immersive #message-panel {
+  position:absolute;
+  top:calc(var(--remote-top,0px) + 70px);
+  left:16px;
+  right:16px;
+  min-height:180px;
+  background:#fff;
+  border-radius:12px;
+  z-index:5;
+  padding:16px}
+
+#viewer:fullscreen #remote-surface {
+  height:calc(100% - 64px)}
+
+#viewer:fullscreen {
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  width:100%}
+
+#viewer:fullscreen #remote-controls {
+  position:static!important;
+  order:2}
+
+#viewer:fullscreen #desktop {
+  height:100%;
+  min-height:0}
+
+body.immersive #viewer:fullscreen {
+  position:static;
+  height:100%;
+  width:100%}
+.display-changing #remote-surface { pointer-events: none; }
+
+/* A compact browser bar; secondary display actions live in one options sheet. */
+#remote-controls {
+  position:relative;
+  top:auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px;
+  overflow:visible;
+  background:#fff;
+  border:1px solid #dce8ec;
+  border-radius:16px;
+}
+#remote-controls button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:0;
+  border-radius:12px;
+  background:transparent;
+  color:#28475a;
+  font-size:13px;
+  line-height:1.25;
+  white-space:nowrap;
+}
+#remote-controls button:hover { background:#edf5f6; }
+#remote-controls button:active { background:#dceff0; }
+#remote-controls svg { width:22px;height:22px;flex:none; }
+#remote-controls>button:not(#keyboard-toggle) .control-label { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }
+#remote-controls #keyboard-toggle { background:#087d83;color:white;padding:10px 16px; }
+#remote-controls #keyboard-toggle[aria-expanded=true] { background:#125e63; }
+#remote-controls #more-controls[aria-expanded=true] { background:#e3f1f2;color:#087d83; }
+#remote-controls #keyboard-toggle::before,#remote-controls #fullscreen::before { content:none; }
+#remote-more {
+  position:absolute;
+  bottom:calc(100% + 12px);
+  right:8px;
+  width:min(320px,calc(100vw - 24px));
+  padding:12px;
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:6px;
+  background:white;
+  border:1px solid #dce8ec;
+  border-radius:18px;
+  box-shadow:0 12px 40px #17324826;
+  z-index:8;
+}
+#remote-more p { grid-column:1/-1;margin:2px 4px 8px;color:#547080;font-size:12px;font-weight:600; }
+#remote-controls #remote-more button { grid-column:span 2;flex-direction:column;width:auto;min-height:64px;height:auto;padding:8px 4px;font-size:12px!important;white-space:normal; }
+#remote-controls #remote-more #display-layout,#remote-controls #remote-more #fullscreen { grid-column:span 3; }
+body.immersive #remote-controls { gap:8px;padding:6px 12px env(safe-area-inset-bottom,0px);border-radius:0;border-width:1px 0 0;overflow:visible; }
+body.immersive #remote-controls>button { width:44px;height:44px;min-width:44px;flex:none;padding:8px;font-size:13px; }
+body.immersive #remote-controls #keyboard-toggle { flex:1;width:auto;font-size:13px!important; }
+body.immersive #remote-controls #remote-more #fullscreen { font-size:12px!important; }

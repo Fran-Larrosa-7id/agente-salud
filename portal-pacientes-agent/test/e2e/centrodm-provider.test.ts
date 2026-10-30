@@ -8,6 +8,7 @@ import { BrowserSession, MedicalArchiveError, StudyReferenceMismatchError, Unexp
 import { centroDm } from '../../src/providers/centrodm/centrodm.provider.js';
 import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
 import { configurePageDisplay, DESKTOP_VIEWPORT } from '../../src/browser/display-profile.js';
+import type { ProviderStructureEvent } from '../../src/browser/types.js';
 
 let server: Server;
 let viewerServer: Server;
@@ -42,6 +43,9 @@ function send(res: import('node:http').ServerResponse, type: string, body: strin
 before(async () => {
   server = createServer((req, res) => {
     const url = new URL(req.url || '/', origin || 'http://127.0.0.1');
+    if (url.pathname === '/readiness-list') {
+      return void send(res, 'text/html; charset=utf-8', `<h1>Mis estudios</h1><a target="_blank" href="/funcion/llamadoURL.php?studyId=readiness-${url.searchParams.get('mode')}"><img alt="abrir"></a>`);
+    }
     if (url.pathname === '/external-list') {
       return void send(res, 'text/html; charset=utf-8', `<!doctype html><html><body><h1>Mis estudios</h1><table><tbody>
         <tr><td>13/04/24</td><td>Ecografía abdominal</td><td>US</td><td><a target="_blank" href="/funcion/llamadoURL.php?studyId=external-study"><img alt="icono"></a></td></tr>
@@ -117,6 +121,10 @@ before(async () => {
     }
     if (url.pathname === '/funcion/llamadoURL.php') {
       const studyId = url.searchParams.get('studyId');
+      if (studyId?.startsWith('readiness-')) {
+        res.writeHead(302, { location: viewerOrigin + '/pixeon-readiness?mode=' + studyId.slice('readiness-'.length) });
+        return void res.end();
+      }
       if (studyId === 'external-study') {
         res.writeHead(302, { location: viewerOrigin + '/pixeon' });
         return void res.end();
@@ -172,6 +180,28 @@ before(async () => {
   origin = `http://127.0.0.1:${address.port}`;
   viewerServer = createServer((req, res) => {
     const url = new URL(req.url || '/', viewerOrigin || 'http://localhost');
+    if (url.pathname === '/pixeon-readiness') {
+      const mode = url.searchParams.get('mode');
+      const blocked = mode === 'blocked';
+      return void send(res, 'text/html; charset=utf-8', `<!doctype html><html><head><title>Pixeon Aurora</title>
+        ${blocked ? '<script src="https://cdn.jsdelivr.net/npm/synthetic-fixture@1/viewer.js?token=must-not-log"></script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/synthetic-fixture@1/viewer.css?patient=must-not-log">' : ''}
+        </head><body><main id="app"></main>
+        ${mode === 'toolbar' ? '<button>Layout</button><button>Zoom</button><button>Presets</button>' : ''}
+        ${mode === 'hidden' ? '<button class="downloadToolsItem" hidden>Descargar</button>' : ''}
+        ${mode === 'disabled' ? '<button class="downloadToolsItem" disabled>Descargar</button>' : ''}
+        ${mode === 'delayed' ? `<script>
+          setTimeout(() => {
+            const host = document.createElement('div'); document.querySelector('#app').append(host);
+            const root = host.attachShadow({mode:'open'});
+            root.innerHTML = '<div class="downloadToolsItem" style="width:80px;height:40px">↓</div><div id="menu"></div>';
+            root.querySelector('.downloadToolsItem').addEventListener('click', () => {
+              root.querySelector('#menu').innerHTML = '<a href="/archive.zip?scope=all-dicom" download>Descargar todas las Series - ZIP DCM</a>';
+            });
+          }, 600);
+        </script>` : ''}
+        ${blocked ? '<script>setTimeout(() => { throw new ReferenceError("must-not-log patient token"); }, 0);</script>' : ''}
+        </body></html>`);
+    }
     if (url.pathname === '/redirect-to-evil') {
       res.writeHead(302, { location: 'https://evil.example/pixeon?token=must-not-log' });
       return void res.end();
@@ -313,7 +343,7 @@ test('Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup 
   assert.ok(structure.some((event) => event.event === 'viewer_download_strategy'));
   assert.ok(structure.some((event) => event.event === 'viewer_download_options' && event.count === 5));
   assert.ok(structure.some((event) => event.event === 'medical_archive_downloaded' && event.count === archive.buffer.length));
-  assert.ok(structure.some((event) => event.event === 'pixeon_probe' && event.brand && (event.downloadCandidates || 0) > 0 && (event.readyScore || 0) >= 4));
+  assert.ok(structure.some((event) => event.event === 'pixeon_probe' && event.brand && (event.downloadCandidates || 0) > 0 && event.found));
   assert.ok(structure.some((event) => event.event === 'pixeon_download_fastpath' && event.selector === 'downloadToolsItem' && event.count === 1 && event.visible));
   assert.ok(structure.some((event) => event.event === 'pixeon_download_button' && event.found && event.strategy === 'class_fastpath'));
   assert.ok(structure.some((event) => event.event === 'pixeon_download_menu' && event.opened));
@@ -322,6 +352,64 @@ test('Centro DM reconoce estudios, mantiene sourceKey entre jobs, detecta popup 
   assert.ok(blockedRequests.some((request) => request.host === 'www.googletagmanager.com'), 'GTM sigue bloqueado como subrecurso');
   assert.equal(fatalDomainCallback, 0, 'bloquear GTM no invalida el viewer ni la sesión');
 });
+
+for (const mode of ['shell', 'toolbar', 'hidden', 'disabled', 'blocked']) {
+  test(`Pixeon no declara listo el visor incompleto: ${mode}`, { timeout: 15_000 }, async () => {
+    const provider = { ...centroDm, loginUrl: origin + '/readiness-list?mode=' + mode, allowedHosts: ['127.0.0.1'], staticHosts: [], allowedOrigins: [viewerOrigin], requireHttps: false };
+    const session = await BrowserSession.open(host, provider, true, undefined, false, undefined, undefined, [], 1_000, 0);
+    sessions.push(session);
+    const events: ProviderStructureEvent[] = [];
+    let ready = 0;
+    session.onProviderStructure = e => events.push(e);
+    session.onCentroDmViewerReady = () => { ready++; };
+    await session.gotoLogin();
+    const list = await session.listStudies();
+    await assert.rejects(session.openStudy(list!.studies[0].id), (e: unknown) => e instanceof MedicalArchiveError && e.code === 'VIEWER_INITIALIZATION_TIMEOUT');
+    assert.equal(ready, 0);
+    assert.ok(events.some(e => e.event === 'pixeon_readiness' && e.configuredOrigin && e.brand && e.found === false));
+    assert.ok(!events.some(e => e.event === 'pixeon_readiness' && e.found));
+    if (mode === 'blocked') {
+      const blocks = events.filter(e => e.event === 'pixeon_resource_blocked');
+      for (const type of ['script', 'stylesheet']) {
+        assert.ok(blocks.some(e => e.host === 'cdn.jsdelivr.net' && e.resourceType === type && e.requestContext === 'subresource' && e.pageContext === 'viewer' && e.initiatorHost === 'localhost'), JSON.stringify(blocks));
+      }
+      assert.ok(events.some(e => e.event === 'pixeon_script_error' && e.errorKind === 'ReferenceError' && e.pageContext === 'viewer'));
+    }
+    const logs = JSON.stringify(events);
+    for (const secret of ['must-not-log', 'patient', 'token=', 'synthetic-fixture', 'viewer.js', 'viewer.css']) assert.ok(!logs.includes(secret));
+    assert.equal(session.policy.isAllowedNavigation('https://cdn.jsdelivr.net/'), false);
+    assert.equal(session.policy.isAllowedSubresource('https://cdn.jsdelivr.net/'), false);
+    assert.equal(session.policy.isAllowedSubresource('https://www.googletagmanager.com/'), false);
+    await session.close();
+  });
+}
+
+for (const responsive of [false, true]) {
+  test(`Pixeon espera descarga tardía en shadow DOM y conserva ZIP original (${responsive ? 'mobile' : 'desktop'})`, { timeout: 15_000 }, async () => {
+    const requestOffset = externalArchiveRequests.length;
+    const provider = { ...centroDm, loginUrl: origin + '/readiness-list?mode=delayed', allowedHosts: ['127.0.0.1'], staticHosts: [], allowedOrigins: [viewerOrigin], requireHttps: false };
+    const session = await BrowserSession.open(host, provider, true, undefined, false, undefined, undefined, [], 5_000, 0, responsive);
+    sessions.push(session);
+    if (responsive) await session.activePage().setViewportSize({ width: 390, height: 844 });
+    const events: ProviderStructureEvent[] = [];
+    let ready = 0;
+    session.onProviderStructure = e => events.push(e);
+    session.onCentroDmViewerReady = () => { ready++; };
+    await session.gotoLogin();
+    const list = await session.listStudies();
+    assert.equal(await session.openStudy(list!.studies[0].id), true);
+    assert.equal(ready, 1);
+    const probes = events.filter(e => e.event === 'pixeon_readiness' && !e.reason);
+    assert.ok(probes.some(e => e.brand && e.download === false && e.found === false));
+    assert.ok(probes.at(-1)?.download && probes.at(-1)?.toolbarBuilt && probes.at(-1)?.found);
+    const archive = await session.downloadFullDicomStudy(5_000);
+    assert.deepEqual(archive.buffer, archiveZip);
+    assert.deepEqual(externalArchiveRequests.slice(requestOffset), ['?scope=all-dicom']);
+    assert.ok(events.some(e => e.event === 'pixeon_download_menu' && e.opened));
+    assert.ok(events.some(e => e.event === 'centrodm_archive_valid' && e.found));
+    await session.close();
+  });
+}
 
 test('Centro DM espera el render tardío de la toolbar Pixeon hasta el timeout configurado', { timeout: 20_000 }, async () => {
   const provider = {
@@ -370,6 +458,7 @@ test('Centro DM acepta un modal de consentimiento Pixeon y reintenta readiness',
 });
 
 test('Centro DM permite solo el origin Pixeon configurado y conserva la pestaña autenticada', { timeout: 60_000 }, async () => {
+  const requestOffset = externalArchiveRequests.length;
   const provider = {
     ...centroDm,
     loginUrl: origin + '/external-list',
@@ -412,7 +501,7 @@ test('Centro DM permite solo el origin Pixeon configurado y conserva la pestaña
   assert.ok(events.some((event) => event.event === 'pixeon_download_probe_end' && event.found), 'el probe informa el resultado');
   assert.ok(events.some((event) => event.event === 'pixeon_frames' && event.count === 1));
   assert.deepEqual(archive.buffer, archiveZip);
-  assert.deepEqual(externalArchiveRequests, ['?scope=all-dicom']);
+  assert.deepEqual(externalArchiveRequests.slice(requestOffset), ['?scope=all-dicom']);
 
   const untrustedProbe = await mainPage.context().newPage();
   await untrustedProbe.goto('http://untrusted.invalid/leave-viewer').catch(() => {});

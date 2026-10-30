@@ -24,7 +24,7 @@ for (const cancel of [false, true]) {
       log: silentLogger,
       runnerFactory: job => ({
         debugViewerRetentionMs: 150,
-        start: async () => { job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'DOWNLOAD_ACTION_NOT_FOUND'); },
+        start: async () => { job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'VIEWER_INITIALIZATION_TIMEOUT'); },
         importSelected: async () => {},
         dispose: async () => { disposed = true; },
       }),

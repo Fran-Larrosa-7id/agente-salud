@@ -11,7 +11,8 @@ import { centroDm } from '../../src/providers/centrodm/centrodm.provider.js';
 import { createLogger } from '../../src/security/logger.js';
 import { testConfig } from '../helpers.js';
 
-test('Centro DM procesa la cola secuencialmente y continúa tras un fallo recuperable', async () => {
+for (const failure of ['VIEWER_NOT_RECOGNIZED', 'VIEWER_INITIALIZATION_TIMEOUT'] as const) {
+test(`Centro DM procesa la cola secuencialmente y continúa tras ${failure}`, async () => {
   const config = testConfig({ maxDownloadsPerJob: 5 });
   const job = new ImportJob('centrodm', centroDm.name);
   const files = new JobFileStore(config.tmpDir, job.id, config.maxPdfBytes, config.maxMedicalArchiveBytes);
@@ -35,7 +36,7 @@ test('Centro DM procesa la cola secuencialmente y continúa tras un fallo recupe
     openStudy: async (id: string) => {
       activeStudy = id;
       operations.push(`open:${id}`);
-      if (id === 'study-b') throw new MedicalArchiveError('VIEWER_NOT_RECOGNIZED');
+      if (id === 'study-b') throw new MedicalArchiveError(failure);
       return true;
     },
     downloadFullDicomStudy: async () => {
@@ -64,9 +65,10 @@ test('Centro DM procesa la cola secuencialmente y continúa tras un fallo recupe
   assert.equal(job.state, S.IMPORTING, 'el runner descarga y valida; el Portal todavía debe acusar persistencia');
   assert.equal(job.isTerminal, false);
   assert.deepEqual(job.files.map((file) => file.studyId), ['study-a', 'study-c']);
-  assert.deepEqual(job.failures, [{ studyId: 'study-b', code: 'VIEWER_NOT_RECOGNIZED' }]);
+  assert.deepEqual(job.failures, [{ studyId: 'study-b', code: failure }]);
   await files.cleanup();
 });
+}
 
 test('Centro DM despacha sin documentos genéricos y reporta una referencia de estudio faltante', async () => {
   const config = testConfig({ maxDownloadsPerJob: 5 });

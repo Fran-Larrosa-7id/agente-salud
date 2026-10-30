@@ -121,6 +121,11 @@ export class AgentImportRunner implements JobRunner {
         if (stage === 'pdf_download_started' && job.state === S.FINDING_DOCUMENT) job.transition(S.DOWNLOADING, { studyId: job.current?.studyId });
       };
       const ALWAYS_LOG_PIXEON = new Set(['centrodm_metadata_dates_found', 'centrodm_studies_with_date', 'centrodm_study_metadata', 'pixeon_download_probe_start', 'pixeon_download_probe_end', 'pixeon_download_probe', 'pixeon_download_fastpath', 'pixeon_download_click', 'pixeon_download_options', 'pixeon_frames', 'pixeon_frame', 'pixeon_text_exact', 'pixeon_text_partial', 'pixeon_attr_candidates', 'pixeon_dom_candidate', 'pixeon_clickable_ancestor', 'pixeon_structural_fallback', 'pixeon_toolbar_candidates', 'toolbar_candidate', 'pixeon_toolbar_detected', 'pixeon_download_structural_candidate', 'pixeon_download_text_matches', 'pixeon_download_role_matches', 'pixeon_download_attr_matches', 'pixeon_download_candidate', 'pixeon_download_button', 'pixeon_download_menu', 'pixeon_download_menu_options', 'pixeon_download_choice', 'centrodm_find_document_enter', 'find_document_dispatch', 'rdc_page', 'rdc_rows', 'rdc_file_icons', 'rdc_file_icons_fallback', 'rdc_file_icons_class_fallback', 'rdc_file_icons_global', 'rdc_result_actions', 'rdc_candidate_rows', 'rdc_parsed_studies', 'rdc_studies_found', 'rdc_action_build', 'rdc_study_action', 'rdc_study_build', 'rdc_study_reference_saved', 'rdc_provider_refs', 'rdc_open_study', 'rdc_document_listeners_ready', 'rdc_study_action_click', 'rdc_modal_opened', 'rdc_frame_navigation', 'rdc_frames', 'rdc_frame', 'rdc_modal_probe', 'rdc_pdf_sources_scan', 'rdc_embed_candidates', 'rdc_embed_candidate', 'rdc_embed_fetch', 'rdc_nested_source_scan', 'rdc_pdf_dom_candidate', 'rdc_pdf_response', 'rdc_pdf_candidate', 'rdc_pdf_source', 'rdc_pdf_full', 'rdc_pdf_valid', 'rdc_external_origin', 'rdc_import_complete']);
+      ALWAYS_LOG_PIXEON.add('pixeon_resource_blocked');
+      ALWAYS_LOG_PIXEON.add('pixeon_readiness');
+      ALWAYS_LOG_PIXEON.add('pixeon_script_error');
+      ALWAYS_LOG_PIXEON.add('centrodm_archive_valid');
+      ALWAYS_LOG_PIXEON.add('pixeon_runtime');
       session.onProviderStructure = ({ event, ...fields }) => {
         if (event === 'rdc_pdf_response' && fields.found && provider.studyExtractor === 'rdcchacabuco' && job.state === S.OPENING_STUDY) {
           job.transition(S.FINDING_DOCUMENT, { studyId: job.current?.studyId });
@@ -521,7 +526,7 @@ export class AgentImportRunner implements JobRunner {
       }
       job.current = undefined;
       if (job.files.length === 0) {
-        const specificFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'INVALID_PDF', 'PDF_SOURCE_NOT_FOUND', 'ARTIFACT_IMPORT_FAILED', 'STUDY_ACTION_NOT_FOUND', 'STUDY_MODAL_NOT_OPENED', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH', 'STUDY_NOT_FOUND', 'STUDY_REFERENCE_MISSING', 'VIEWER_NOT_READY', 'VIEWER_OPEN_TIMEOUT', 'VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND', 'DICOM_DOWNLOAD_TIMEOUT', 'INVALID_MEDICAL_ARCHIVE'].includes(failure.code));
+        const specificFailure = job.failures.find((failure) => ['PDF_NOT_FOUND', 'PDF_DOWNLOAD_TIMEOUT', 'INVALID_DOCUMENT', 'INVALID_PDF', 'PDF_SOURCE_NOT_FOUND', 'ARTIFACT_IMPORT_FAILED', 'STUDY_ACTION_NOT_FOUND', 'STUDY_MODAL_NOT_OPENED', 'UNEXPECTED_DOMAIN', 'STUDY_REFERENCE_MISMATCH', 'STUDY_NOT_FOUND', 'STUDY_REFERENCE_MISSING', 'VIEWER_NOT_READY', 'VIEWER_OPEN_TIMEOUT', 'VIEWER_NOT_RECOGNIZED', 'VIEWER_INITIALIZATION_TIMEOUT', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND', 'DICOM_DOWNLOAD_TIMEOUT', 'INVALID_MEDICAL_ARCHIVE'].includes(failure.code));
         return void job.fail(S.AGENT_UNABLE_TO_CONTINUE, specificFailure?.code ?? (isCentroDm || isRdcChacabuco ? 'NO_ARTIFACTS_IMPORTED' : 'NO_DOCUMENTS'));
       }
       // El JobManager mantiene IMPORTING hasta que el Portal confirme el Blob y la ficha persistida.
@@ -604,7 +609,7 @@ export class AgentImportRunner implements JobRunner {
   get debugViewerRetentionMs(): number { return this.session?.debugViewerRetentionMs || 0; }
 
   private retainFailedViewer(session: BrowserSession, code: string, lastSelectedStudy = false): void {
-    if (this.deps.config.pixeonDebugKeepViewerOpen && ['VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(code)) {
+    if (this.deps.config.pixeonDebugKeepViewerOpen && ['VIEWER_NOT_RECOGNIZED', 'VIEWER_INITIALIZATION_TIMEOUT', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(code)) {
       session.retainPixeonViewerForDebug(this.deps.config.pixeonDebugKeepViewerOpenMs);
     }
     if (lastSelectedStudy && this.deps.config.rdcDebugKeepModalOpen && code === 'PDF_SOURCE_NOT_FOUND') {

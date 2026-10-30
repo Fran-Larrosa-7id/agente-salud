@@ -49,7 +49,7 @@ export type RdcChacabucoErrorCode = 'STUDY_REFERENCE_MISSING' | 'STUDY_ACTION_NO
 export class RdcChacabucoError extends Error {
   constructor(readonly code: RdcChacabucoErrorCode) { super(code); }
 }
-export type MedicalArchiveErrorCode = 'STUDY_REFERENCE_MISSING' | 'VIEWER_NOT_READY' | 'VIEWER_OPEN_TIMEOUT' | 'VIEWER_NOT_RECOGNIZED' | 'DOWNLOAD_ACTION_NOT_FOUND' | 'DOWNLOAD_ACTION_NOT_CLICKABLE' | 'DOWNLOAD_MENU_NOT_FOUND' | 'DICOM_DOWNLOAD_TIMEOUT' | 'INVALID_MEDICAL_ARCHIVE';
+export type MedicalArchiveErrorCode = 'STUDY_REFERENCE_MISSING' | 'VIEWER_NOT_READY' | 'VIEWER_OPEN_TIMEOUT' | 'VIEWER_NOT_RECOGNIZED' | 'VIEWER_INITIALIZATION_TIMEOUT' | 'DOWNLOAD_ACTION_NOT_FOUND' | 'DOWNLOAD_ACTION_NOT_CLICKABLE' | 'DOWNLOAD_MENU_NOT_FOUND' | 'DICOM_DOWNLOAD_TIMEOUT' | 'INVALID_MEDICAL_ARCHIVE';
 export class MedicalArchiveError extends Error {
   constructor(readonly code: MedicalArchiveErrorCode) { super(code); }
 }
@@ -231,9 +231,11 @@ export class BrowserSession implements BrowserPort {
       const url = req.url();
       let isMainNav = false;
       let requestPage: Page | null = null;
+      let initiatorHost = 'none';
       try {
         requestPage = req.frame().page();
         isMainNav = req.isNavigationRequest() && req.frame() === requestPage.mainFrame();
+        initiatorHost = this.safeUrlParts(req.frame().url()).host;
       } catch {
         /* solicitudes sin frame */
       }
@@ -249,6 +251,16 @@ export class BrowserSession implements BrowserPort {
       const allowed = allowedDataPdf || actionViewer || centroDmViewer || (req.isNavigationRequest() ? this.policy.isAllowedNavigation(url) : this.policy.isAllowedSubresource(url));
       if (allowed) return route.continue();
       if (!DomainPolicy.isTransientBlank(url)) {
+        if (this.provider.id === 'centrodm') {
+          // Solo tipos y origins: nunca URL, query, headers, cuerpos ni mensajes de scripts.
+          this.providerStructure('pixeon_resource_blocked', undefined, {
+            ...this.safeUrlParts(url),
+            resourceType: req.resourceType(),
+            requestContext: isMainNav ? 'main_navigation' : req.isNavigationRequest() ? 'frame_navigation' : 'subresource',
+            pageContext: guardedCentroDmPage ? 'viewer' : requestPage === this.mainPage ? 'portal' : 'other',
+            initiatorHost,
+          });
+        }
         if (this.provider.id === 'rdcchacabuco' && /^https?:/i.test(url)) {
           this.providerStructure('rdc_external_origin', undefined, { host: this.safeUrlParts(url).host });
         }
@@ -352,6 +364,13 @@ export class BrowserSession implements BrowserPort {
 
   private attachPage(p: Page): void {
     this.onPdfTrace?.({ stage: 'page_opened', ...this.safeUrlParts(p.url()) });
+    if (this.provider.id === 'centrodm') p.on('pageerror', error => {
+      const errorKind = error.name === 'SyntaxError' || error.name === 'ReferenceError' || error.name === 'TypeError' ? error.name : 'other';
+      this.providerStructure('pixeon_script_error', undefined, {
+        errorKind,
+        pageContext: this.pendingCentroDmViewer?.page === p || this.guardedCentroDmViewerPages.has(p) ? 'viewer' : p === this.mainPage ? 'portal' : 'other',
+      });
+    });
     if (this.provider.studyExtractor === 'rdcchacabuco') p.on('framenavigated', (frame) => {
       if (!this.activeStudyId) return;
       const url = frame.url();
@@ -806,6 +825,7 @@ export class BrowserSession implements BrowserPort {
       'pixeon_download_menu', 'pixeon_download_menu_options', 'pixeon_download_choice',
       'pixeon_structural_fallback', 'pixeon_toolbar_candidates', 'toolbar_candidate', 'pixeon_toolbar_detected', 'pixeon_download_structural_candidate',
       'pixeon_download_fastpath', 'pixeon_download_click', 'pixeon_download_options',
+      'pixeon_resource_blocked', 'pixeon_readiness', 'pixeon_script_error', 'pixeon_runtime', 'centrodm_archive_valid',
       'centrodm_find_document_enter', 'find_document_dispatch',
       'rdc_page', 'rdc_rows', 'rdc_file_icons', 'rdc_file_icons_fallback', 'rdc_file_icons_class_fallback', 'rdc_file_icons_global', 'rdc_result_actions', 'rdc_candidate_rows', 'rdc_parsed_studies', 'rdc_studies_found', 'rdc_action_build', 'rdc_study_action', 'rdc_study_build', 'rdc_study_reference_saved', 'rdc_provider_refs', 'rdc_open_study', 'rdc_document_listeners_ready', 'rdc_study_action_click', 'rdc_modal_opened',
       'rdc_frame_navigation', 'rdc_frames', 'rdc_frame', 'rdc_modal_probe', 'rdc_pdf_sources_scan', 'rdc_pdf_dom_candidate', 'rdc_embed_candidates', 'rdc_embed_candidate', 'rdc_embed_fetch', 'rdc_nested_source_scan', 'rdc_pdf_response', 'rdc_pdf_candidate', 'rdc_pdf_source', 'rdc_pdf_full', 'rdc_pdf_valid', 'rdc_external_origin', 'rdc_import_complete',
@@ -1543,6 +1563,10 @@ export class BrowserSession implements BrowserPort {
   }
 
   private async openCentroDmStudy(studyId: string): Promise<boolean> {
+    this.providerStructure('pixeon_runtime', undefined, {
+      browserVersion: this.context.browser()?.version() || 'unknown', headless: this.headless,
+      viewerReadyTimeoutMs: this.pixeonViewerReadyTimeoutMs, toolbarTimeoutMs: this.pixeonToolbarTimeoutMs,
+    });
     const target = this.centroDmStudies.get(studyId);
     if (!target || !target.openHref || !target.sourceKey || !target.listUrl) {
       throw new MedicalArchiveError('STUDY_REFERENCE_MISSING');
@@ -1605,12 +1629,14 @@ export class BrowserSession implements BrowserPort {
     }
     const deadline = Date.now() + this.pixeonViewerReadyTimeoutMs;
     let detectionReported = false;
+    let viewerIdentified = false;
     while (Date.now() < deadline && !this.closing) {
       if (pending.blockedExternalNavigation) {
         this.pendingCentroDmViewer = null;
         throw new UnexpectedDomainError();
       }
       const candidate = await this.findPixeonFrame(viewerPage);
+      viewerIdentified ||= this.lastPixeonSignalCount > 0;
       if (candidate) {
         const viewerOrigin = this.originOf(candidate.url());
         if (!viewerOrigin || !this.isCentroDmViewerUrlAllowed(candidate.url())) {
@@ -1638,32 +1664,48 @@ export class BrowserSession implements BrowserPort {
           ...this.lastPixeonSignals,
         });
       }
-      await sleep(750);
+      // Sondeo condicionado por señales DOM, acotado por el deadline de inicialización.
+      await sleep(Math.min(200, Math.max(0, deadline - Date.now())));
     }
     const failedUrl = viewerPage.url();
     this.pendingCentroDmViewer = null;
     this.providerStructure('centrodm_viewer_detected', undefined, { found: false, host: this.safeUrlParts(failedUrl).host });
-    throw new MedicalArchiveError(DomainPolicy.isTransientBlank(failedUrl) ? 'VIEWER_OPEN_TIMEOUT' : 'VIEWER_NOT_RECOGNIZED');
+    this.providerStructure('pixeon_readiness', undefined, { found: false, reason: viewerIdentified ? 'initialization_timeout' : 'viewer_not_recognized' });
+    throw new MedicalArchiveError(DomainPolicy.isTransientBlank(failedUrl) ? 'VIEWER_OPEN_TIMEOUT' : viewerIdentified ? 'VIEWER_INITIALIZATION_TIMEOUT' : 'VIEWER_NOT_RECOGNIZED');
   }
 
   private async findPixeonFrame(page: Page): Promise<Frame | null> {
+    this.lastPixeonSignalCount = 0;
     for (const frame of page.frames()) {
       if (!this.isCentroDmViewerUrlAllowed(frame.url())) continue;
       if (await this.acceptPixeonCookieConsent(page, frame)) return null;
       const probe = await this.inspectPixeonUi(frame);
       const configuredOrigin = this.isConfiguredCentroDmViewerOrigin(frame.url());
       const imageToolbar = probe.toolbarCandidates >= 3;
-      const readyScore = (configuredOrigin ? 2 : 0) + (probe.branding ? 2 : 0) + (probe.downloadCandidates.length ? 3 : 0) + (imageToolbar ? 2 : 0);
-      this.lastPixeonSignalCount = readyScore;
-      this.lastPixeonSignals = { brand: probe.branding, download: probe.downloadCandidates.length > 0, imageToolbar };
+      const identified = configuredOrigin || probe.branding || imageToolbar;
+      this.lastPixeonSignalCount = Math.max(this.lastPixeonSignalCount, Number(identified));
+      // Usa el mismo finder de descarga, incluidos shadow DOM y frames hijos permitidos.
+      // Ni el origen ni el branding solos demuestran que los controles estén disponibles.
+      const action = identified ? await probePixeonDownload(page, 'download', () => {}, frame, candidate => {
+        let owner: Frame | null = candidate;
+        while (owner && /^about:(blank|srcdoc)$/.test(owner.url())) owner = owner.parentFrame();
+        return !!owner && this.isCentroDmViewerUrlAllowed(owner.url());
+      }) : null;
+      const downloadAvailable = !!action?.control && await action.control.locator.isEnabled().catch(() => false);
+      const documentReadyState = await frame.evaluate(() => document.readyState).catch(() => 'loading' as const);
+      const ready = identified && documentReadyState !== 'loading' && downloadAvailable;
+      this.lastPixeonSignals = { brand: probe.branding, download: downloadAvailable, imageToolbar };
+      this.providerStructure('pixeon_readiness', undefined, {
+        documentReadyState, configuredOrigin, brand: probe.branding, imageToolbar,
+        toolbarBuilt: imageToolbar || downloadAvailable, download: downloadAvailable, found: ready,
+      });
       this.providerStructure('pixeon_probe', undefined, {
         brand: probe.branding,
-        downloadCandidates: probe.downloadCandidates.length,
+        downloadCandidates: Math.max(probe.downloadCandidates.length, Number(downloadAvailable)),
         toolbarCandidates: probe.toolbarCandidates,
-        readyScore,
-        found: readyScore >= 4,
+        found: ready,
       });
-      if (readyScore >= 4) return frame;
+      if (ready) return frame;
     }
     return null;
   }
@@ -1810,11 +1852,8 @@ export class BrowserSession implements BrowserPort {
   async downloadFullDicomStudy(timeoutMs: number): Promise<CapturedMedicalArchive> {
     this.providerStructure('centrodm_find_document_enter');
     if (this.provider.studyExtractor !== 'centrodm' || !this.activeStudyId) throw new MedicalArchiveError('VIEWER_NOT_READY');
-    let frame = this.viewerFrame;
-    if (!frame || !(await this.findPixeonFrame(this.page))) throw new MedicalArchiveError('VIEWER_NOT_READY');
-    const visibleViewer = await this.findPixeonFrame(this.page);
-    if (visibleViewer) frame = this.viewerFrame = visibleViewer;
-    if (!frame) throw new MedicalArchiveError('VIEWER_NOT_READY');
+    const frame = this.viewerFrame;
+    if (!frame || frame.isDetached() || this.page.isClosed() || !this.isCentroDmViewerUrlAllowed(frame.url())) throw new MedicalArchiveError('VIEWER_NOT_READY');
     const trace = (event: ProviderStructureEvent) => this.providerStructure(event.event, event.count, event);
     this.providerStructure('pixeon_download_probe_start');
     const canInteract = (candidate: Frame): boolean => {

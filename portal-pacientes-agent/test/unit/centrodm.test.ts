@@ -67,6 +67,10 @@ test('allowlist Centro DM bloquea viewer desconocido y acepta solo su origen HTT
   assert.equal(configured.isAllowedNavigation('https://curie.centrodm.com.ar:8091/aurora'), false);
   assert.equal(configured.isAllowedNavigation('http://curie.centrodm.com.ar:8090/aurora'), false);
   assert.equal(configured.isAllowedNavigation('https://evil.example/aurora'), false);
+  for (const url of ['https://cdn.jsdelivr.net/npm/fixture@1/index.js', 'https://www.googletagmanager.com/gtag/js', 'https://cdn.jsdelivr.net/arbitrary.zip']) {
+    assert.equal(configured.isAllowedNavigation(url), false);
+    assert.equal(configured.isAllowedSubresource(url), false);
+  }
 
   const percambPolicy = new DomainPolicy(percamb.allowedHosts, percamb.staticHosts, percamb.allowedOrigins || [], percamb.requireHttps);
   assert.equal(percambPolicy.isAllowedNavigation('https://curie.centrodm.com.ar:8090/aurora'), false);

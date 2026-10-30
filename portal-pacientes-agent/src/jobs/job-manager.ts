@@ -292,7 +292,7 @@ export class JobManager {
   private async onTerminal(e: Entry, state: JobState): Promise<void> {
     e.disposing = true;
     const { config, log } = this.deps;
-    const recoverable = ['VIEWER_NOT_RECOGNIZED', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(e.job.errorCode || '');
+    const recoverable = ['VIEWER_NOT_RECOGNIZED', 'VIEWER_INITIALIZATION_TIMEOUT', 'DOWNLOAD_ACTION_NOT_FOUND', 'DOWNLOAD_ACTION_NOT_CLICKABLE', 'DOWNLOAD_MENU_NOT_FOUND'].includes(e.job.errorCode || '');
     const holdPixeon = recoverable && state === JobState.AGENT_UNABLE_TO_CONTINUE && config.pixeonDebugKeepViewerOpen && e.job.provider === 'centrodm'
       ? Math.min(config.pixeonDebugKeepViewerOpenMs, e.runner.debugViewerRetentionMs || 0) : 0;
     const holdRdc = e.job.errorCode === 'PDF_SOURCE_NOT_FOUND' && state === JobState.AGENT_UNABLE_TO_CONTINUE && config.rdcDebugKeepModalOpen && e.job.provider === 'rdcchacabuco'

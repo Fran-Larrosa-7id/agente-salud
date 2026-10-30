@@ -6,6 +6,19 @@ import { formatLine } from '../../src/security/logger.js';
 import { cellShape, maskCell, maskLabel, maskPath, maskText } from '../../src/security/sanitize.js';
 import { el, snap, testProvider } from '../helpers.js';
 
+test('diagnóstico Pixeon conserva tipos y señales, descarta URLs y mensajes', () => {
+  const fields = {
+    resourceType: 'script', requestContext: 'subresource', pageContext: 'viewer',
+    host: 'cdn.jsdelivr.net', initiatorHost: 'curie.centrodm.com.ar', port: '443',
+    documentReadyState: 'interactive', configuredOrigin: true, toolbarBuilt: false,
+    errorKind: 'ReferenceError', url: 'https://cdn.jsdelivr.net/a.js?token=secret',
+    errorMessage: 'medical private data', html: '<div>private</div>',
+  };
+  const line = formatLine(null, 'pixeon_resource_blocked', fields);
+  for (const value of ['resourceType=script', 'requestContext=subresource', 'pageContext=viewer', 'initiatorHost=curie.centrodm.com.ar', 'toolbarBuilt=false', 'errorKind=ReferenceError']) assert.ok(line.includes(value), line);
+  assert.ok(!/token|secret|medical|private|a\.js|html|errorMessage/.test(line), line);
+});
+
 test('maskText oculta DNI, fechas, emails y números de protocolo', () => {
   const out = maskText('DNI 30.111.222 · protocolo 0012345 del 28/05/2026 · juan@mail.com');
   assert.ok(!/30\.111\.222|0012345|28\/05\/2026|juan@mail\.com/.test(out), out);

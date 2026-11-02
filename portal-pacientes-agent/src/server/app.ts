@@ -269,6 +269,14 @@ export function createApp({ config, manager, providers, info, desktop, google }:
     const owner = (req: Request) => access.owner(req)!;
     const publicStudy = ({ ownerUserId: _owner, remoteFileId: _remote, remoteFolderId: _folder, ...record }: StoredStudy) => record;
     app.get('/api/drive', (req, res) => res.json({ status: google.db.connection(owner(req)).status }));
+    app.post('/api/drive/organization/dry-run', async (req, res) => {
+      if (req.body?.provider !== undefined && typeof req.body.provider !== 'string') return void res.status(400).json({ error: 'DRIVE_PROVIDER_INVALID' });
+      res.json(await google.drive.organizationDryRun(owner(req), req.body?.provider));
+    });
+    app.post('/api/drive/organization/execute', async (req, res) => {
+      if (typeof req.body?.planId !== 'string' || typeof req.body?.confirmation !== 'string') return void res.status(400).json({ error: 'CONFIRMATION_REQUIRED' });
+      res.json(await google.drive.executeOrganization(owner(req), req.body.planId, req.body.confirmation));
+    });
     app.post('/api/drive/disconnect', async (req, res) => {
       const userId = owner(req);
       await Promise.all(manager.activeJobs().filter(job => job.ownerUserId === userId).map(job => manager.cancel(job.id)));

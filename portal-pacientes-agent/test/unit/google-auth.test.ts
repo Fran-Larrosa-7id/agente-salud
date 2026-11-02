@@ -17,6 +17,7 @@ import { silentLogger } from '../../src/security/logger.js';
 import { loadConfig } from '../../src/config.js';
 import { waitFor } from '../helpers.js';
 import { googleTestConfig, MockGoogle } from '../google-helpers.js';
+import { DRIVE_APP, FOLDER_MIME, MOVE_CONFIRMATION } from '../../src/storage/drive-organization.js';
 
 async function fixture(proxyPort?: number, configuredOrigin?: string) {
   const config = googleTestConfig(); config.remoteLogin = true;
@@ -56,6 +57,35 @@ async function fixture(proxyPort?: number, configuredOrigin?: string) {
   return { config, mock, google, manager, desktop, server, base, api, begin, login, connect,
     async close() { await desktop.stop(); await manager.shutdown(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); google.db.close(); } };
 }
+
+test('organization API requires authenticated same-origin review and explicit owner-bound execution', async () => {
+  const f = await fixture();
+  try {
+    const path = '/api/drive/organization/';
+    assert.equal((await f.api(path + 'dry-run', '', 'POST')).status, 401);
+    const a = await f.login('account-A'), b = await f.login('account-B');
+    await f.connect('account-A', a.cookie); await f.connect('account-B', b.cookie);
+    f.mock.files.set('synthetic-legacy-root', { id: 'synthetic-legacy-root', name: 'Portal Pacientes', account: 'account-A', mimeType: FOLDER_MIME,
+      appProperties: { pp_app: DRIVE_APP, pp_owner: a.id } });
+    f.mock.files.set('synthetic-legacy-file', { id: 'synthetic-legacy-file', name: 'original.zip', account: 'account-A', mimeType: 'application/zip',
+      size: '100', md5Checksum: 'b'.repeat(32), parents: ['synthetic-legacy-root'], appProperties: {
+        pp_app: DRIVE_APP, pp_owner: a.id, pp_provider: 'centrodm', pp_kind: 'DICOM_ZIP', pp_sha256: 'a'.repeat(64), pp_md5: 'b'.repeat(32) } });
+    const before = f.mock.calls.length;
+    assert.equal((await f.api(path + 'dry-run', a.cookie, 'POST', { provider: 'invalid' })).status, 400);
+    const preview = await (await f.api(path + 'dry-run', a.cookie, 'POST', { provider: 'centrodm' })).json();
+    assert.equal(preview.files.length, 1); assert.ok(f.mock.calls.slice(before).every(call => call.method === 'GET'));
+    const body = { planId: preview.planId, confirmation: MOVE_CONFIRMATION };
+    assert.equal((await f.api(path + 'execute', a.cookie, 'POST', { planId: preview.planId })).status, 400);
+    assert.equal((await f.api(path + 'execute', b.cookie, 'POST', body)).status, 404);
+    assert.equal((await fetch(f.base + path + 'execute', { method: 'POST', headers: {
+      Cookie: a.cookie, Origin: 'https://foreign.test', 'content-type': 'application/json' }, body: JSON.stringify(body) })).status, 403);
+    const executed = await (await f.api(path + 'execute', a.cookie, 'POST', body)).json();
+    assert.equal(executed.results[0].status, 'moved');
+    const retry = await (await f.api(path + 'execute', a.cookie, 'POST', body)).json();
+    assert.equal(retry.results[0].status, 'already_organized');
+    assert.equal(f.mock.files.has('synthetic-legacy-file'), true);
+  } finally { await f.close(); }
+});
 
 test('localhost:8888 code flow works without Secure cookies only in development, never with remote HTTP or production HTTP', async () => {
   const env = { NODE_ENV: 'development', AUTH_MODE: 'google', STORAGE_PROVIDER: 'google_drive',

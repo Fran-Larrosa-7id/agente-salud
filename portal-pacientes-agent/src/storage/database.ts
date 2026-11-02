@@ -15,7 +15,7 @@ export interface StoredStudy {
   hidden?: boolean;
 }
 export interface OAuthAttempt { purpose: 'login' | 'drive'; nonce: string; verifier: string; ownerId?: string; sessionHash?: string; jobId?: string }
-export interface UploadRecord { remoteId: string; session?: string; status: string }
+export interface UploadRecord { remoteId: string; session?: string; status: string; folderId?: string }
 
 /** AES-GCM binds each ciphertext to its user and purpose, preventing row swapping. */
 export class TokenCipher {
@@ -79,6 +79,12 @@ export class PortalDatabase {
         hidden INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(owner_id,study_id));
       CREATE TABLE IF NOT EXISTS study_originals(owner_id TEXT NOT NULL REFERENCES users(id), study_id TEXT NOT NULL REFERENCES studies(id),
         remote_id TEXT NOT NULL, record TEXT NOT NULL, PRIMARY KEY(owner_id,study_id,remote_id));
+      CREATE TABLE IF NOT EXISTS drive_folders(owner_id TEXT NOT NULL REFERENCES users(id), scope TEXT NOT NULL,
+        remote_id TEXT NOT NULL, ready INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(owner_id,scope));
+      CREATE TABLE IF NOT EXISTS upload_folders(owner_id TEXT NOT NULL REFERENCES users(id), remote_id TEXT NOT NULL,
+        folder_id TEXT NOT NULL, PRIMARY KEY(owner_id,remote_id));
+      CREATE TABLE IF NOT EXISTS drive_move_plans(id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id),
+        expires_at INTEGER NOT NULL, payload TEXT NOT NULL);
       INSERT OR IGNORE INTO schema_migrations VALUES(1,datetime('now'));
       COMMIT;`);
     } catch (error) {
@@ -132,6 +138,43 @@ export class PortalDatabase {
   }
   driveStatus(userId: string, status: DriveStatus): void { this.sql.prepare('UPDATE google_drive_connections SET status=? WHERE owner_id=? AND (credentials IS NOT NULL OR ?=\'disconnected\')').run(status, userId, status); }
   folder(userId: string, folderId: string): void { this.sql.prepare('UPDATE google_drive_connections SET folder_id=? WHERE owner_id=?').run(folderId, userId); }
+  driveFolder(owner: string, scope: string): { id: string; ready: boolean } | null {
+    const row = this.sql.prepare('SELECT remote_id,ready FROM drive_folders WHERE owner_id=? AND scope=?').get(owner, scope);
+    return row ? { id: String(row.remote_id), ready: row.ready === 1 } : null;
+  }
+  reserveFolder(owner: string, scope: string, id: string): string {
+    this.sql.prepare('INSERT OR IGNORE INTO drive_folders(owner_id,scope,remote_id) VALUES(?,?,?)').run(owner, scope, id);
+    return this.driveFolder(owner, scope)!.id;
+  }
+  folderReady(owner: string, scope: string, id: string): void {
+    this.sql.prepare('UPDATE drive_folders SET ready=1 WHERE owner_id=? AND scope=? AND remote_id=?').run(owner, scope, id);
+  }
+  forgetFolder(owner: string, scope: string, id: string): void {
+    this.sql.prepare('DELETE FROM drive_folders WHERE owner_id=? AND scope=? AND remote_id=?').run(owner, scope, id);
+  }
+  uploadFolder(owner: string, remoteId: string, folderId: string): string {
+    this.sql.prepare('INSERT OR IGNORE INTO upload_folders VALUES(?,?,?)').run(owner, remoteId, folderId);
+    return String(this.sql.prepare('SELECT folder_id FROM upload_folders WHERE owner_id=? AND remote_id=?').get(owner, remoteId)!.folder_id);
+  }
+  saveMovePlan(owner: string, payload: unknown): { planId: string; expiresAt: number } {
+    this.sql.prepare('DELETE FROM drive_move_plans WHERE expires_at<=?').run(Date.now());
+    const planId = randomUUID(), expiresAt = Date.now() + 24 * 3600_000;
+    this.sql.prepare('INSERT INTO drive_move_plans VALUES(?,?,?,?)').run(planId, owner, expiresAt, JSON.stringify(payload));
+    return { planId, expiresAt };
+  }
+  movePlan<T>(owner: string, id: string): T | null {
+    const row = this.sql.prepare('SELECT payload FROM drive_move_plans WHERE owner_id=? AND id=? AND expires_at>?').get(owner, id, Date.now());
+    return row ? JSON.parse(String(row.payload)) as T : null;
+  }
+  /** Folder metadata only; preserve aliases, missing status, preferences and upload checkpoints. */
+  updateRemoteFolder(owner: string, remoteId: string, folderId: string): void {
+    this.sql.exec('BEGIN IMMEDIATE');
+    try {
+      for (const table of ['studies', 'study_originals']) this.sql.prepare(`UPDATE ${table}
+        SET record=json_set(record,'$.remoteFolderId',?) WHERE owner_id=? AND remote_id=?`).run(folderId, owner, remoteId);
+      this.sql.exec('COMMIT');
+    } catch (error) { this.sql.exec('ROLLBACK'); throw error; }
+  }
   disconnect(userId: string): void {
     this.sql.exec('BEGIN IMMEDIATE');
     try {
@@ -142,7 +185,8 @@ export class PortalDatabase {
   }
   upload(userId: string, key: string): UploadRecord | null {
     const row = this.sql.prepare('SELECT * FROM file_uploads WHERE owner_id=? AND idempotency_key=?').get(userId, key);
-    return row ? { remoteId: String(row.remote_id), status: String(row.status), session: row.session_cipher ? this.cipher.open<string>(String(row.session_cipher), 'upload:' + userId + ':' + key) : undefined } : null;
+    return row ? { remoteId: String(row.remote_id), status: String(row.status), session: row.session_cipher ? this.cipher.open<string>(String(row.session_cipher), 'upload:' + userId + ':' + key) : undefined,
+      folderId: this.sql.prepare('SELECT folder_id FROM upload_folders WHERE owner_id=? AND remote_id=?').get(userId, String(row.remote_id))?.folder_id as string | undefined } : null;
   }
   saveUpload(userId: string, key: string, remoteId: string, jobId: string, session?: string): void {
     this.sql.prepare(`INSERT INTO file_uploads VALUES(?,?,?,?,'uploading',?) ON CONFLICT(owner_id,idempotency_key)

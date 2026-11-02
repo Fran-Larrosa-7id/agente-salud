@@ -8,12 +8,13 @@ import { PortalDatabase, type StoredStudy } from './database.js';
 import { CloudError } from './errors.js';
 import type { CloudStorageProvider, UploadInput } from './provider.js';
 import { driveFilenameCandidates, studyFilenameDate } from './drive-filename.js';
+import { DRIVE_APP, FOLDER_MIME, INSTITUTION_FOLDERS, isAppFolder, isDriveProvider, isMedicalOriginal, matchesCandidate, privateAppFile,
+  MOVE_CONFIRMATION, type DriveProvider, type DriveMovePlan, type RemoteFile } from './drive-organization.js';
 
 const API = 'https://www.googleapis.com/drive/v3/files';
-const APP = 'portal-pacientes-v1';
-const FIELDS = 'id,name,size,mimeType,appProperties,trashed,parents,shared,md5Checksum,createdTime';
+const APP = DRIVE_APP;
+const FIELDS = 'id,name,size,mimeType,appProperties,trashed,parents,shared,ownedByMe,md5Checksum,createdTime';
 const CHUNK = 8 * 1024 * 1024; // Multiple of Drive's 256 KiB requirement, bounded memory.
-interface RemoteFile { id: string; name?: string; size?: string; mimeType: string; appProperties?: Record<string, string>; trashed?: boolean; shared?: boolean; parents?: string[]; md5Checksum?: string; createdTime?: string }
 export interface DriveDiagnostic { stage: string; status?: number; reason: string; bytes: number; totalBytes: number; retryCount: number; sessionState: string; transient: boolean }
 const SAFE_REASONS = new Set(['storageQuotaExceeded', 'rateLimitExceeded', 'userRateLimitExceeded', 'quotaExceeded', 'insufficientPermissions', 'authError', 'forbidden', 'notFound', 'fileNotFound', 'backendError', 'internalError', 'invalid', 'badRequest', 'appNotAuthorizedToFile', 'accessNotConfigured', 'domainPolicy']);
 const SAFE_NETWORK_CODES = new Set(['UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT', 'UND_ERR_SOCKET', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT']);
@@ -105,26 +106,85 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     if (!result.ids?.[0] || !/^[\w-]{1,200}$/.test(result.ids[0])) throw new CloudError('DRIVE_UPLOAD_FAILED');
     return result.ids[0];
   }
-  private async folder(owner: string, signal?: AbortSignal): Promise<string> {
-    const previous = this.db.connection(owner).folderId;
-    if (previous) {
-      const value = await this.remote(owner, previous, signal).catch(error => { if (error instanceof CloudError && error.code === 'FILE_MISSING') return null; throw error; });
-      if (value && !value.trashed && !value.shared && value.mimeType === 'application/vnd.google-apps.folder' && value.appProperties?.pp_owner === owner && value.appProperties?.pp_app === APP) return value.id;
+  private async maybeRemote(owner: string, id: string, signal?: AbortSignal): Promise<RemoteFile | null> {
+    return this.remote(owner, id, signal).catch(error => { if (error instanceof CloudError && error.code === 'FILE_MISSING') return null; throw error; });
+  }
+  private async search(owner: string, query: string, signal?: AbortSignal): Promise<RemoteFile[]> {
+    let pageToken = ''; const seen = new Set<string>(), files: RemoteFile[] = [];
+    do {
+      const data = await (await this.request(owner, API + '?' + new URLSearchParams({ q: query, spaces: 'drive', pageSize: '100',
+        fields: 'nextPageToken,files(' + FIELDS + ')', ...(pageToken ? { pageToken } : {}) }), {}, { signal })).json() as { files?: RemoteFile[]; nextPageToken?: string };
+      files.push(...data.files || []); pageToken = data.nextPageToken || '';
+      if (pageToken && seen.has(pageToken)) throw new CloudError('DRIVE_UPLOAD_FAILED');
+      if (pageToken) seen.add(pageToken);
+    } while (pageToken);
+    return files;
+  }
+  /** Read-only discovery: used by dry-run; never creates folders or patches legacy metadata. */
+  private async findFolder(owner: string, provider?: DriveProvider, parent?: string, signal?: AbortSignal): Promise<RemoteFile | null> {
+    const scope = provider ? parent + ':' + provider : 'root';
+    const cached = this.db.driveFolder(owner, scope);
+    const ids = new Set([cached?.id, ...(!provider ? [this.db.connection(owner).folderId] : [])]);
+    for (const id of ids) if (id) {
+      const file = await this.maybeRemote(owner, id, signal);
+      if (file && isAppFolder(file, owner, provider, parent)) return file;
     }
-    const query = `trashed=false and mimeType='application/vnd.google-apps.folder' and appProperties has { key='pp_app' and value='${APP}' } and appProperties has { key='pp_owner' and value='${owner}' }`;
-    const found = await (await this.request(owner, API + '?' + new URLSearchParams({ q: query, spaces: 'drive', fields: 'files(' + FIELDS + ')', pageSize: '100' }), {}, { signal })).json() as { files?: RemoteFile[] };
-    let folder = found.files?.find(item => !item.shared && !item.trashed);
-    if (!folder) {
-      const id = await this.generateId(owner, signal);
-      folder = await (await this.request(owner, API + '?fields=' + encodeURIComponent(FIELDS), { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id, name: 'Portal Pacientes', mimeType: 'application/vnd.google-apps.folder', appProperties: { pp_app: APP, pp_owner: owner } }) }, { signal, retry: false })).json() as RemoteFile;
+    const query = `trashed=false and mimeType='${FOLDER_MIME}' and appProperties has { key='pp_app' and value='${APP}' } and appProperties has { key='pp_owner' and value='${owner}' }`;
+    const found = (await this.search(owner, query, signal)).filter(file => isAppFolder(file, owner, provider, parent));
+    // Existing duplicates are not deleted or merged; choose a stable ID on fresh SQLite.
+    return found.sort((a, b) => a.id.localeCompare(b.id))[0] || null;
+  }
+  private async folder(owner: string, signal?: AbortSignal, provider?: DriveProvider, parent?: string): Promise<string> {
+    const scope = provider ? parent + ':' + provider : 'root';
+    let reservation = this.db.driveFolder(owner, scope);
+    if (reservation) {
+      const file = await this.maybeRemote(owner, reservation.id, signal);
+      if (file && isAppFolder(file, owner, provider, parent)) {
+        this.db.folderReady(owner, scope, file.id);
+        if (!provider) this.db.folder(owner, file.id);
+        return file.id;
+      }
+      if (file || reservation.ready) { this.db.forgetFolder(owner, scope, reservation.id); reservation = null; }
     }
-    if (!folder.id || folder.shared || folder.trashed) throw new CloudError('DRIVE_UPLOAD_FAILED');
-    this.db.folder(owner, folder.id); return folder.id;
+    if (!reservation) {
+      const found = await this.findFolder(owner, provider, parent, signal);
+      const id = found?.id || await this.generateId(owner, signal);
+      const reserved = this.db.reserveFolder(owner, scope, id);
+      if (found && reserved === found.id) this.db.folderReady(owner, scope, reserved);
+      reservation = this.db.driveFolder(owner, scope)!;
+    }
+    // Persist the generated ID before creation. Concurrent workers/restarts reuse the ID;
+    // Drive's 409 is an acknowledgement, never a reason to create a different folder.
+    let file = await this.maybeRemote(owner, reservation.id, signal);
+    if (!file) {
+      await this.request(owner, API + '?fields=id', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: reservation.id, name: provider ? INSTITUTION_FOLDERS[provider] : 'Portal Pacientes', mimeType: FOLDER_MIME,
+          ...(provider ? { parents: [parent] } : {}), appProperties: { pp_app: APP, pp_owner: owner,
+            pp_role: provider ? 'institution' : 'root', ...(provider ? { pp_provider: provider, pp_parent: parent } : {}) } }) }, { signal, accepted: [409] });
+      file = await this.remote(owner, reservation.id, signal);
+    }
+    if (!isAppFolder(file, owner, provider, parent)) throw new CloudError('DRIVE_FOLDER_INVALID', 409);
+    this.db.folderReady(owner, scope, file.id);
+    if (!provider) this.db.folder(owner, file.id);
+    return file.id;
+  }
+  private async institutionFolder(owner: string, provider: string, signal?: AbortSignal): Promise<string> {
+    if (!isDriveProvider(provider)) throw new CloudError('DRIVE_PROVIDER_INVALID', 400);
+    const root = await this.folder(owner, signal);
+    return this.folder(owner, signal, provider, root);
+  }
+  private async verifiedParent(owner: string, file: RemoteFile, signal?: AbortSignal): Promise<string> {
+    if (file.parents?.length !== 1) throw new CloudError('DRIVE_FOLDER_INVALID', 409);
+    const parent = await this.remote(owner, file.parents[0], signal);
+    if (isAppFolder(parent, owner)) return parent.id;
+    const provider = file.appProperties?.pp_provider || '', rootId = parent.appProperties?.pp_parent;
+    if (isDriveProvider(provider) && rootId && isAppFolder(parent, owner, provider, rootId) &&
+      isAppFolder(await this.remote(owner, rootId, signal), owner)) return parent.id;
+    throw new CloudError('DRIVE_FOLDER_INVALID', 409);
   }
   private verifyRemote(value: RemoteFile, input: UploadInput, md5: string): void {
     const { file, ownerUserId } = input;
-    if (!value.id || value.trashed || value.shared || Number(value.size) !== file.bytes || value.mimeType !== file.mimeType ||
+    if (!privateAppFile(value, ownerUserId) || Number(value.size) !== file.bytes || value.mimeType !== file.mimeType ||
       value.appProperties?.pp_app !== APP || value.appProperties?.pp_owner !== ownerUserId || value.appProperties?.pp_sha256 !== file.sha256 ||
       value.md5Checksum && value.md5Checksum !== md5) throw new CloudError('DRIVE_UPLOAD_FAILED');
   }
@@ -220,7 +280,12 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     this.stage('remote_lookup');
     let remote = await this.remote(owner, record.remoteId, signal).catch(error => { if (error instanceof CloudError && error.code === 'FILE_MISSING') return null; throw error; });
     this.stage('folder_lookup');
-    const folderId = await this.folder(owner, signal);
+    // A pre-upgrade session already has its parent fixed by Drive. Preserve it.
+    const selectedFolder = remote ? await this.verifiedParent(owner, remote, signal) : record.folderId ||
+      (record.session ? await this.folder(owner, signal) : await this.institutionFolder(owner, input.study.provider, signal));
+    // A different worker may have bound this remote ID while we were resolving folders.
+    const reservedFolder = this.db.uploadFolder(owner, record.remoteId, selectedFolder);
+    const folderId = remote ? selectedFolder : reservedFolder;
     if (!remote) {
       const handle = await open(file.path, 'r');
       try {
@@ -294,12 +359,14 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     let remote: RemoteFile;
     try { remote = await this.remote(owner, stored.remoteFileId); }
     catch (error) { if (error instanceof CloudError && error.code === 'FILE_MISSING') this.db.markMissing(owner, id); throw error; }
-    if (remote.trashed || remote.id !== stored.remoteFileId || remote.appProperties?.pp_owner !== owner || remote.appProperties?.pp_sha256 !== stored.sha256 || remote.appProperties?.pp_app !== APP || Number(remote.size) !== stored.bytes || remote.mimeType !== stored.mimeType ||
+    if (!privateAppFile(remote, owner) || remote.id !== stored.remoteFileId || remote.appProperties?.pp_sha256 !== stored.sha256 || Number(remote.size) !== stored.bytes || remote.mimeType !== stored.mimeType ||
       stored.md5Checksum && remote.md5Checksum && stored.md5Checksum !== remote.md5Checksum) {
       this.db.markMissing(owner, id); throw new CloudError('FILE_MISSING', 404);
     }
-    if (stored.status === 'remote_missing') return this.db.commitStudy({ ...stored, status: 'stored' });
-    return stored;
+    const folderId = remote.parents?.[0] || '';
+    if (folderId !== stored.remoteFolderId) this.db.updateRemoteFolder(owner, stored.remoteFileId, folderId);
+    if (stored.status === 'remote_missing') return this.db.commitStudy({ ...stored, remoteFolderId: folderId, status: 'stored' });
+    return { ...stored, remoteFolderId: folderId };
   }
   async open(owner: string, id: string): Promise<string> { const file = await this.getMetadata(owner, id); return 'https://drive.google.com/file/d/' + encodeURIComponent(file.remoteFileId) + '/view'; }
   async download(owner: string, id: string): Promise<{ study: StoredStudy; response: Response }> {
@@ -311,6 +378,77 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     const file = await this.getMetadata(owner, id);
     await this.request(owner, API + '/' + encodeURIComponent(file.remoteFileId), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ trashed: true }) });
     this.db.markMissing(owner, id);
+  }
+  /** Explicit maintenance preview. GETs only on Drive; the plan is local and account-bound. */
+  async organizationDryRun(owner: string, provider?: string) {
+    if (provider !== undefined && !isDriveProvider(provider)) throw new CloudError('DRIVE_PROVIDER_INVALID', 400);
+    const root = await this.findFolder(owner);
+    const plan: DriveMovePlan = { rootId: root?.id || null, files: [] };
+    let skipped = 0; const names = new Map<string, string>();
+    if (root) {
+      const files = await this.search(owner, `trashed=false and '${root.id}' in parents and appProperties has { key='pp_app' and value='${APP}' } and appProperties has { key='pp_owner' and value='${owner}' }`);
+      for (const file of files) {
+        if (file.mimeType === FOLDER_MIME) continue;
+        if (!isMedicalOriginal(file, owner) || file.parents?.length !== 1 || file.parents[0] !== root.id) { skipped++; continue; }
+        const props = file.appProperties!;
+        if (provider && props.pp_provider !== provider) continue;
+        names.set(file.id, file.name || '');
+        plan.files.push({ id: file.id, provider: props.pp_provider as DriveProvider,
+          sha256: props.pp_sha256, kind: props.pp_kind, mimeType: file.mimeType, bytes: Number(file.size), md5: file.md5Checksum });
+      }
+    }
+    plan.files.sort((a, b) => a.id.localeCompare(b.id));
+    const saved = this.db.saveMovePlan(owner, plan);
+    return { ...saved, dryRun: true, rootId: plan.rootId, skipped, files: plan.files.map(file => ({ ...file, name: names.get(file.id) || '',
+      destination: 'Portal Pacientes/' + INSTITUTION_FOLDERS[file.provider] })), confirmationRequired: MOVE_CONFIRMATION };
+  }
+  /** Never invoked by login, reconciliation or upload. Retry this same plan after partial failure. */
+  async executeOrganization(owner: string, planId: string, confirmation: string) {
+    if (confirmation !== MOVE_CONFIRMATION) throw new CloudError('CONFIRMATION_REQUIRED', 400);
+    const plan = this.db.movePlan<DriveMovePlan>(owner, planId);
+    if (!plan) throw new CloudError('DRIVE_MOVE_PLAN_INVALID', 404);
+    const results: { id: string; status: 'moved' | 'already_organized' | 'skipped' | 'error'; error?: string }[] = [];
+    if (!plan.rootId) return { planId, results };
+    if (!isAppFolder(await this.remote(owner, plan.rootId), owner)) throw new CloudError('DRIVE_FOLDER_INVALID', 409);
+    for (const candidate of plan.files) {
+      try {
+        const file = await this.maybeRemote(owner, candidate.id);
+        if (!file || !matchesCandidate(file, owner, candidate) || file.parents?.length !== 1) {
+          results.push({ id: candidate.id, status: 'skipped' }); continue;
+        }
+        if (file.parents[0] !== plan.rootId) {
+          // A lost PATCH response or SQLite failure is repaired without moving again.
+          const parent = await this.maybeRemote(owner, file.parents[0]);
+          if (parent && isAppFolder(parent, owner, candidate.provider, plan.rootId)) {
+            this.db.updateRemoteFolder(owner, file.id, parent.id);
+            results.push({ id: file.id, status: 'already_organized' });
+          } else results.push({ id: file.id, status: 'skipped' });
+          continue;
+        }
+        const target = await this.folder(owner, undefined, candidate.provider, plan.rootId);
+        // Recheck after folder creation/network waits. Never move a stale listing entry.
+        const current = await this.remote(owner, candidate.id);
+        if (!matchesCandidate(current, owner, candidate) || current.parents?.length !== 1 || current.parents[0] !== plan.rootId) {
+          results.push({ id: file.id, status: 'skipped' }); continue;
+        }
+        let moveError: unknown;
+        try {
+          await this.request(owner, API + '/' + encodeURIComponent(file.id) + '?' + new URLSearchParams({
+            addParents: target, removeParents: plan.rootId, fields: FIELDS }),
+          { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: '{}' }, { retry: false });
+        } catch (error) { moveError = error; }
+        // Remote verification also resolves a timeout after Drive applied the move.
+        const moved = await this.remote(owner, file.id);
+        if (!matchesCandidate(moved, owner, candidate) || moved.parents?.length !== 1 || moved.parents[0] !== target) {
+          throw moveError || new CloudError('DRIVE_MOVE_FAILED', 503, true);
+        }
+        this.db.updateRemoteFolder(owner, file.id, target);
+        results.push({ id: file.id, status: 'moved' });
+      } catch (error) {
+        results.push({ id: candidate.id, status: 'error', error: error instanceof CloudError ? error.code : 'DRIVE_MOVE_FAILED' });
+      }
+    }
+    return { planId, results };
   }
   /** Only files created by this app and account; never enumerates the rest of the patient's Drive. */
   async reconcile(owner: string): Promise<void> {
@@ -325,14 +463,14 @@ export class GoogleDriveStorage implements CloudStorageProvider {
     const remoteIds = new Set<string>();
     for (const file of collected) {
       const props = file.appProperties || {};
-      if (file.trashed || props.pp_app !== APP || props.pp_owner !== owner || !/^[a-f0-9]{64}$/.test(props.pp_sha256 || '') || !['percamb', 'centrodm', 'rdcchacabuco'].includes(props.pp_provider) ||
+      if (!privateAppFile(file, owner) || !/^[a-f0-9]{64}$/.test(props.pp_sha256 || '') || !['percamb', 'centrodm', 'rdcchacabuco'].includes(props.pp_provider) ||
         !['PDF', 'DICOM_ZIP'].includes(props.pp_kind) || file.mimeType !== (props.pp_kind === 'PDF' ? 'application/pdf' : 'application/zip') || !(Number(file.size) > 0)) continue;
       remoteIds.add(file.id);
       const aliases = this.db.list(owner).filter(value => value.remoteFileId === file.id);
       if (!aliases.length && this.db.wasReplaced(owner, file.id)) continue; // Restoring an older original must not undo a successful reimport.
       if (props.pp_md5 && file.md5Checksum && props.pp_md5 !== file.md5Checksum) { for (const alias of aliases) this.db.markMissing(owner, alias.id); continue; }
       if (aliases.length) {
-        for (const alias of aliases) this.db.commitStudy({ ...alias, status: 'stored' });
+        for (const alias of aliases) this.db.commitStudy({ ...alias, remoteFolderId: file.parents?.[0] || '', status: 'stored' });
         continue;
       }
       const previous = this.db.byHash(owner, props.pp_sha256);

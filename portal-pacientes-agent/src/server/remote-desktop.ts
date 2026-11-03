@@ -12,6 +12,7 @@ import type { JobManager } from '../jobs/job-manager.js';
 import { silentLogger, type Logger } from '../security/logger.js';
 import { requestOrigin, type PortalAccess } from './portal-auth.js';
 import type { Config } from '../config.js';
+import { captureArguments } from './capture-mode.js';
 
 export function interactive(job: ImportJob | undefined): boolean {
   return !!job && (job.state === S.WAITING_FOR_USER_LOGIN || job.state === S.HUMAN_ACTION_REQUIRED);
@@ -106,6 +107,7 @@ export class RemoteDesktop {
   }
 
   private async open(job: ImportJob): Promise<string> {
+    const capture = captureArguments(process.env.REMOTE_CAPTURE_MODE);
     const started = Date.now();
     this.log.info(job.id, 'desktop_preparing', { provider: job.provider, state: job.state });
     await this.stopping;
@@ -118,7 +120,7 @@ export class RemoteDesktop {
     desktop.listener = () => { if (!interactive(job)) void this.stop(job.id); };
     job.on('event', desktop.listener);
     for (const [command, args] of [
-      ['x11vnc', ['-display', process.env.DISPLAY, '-localhost', '-rfbport', '5900', '-forever', '-nopw', '-quiet', '-noxdamage', '-noshm', ...(this.view?.jobId === job.id && this.view.layout === 'mobile' ? ['-clip', `${this.view.geometry.width}x${this.view.geometry.height}+${this.view.geometry.x}+${this.view.geometry.y}`] : [])]],
+      ['x11vnc', ['-display', process.env.DISPLAY, '-localhost', '-rfbport', '5900', '-forever', '-nopw', '-quiet', ...capture, ...(this.view?.jobId === job.id && this.view.layout === 'mobile' ? ['-clip', `${this.view.geometry.width}x${this.view.geometry.height}+${this.view.geometry.x}+${this.view.geometry.y}`] : [])]],
       ['websockify', ['127.0.0.1:6080', '127.0.0.1:5900']],
     ] as [string, string[]][]) {
       const child = spawn(command, args, { stdio: 'ignore' });

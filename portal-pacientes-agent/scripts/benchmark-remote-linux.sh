@@ -25,9 +25,12 @@ for profile in mobile desktop; do
         -v "$root/portal-pacientes-agent/src/browser/display-profile.ts:/app/portal-pacientes-agent/src/browser/display-profile.ts:ro" \
         -v "$root/portal-pacientes-agent/src/server/capture-mode.ts:/app/portal-pacientes-agent/src/server/capture-mode.ts:ro" \
         -e HOME=/home/pwuser -e XDG_CONFIG_HOME=/home/pwuser/.config -e XDG_CACHE_HOME=/home/pwuser/.cache \
-        -e "BENCH_SECONDS=$seconds" -e "BENCH_WARMUP_SECONDS=$warmup" -e "BENCH_PROFILE=$profile" -e "BENCH_VARIANT=$variant" \
-        --entrypoint xvfb-run "$image" -a '--server-args=-screen 0 1280x1000x24 -nolisten tcp' \
-        node --import tsx scripts/benchmark-remote-fps.mjs > "$out/${profile}-${variant}-${round}.json"
+        -e "BENCH_SECONDS=$seconds" -e "BENCH_WARMUP_SECONDS=$warmup" -e "BENCH_PROFILE=$profile" -e "BENCH_VARIANT=$variant" -e "BENCH_VNC_DIAGNOSTIC=${BENCH_VNC_DIAGNOSTIC:-0}" -e BENCH_RESULT_FD=3 \
+        --entrypoint sh "$image" -c 'exec 3>&1; exec 1>&2; exec xvfb-run -a "--server-args=-screen 0 1280x1000x24 -nolisten tcp" node --import tsx scripts/benchmark-remote-fps.mjs' \
+        > "$out/${profile}-${variant}-${round}.json" 2> "$out/${profile}-${variant}-${round}.log" || {
+          echo "Failed: see $out/${profile}-${variant}-${round}.log" >&2; exit 1;
+        }
+      python3 -m json.tool "$out/${profile}-${variant}-${round}.json" > /dev/null || { echo 'Invalid benchmark JSON' >&2; exit 1; }
     done
   done
 done

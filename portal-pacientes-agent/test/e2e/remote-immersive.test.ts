@@ -46,6 +46,29 @@ test('immersive Linux: real cropped framebuffer, touch coordinates, zoom, rotate
     await client.goto(`${base}/remote/${job.id}`);
     await client.waitForSelector('body.immersive.connected');
     await client.waitForFunction(() => (document.querySelector('#desktop canvas') as HTMLCanvasElement)?.width === 390);
+    // Sample real noVNC pixels, including a small update and a temporary overlap.
+    // Solid synthetic colours are used only in this test; no patient screen is captured.
+    await worker.evaluate(() => {
+      const target = document.createElement('div'); target.id = 'qa-pixels';
+      target.style.cssText = 'position:fixed;left:10px;top:10px;width:120px;height:80px;background:rgb(255,0,0);z-index:2147483647';
+      document.body.appendChild(target);
+    });
+    const expectPixel = async (x: number, y: number, rgb: number[]) => client.waitForFunction(({ x, y, rgb }) => {
+      const canvas = document.querySelector('#desktop canvas') as HTMLCanvasElement;
+      const pixel = canvas?.getContext('2d')?.getImageData(x, y, 1, 1).data;
+      return !!pixel && rgb.every((value, index) => Math.abs(pixel[index] - value) < 40);
+    }, { x, y, rgb }, { timeout: 10000 });
+    await expectPixel(20, 20, [255, 0, 0]);
+    await worker.evaluate(() => {
+      const patch = document.createElement('div'); patch.id = 'qa-pixel-patch';
+      patch.style.cssText = 'position:absolute;left:5px;top:5px;width:20px;height:20px;background:rgb(0,255,0)';
+      document.getElementById('qa-pixels')!.appendChild(patch);
+    });
+    await expectPixel(20, 20, [0, 255, 0]);
+    await expectPixel(100, 70, [255, 0, 0]);
+    await worker.evaluate(() => { document.getElementById('qa-pixel-patch')!.remove(); });
+    await expectPixel(20, 20, [255, 0, 0]);
+    await worker.evaluate(() => { document.getElementById('qa-pixels')!.remove(); });
     assert.equal(await worker.evaluate(() => innerWidth), 390);
     assert.equal(await worker.evaluate(() => navigator.maxTouchPoints > 0), true);
     assert.equal(await worker.evaluate(() => /Mobile/.test(navigator.userAgent)), false);

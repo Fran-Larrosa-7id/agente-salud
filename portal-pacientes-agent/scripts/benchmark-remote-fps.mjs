@@ -2,6 +2,7 @@
 import { spawn, execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { configurePageDisplay } from '../src/browser/display-profile.ts';
@@ -49,7 +50,7 @@ try {
   for(let i=0;i<12;i++){x.fillStyle=(n&(1<<i))?'#ffffff':'#000000';x.fillRect(8+i*10,8,8,8)}requestAnimationFrame(frame)}requestAnimationFrame(frame);</script>`);
   const geometry = await configurePageDisplay(source, profile === 'mobile' ? 'mobile' : 'desktop', 390, 720);
   const clip = profile === 'mobile' ? ['-clip', `${geometry.width}x${geometry.height}+${geometry.x}+${geometry.y}`] : [];
-  const args = ['-display', process.env.DISPLAY, '-localhost', '-rfbport', '5908', '-forever', '-nopw', '-quiet',
+  const args = ['-display', process.env.DISPLAY, '-localhost', '-rfbport', '5908', '-forever', '-nopw', ...(process.env.BENCH_VNC_DIAGNOSTIC === '1' ? [] : ['-quiet']),
     ...(variant === 'damage' ? ['-noshm'] : captureArguments(({ baseline: 'legacy', both: 'shm_damage', wait10: 'legacy' })[variant] || variant)),
     ...(variant === 'wait10' ? ['-wait', '10'] : []), ...clip];
   run('x11vnc', args); run('websockify', ['127.0.0.1:6088', '127.0.0.1:5908']);
@@ -97,7 +98,9 @@ try {
     bucket.cpuSum += Number(cpu); bucket.rssKiBSum += Number(rss); bucket.processes++;
   }
   for (const bucket of Object.values(processSummary)) { bucket.meanCpuPercent = bucket.cpuSum / processSamples.length; bucket.meanRssKiB = bucket.rssKiBSum / processSamples.length; delete bucket.cpuSum; delete bucket.rssKiBSum; }
-  console.log(JSON.stringify({ variant, profile, geometry, framebuffer: profile === 'mobile' ? { width: geometry.width, height: geometry.height } : { width: 1280, height: 1000 }, captureArguments: args, warmupSeconds: warmup, sourceFrames, sourceFps: sourceFrames*1000/result.elapsedMs, ...result, processSamples: processSamples.length, processes: processSummary }, null, 2));
+  const output = JSON.stringify({ variant, profile, geometry, framebuffer: profile === 'mobile' ? { width: geometry.width, height: geometry.height } : { width: 1280, height: 1000 }, captureArguments: args, warmupSeconds: warmup, sourceFrames, sourceFps: sourceFrames*1000/result.elapsedMs, ...result, processSamples: processSamples.length, processes: processSummary }, null, 2) + '\n';
+  if (process.env.BENCH_RESULT_FD === '3') writeFileSync(3, output);
+  else process.stdout.write(output);
 } finally {
   await clientBrowser?.close(); await sourceBrowser?.close();
   for (const child of children) child.kill('SIGTERM');

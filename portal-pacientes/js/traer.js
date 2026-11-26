@@ -1,6 +1,5 @@
 /* Portal de Pacientes — flujo «Traer mis estudios».
-   Las instituciones con `live` (Pérez Cambet) usan el agente de IA real (portal-pacientes-agent):
-   el paciente inicia sesión en la ventana del laboratorio y el agente hace el resto.
+   Las instituciones con `live` usan el servicio portal-pacientes-agent.
    El resto de las instituciones sigue simulado. */
 (function () {
   const P = window.P;
@@ -83,6 +82,10 @@
       wait: viewWait, human: viewHuman, lsearch: viewLiveSearch, lparser: viewParserMismatch, lresults: viewLiveResults, download: viewDownload, lerror: viewLiveError,
     }[F.step]();
     v.innerHTML = '<div class="fv fv-' + F.step + '">' + html + '</div>';
+    v.querySelector('#lab-login-form')?.addEventListener('submit', event => {
+      event.preventDefault();
+      void openLive(event.submitter || event.currentTarget.querySelector('[type=submit]'), event.currentTarget);
+    });
     document.title = steps()[Math.min(stepIndex(), 3)] + ' · Traer mis estudios · Portal de Pacientes';
     window.scrollTo(0, 0);
     const h = v.querySelector('h1');
@@ -194,7 +197,7 @@
       '<button type="button" class="btn btn-accent btn-lg" data-action="flow-connect">Continuar a ' + i.name + ic('external', 18) + '</button></div>'
     );
   }
-  A['flow-back'] = () => go('select');
+  A['flow-back'] = () => { F.run++; go('select'); };
   A['flow-connect'] = () => go('connect');
 
   /* ---------- Paso 3: acceso externo (simulado) ---------- */
@@ -461,9 +464,7 @@
   };
 
   /* =====================================================================
-     Conexión real con el agente de IA (Pérez Cambet)
-     El Portal no ve la contraseña: el paciente la escribe en la ventana del laboratorio.
-     La UI solo refleja estados resumidos que llegan por SSE; nunca razonamiento del agente.
+     Conexión con las instituciones de estudios
      ===================================================================== */
 
   const LIVE_SEARCH = ['Acceso detectado', 'Buscando tus estudios disponibles', 'Preparando resultados'];
@@ -473,6 +474,7 @@
     mfa: 'Te pide un código de verificación.',
     session_expired: 'Tu sesión se cerró. Volvé a iniciar sesión en esa ventana.',
     unknown_modal: 'Apareció un aviso que el asistente prefiere no responder por vos.',
+    login_form_returned: 'El laboratorio volvió a mostrar el formulario después del envío. Ingresá directamente en el navegador seguro.',
     ambiguous: 'El asistente no está seguro de cómo seguir y prefiere no adivinar.',
     security_check: 'Te pide un control de seguridad.',
   };
@@ -507,7 +509,32 @@
   }
 
   /* ---------- Explicación (antes de abrir el laboratorio) ---------- */
+  const secureLabOrigin = () => location.protocol === 'https:' ||
+    (location.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname));
+
   function viewLiveExplain(i) {
+    const usernameLabel = P.labLoginForms?.[i.live];
+    const termsUrl = P.labLoginTerms?.[i.live];
+    if (usernameLabel && !secureLabOrigin()) return (
+      '<h1 class="flow-title">Necesitamos una conexión segura</h1>' +
+      '<p class="flow-sub">Abrí el Portal por HTTPS para conectar con ' + i.name + '.</p>' +
+      '<div class="flow-actions"><button type="button" class="btn btn-ghost" data-action="flow-back">Elegir otra institución</button></div>'
+    );
+    if (usernameLabel) return (
+      '<div class="flow-inst">' + P.mono(i.id, 'lg') + '<span class="fi-t"><b>' + i.name + '</b><span>' + P.instSub(i) + '</span></span>' +
+      '<button type="button" class="link" data-action="flow-back">Cambiar</button></div>' +
+      '<h1 class="flow-title">Conectá con ' + i.name + '</h1>' +
+      '<p class="flow-sub">Ingresá los datos que usás en esta institución para buscar tus estudios.</p>' +
+      '<form id="lab-login-form" method="post" autocomplete="off">' +
+      '<div class="field"><label for="lab-username">' + P.esc(usernameLabel) + '</label><input class="input input-lg" id="lab-username" maxlength="256" autocapitalize="none" spellcheck="false" required></div>' +
+      '<div class="field"><label for="lab-password">' + (termsUrl ? 'Contraseña o número de acceso' : 'Contraseña') + '</label><input class="input input-lg" id="lab-password" type="password" maxlength="512" required></div>' +
+      '<label class="lab-consent"><input id="lab-consent" type="checkbox" required><span>Autorizo al Portal de Pacientes a usar estos datos para iniciar sesión en ' + i.name + '. Tu contraseña se usa solo para esta conexión.</span></label>' +
+      (termsUrl ? '<label class="lab-consent"><input id="lab-terms" type="checkbox" required><span>Acepto los <a class="link" href="' +
+        P.esc(termsUrl) + '" target="_blank" rel="noopener noreferrer">términos y condiciones</a> de ' + i.name + '.</span></label>' : '') +
+      '<div id="live-open-error"></div>' +
+      '<div class="flow-actions"><button type="button" class="btn btn-ghost" data-action="flow-back">' + ic('arrow-left', 18) + 'Elegir otra institución</button>' +
+      '<button type="submit" class="btn btn-accent btn-lg">Conectar y buscar estudios</button></div></form>'
+    );
     const s = [
       ['Abrimos la ventana oficial de ' + i.name, 'Se abre su propio sitio de resultados, en una ventana aparte.'],
       ['Iniciás sesión ahí, como siempre', 'Con tu usuario y contraseña de ' + i.name + '. Es lo único que hacés vos.'],
@@ -530,23 +557,29 @@
   }
 
   const OPEN_ERRORS = {
+    LAB_LOGIN_REQUIRES_HTTPS: ['Necesitamos una conexión segura', 'Abrí el Portal por HTTPS para conectar con el laboratorio.'],
+    LAB_LOGIN_CONSENT_REQUIRED: ['Confirmá el permiso', 'Marcá la casilla para autorizar esta conexión.'],
+    LAB_TERMS_REQUIRED: ['Confirmá los términos de la institución', 'Marcá la casilla de términos y condiciones para continuar.'],
+    INVALID_LAB_LOGIN: ['Revisá tus datos', 'Completá el usuario y la contraseña de la institución.'],
+    LAB_LOGIN_UNAVAILABLE: ['La conexión automática no está disponible', 'Volvé a intentar en unos minutos.'],
     AGENT_OFFLINE: ['No pudimos iniciar el asistente', 'El servicio del asistente no responde. Si estás probando en tu computadora, iniciá portal-pacientes-agent (npm run dev) y volvé a intentar.'],
     LLM_NOT_CONFIGURED: ['El asistente todavía no está configurado', 'Falta la clave del modelo de IA en el servicio del asistente.'],
     TOO_MANY_JOBS: ['Ya hay una importación en curso', 'Esperá a que termine o cancelala antes de empezar otra.'],
   };
 
-  A['live-open'] = async (el) => {
-    if (el.disabled) return;
+  A['live-open'] = el => openLive(el);
+  async function openLive(el, form) {
+    if (el.disabled || form && !secureLabOrigin()) return;
     const i = P.inst(F.inst);
     const box = document.getElementById('live-open-error');
     box.innerHTML = '';
     if (P.storageBackend === 'google_drive' && ['disconnected', 'reconnect_required'].includes(P.driveStatus)) { box.innerHTML = P.renderDrivePanel(); return; }
-    const done = P.busy(el, 'Abriendo ' + i.name + '…');
+    const done = P.busy(el, 'Conectando…');
     const token = F.run;
     // Reservar la pestaña dentro del clic: abrirla después del POST puede activar el bloqueo de popups.
     let loginWindow = null;
     try {
-      loginWindow = window.open('about:blank', '_blank');
+      if (!form) loginWindow = window.open('about:blank', '_blank');
       if (loginWindow) {
         loginWindow.opener = null;
         loginWindow.document.title = 'Preparando el acceso · Portal de Pacientes';
@@ -556,7 +589,14 @@
     } catch { loginWindow?.close(); loginWindow = null; }
     let res;
     try {
-      res = await P.agent.start(i.live);
+      const request = P.agent.start(i.live, form ? {
+        username: form.querySelector('#lab-username').value,
+        password: form.querySelector('#lab-password').value,
+        consent: form.querySelector('#lab-consent').checked,
+        providerTermsAccepted: form.querySelector('#lab-terms')?.checked,
+      } : undefined);
+      form?.reset();
+      res = await request;
     } catch (e) {
       loginWindow?.close();
       done();
@@ -571,13 +611,13 @@
     if (token !== F.run) { loginWindow?.close(); P.agent.cancel(res.jobId); return; }
     if (loginWindow && loginWindow.closed) { P.agent.cancel(res.jobId); done(); return; }
     liveBegin(res.jobId, res.remoteLogin, res.remoteLogin ? loginWindow : null);
-    if (res.remoteLogin) {
+    if (res.remoteLogin && !form) {
       const url = P.agent.base() + '/remote/' + res.jobId;
       // Si el navegador bloqueó la pestaña, continuar directamente en esta misma ventana.
       if (loginWindow && !loginWindow.closed) loginWindow.location.replace(url + '?aux=1');
       else location.assign(url);
     } else loginWindow?.close();
-  };
+  }
 
   A['live-cancel-active'] = async (el) => {
     const done = P.busy(el, 'Cancelando…');
@@ -691,7 +731,7 @@
       L.at = Math.min(stepIndex(), 3);
       return go('human');
     }
-    if (type === 'provider_opened' || type === 'waiting_user_login') {
+    if (type === 'provider_opening' || type === 'provider_opened' || type === 'signing_in' || type === 'waiting_user_login') {
       if (F.step !== 'wait') go('wait'); else refreshWait();
       return;
     }
@@ -737,6 +777,12 @@
   function viewWait() {
     const i = P.inst(F.inst);
     const L = F.live;
+    if (L?.state === 'SIGNING_IN' || P.labLoginForms?.[i.live] && (!L || ['CREATED', 'OPENING_PROVIDER'].includes(L.state))) {
+      const progress = L?.state === 'SIGNING_IN' ? 'Iniciando sesión en ' : 'Conectando con ';
+      return liveArt(i) + '<h1 class="flow-title center" role="status">' + progress + i.name + '…</h1>' +
+        '<p class="flow-sub center">Cuando se complete el acceso, buscaremos tus estudios.</p>' +
+        '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>';
+    }
     const opened = L && L.state !== 'CREATED' && L.state !== 'OPENING_PROVIDER';
     if (F.recovering || (L && L.remoteLogin && !['WAITING_FOR_USER_LOGIN', 'HUMAN_ACTION_REQUIRED'].includes(L.state))) return (
       liveArt(i) + '<h1 class="flow-title center">Preparando el acceso seguro a ' + i.name + '…</h1>' +
@@ -770,6 +816,7 @@
     const L = F.live;
     if (L && L.remoteLogin) return liveArt(i, 'human') +
       '<h1 class="flow-title center">' + i.name + ' necesita que completes un paso</h1>' +
+      '<p class="human-why center">' + ic('info', 18) + '<span>' + (HUMAN_TEXT[L.human] || HUMAN_TEXT.ambiguous) + '</span></p>' +
       '<p class="flow-sub center">Completalo en el navegador seguro. Seguimos automáticamente al detectar que el paso terminó.</p>' +
       '<div class="flow-actions center"><a class="btn btn-accent btn-lg" target="_blank" rel="noopener" href="' + P.esc(P.agent.base() + '/remote/' + L.jobId + '?aux=1') + '">Abrir navegador seguro</a></div>' +
       '<p class="flow-foot center"><button type="button" class="link" data-action="flow-exit">Cancelar la importación</button></p>';
@@ -803,7 +850,7 @@
       '<div class="scan-track"><span></span><span></span><span></span></div>' +
       '<div class="scan-grid" id="scan-grid">' + Array.from({ length: 6 }, () => '<span class="slot"></span>').join('') + '</div></div>' +
       '<h1 class="flow-title center" id="search-title">Buscando tus estudios…</h1>' +
-      '<p class="flow-sub center">El asistente está revisando tu cuenta de ' + i.name + (L && L.remoteLogin ? '. Esperá acá mientras buscamos tus estudios.</p>' : '. Podés mirar la ventana del laboratorio: navega solo.</p>') +
+      '<p class="flow-sub center">Estamos buscando los estudios disponibles en tu cuenta de ' + i.name + '.</p>' +
       '<ol class="plist" id="plist" aria-live="polite">' + plistItems(searchStates(L), LIVE_SEARCH, LIVE_SEARCH_DONE) + '</ol>'
     );
   }
@@ -1172,7 +1219,10 @@
 
   /* ---------- Errores ---------- */
   const LIVE_ERRORS = {
-    LOGIN_TIMEOUT: ['Se venció el tiempo para iniciar sesión', 'Por seguridad cerramos la ventana del laboratorio. No se guardó ningún dato.', 'clock'],
+    INVALID_LAB_CREDENTIALS: ['El laboratorio rechazó los datos de acceso', 'Revisá el usuario y la contraseña de la institución y volvé a intentar.', 'alert'],
+    LAB_TERMS_REQUIRED: ['La institución pide aceptar sus términos', 'Volvé a intentar y marcá la casilla de términos y condiciones.', 'alert'],
+    LAB_SESSION_EXPIRED: ['Se venció tu sesión en el laboratorio', 'Volvé a conectar con la institución para continuar.', 'clock'],
+    LOGIN_TIMEOUT: ['Se venció el tiempo para iniciar sesión', 'Volvé a intentar para abrir una sesión nueva.', 'clock'],
     AUTH_TIMEOUT: ['Se venció el tiempo para iniciar sesión', 'Por seguridad cerramos la ventana del laboratorio. No se guardó ningún dato.', 'clock'],
     HUMAN_ACTION_TIMEOUT: ['El paso pendiente no se completó a tiempo', 'Por seguridad cerramos la ventana del laboratorio. No se guardó ningún dato.', 'clock'],
     WINDOW_CLOSED: ['Se cerró la ventana del laboratorio', 'No se guardó ningún dato. Podés volver a intentarlo cuando quieras.', 'x'],
@@ -1206,8 +1256,7 @@
       '<h1 class="flow-title center">' + m[0] + '</h1>' +
       '<p class="flow-sub center">' + m[1] + '</p>' +
       '<div class="flow-actions center"><button type="button" class="btn btn-secondary btn-lg" data-action="flow-restart">Elegir otra institución</button>' +
-      '<button type="button" class="btn btn-accent btn-lg" data-action="live-retry">' + ic('retry', 18) + 'Volver a intentar</button></div>' +
-      '<p class="flow-foot center muted">Código: <span class="num">' + P.esc(code) + '</span></p></div>'
+      '<button type="button" class="btn btn-accent btn-lg" data-action="live-retry">' + ic('retry', 18) + 'Volver a intentar</button></div></div>'
     );
   }
   A['live-retry'] = async (el) => {

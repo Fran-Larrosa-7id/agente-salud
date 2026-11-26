@@ -1,6 +1,6 @@
 /* Portal de Pacientes — cliente del agente de importación (portal-pacientes-agent) y
    almacenamiento local de los PDF traídos (IndexedDB).
-   El Portal nunca pide ni recibe la contraseña del laboratorio: solo habla con la API del agente. */
+   Las credenciales del laboratorio se envían en el POST de inicio. */
 (function () {
   const P = window.P;
 
@@ -22,6 +22,7 @@
       res = await fetch(base() + path, {
         method,
         credentials: 'same-origin',
+        ...(body?.credentials ? { redirect: 'error' } : {}),
         headers: body ? { 'content-type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
@@ -37,7 +38,7 @@
     return json;
   }
 
-  const EVENTS = ['snapshot', 'provider_opening', 'provider_opened', 'waiting_user_login', 'authenticated', 'agent_started', 'agent_observing',
+  const EVENTS = ['snapshot', 'provider_opening', 'provider_opened', 'signing_in', 'waiting_user_login', 'authenticated', 'agent_started', 'agent_observing',
     'searching_studies', 'studies_found', 'waiting_selection', 'opening_study', 'viewer_ready', 'finding_document', 'downloading', 'importing',
     'file_ready', 'study_failed', 'human_action_required', 'provider_parser_mismatch', 'completed', 'error'];
   EVENTS.push('storage_uploading', 'storage_stored', 'storage_error');
@@ -49,7 +50,10 @@
     call,
     catalog: (sync) => call('GET', '/api/studies' + (sync ? '?sync=1' : '')),
     retryStorage: (id) => call('POST', '/api/imports/' + id + '/retry-storage'),
-    start: (provider) => call('POST', '/api/imports/' + encodeURIComponent(provider), { layout: window.innerWidth <= 600 || window.matchMedia?.('(pointer: coarse)').matches && Math.min(window.innerWidth, window.innerHeight) <= 600 ? 'mobile' : 'desktop' }),
+    start: (provider, credentials) => call('POST', '/api/imports/' + encodeURIComponent(provider), {
+      layout: window.innerWidth <= 600 || window.matchMedia?.('(pointer: coarse)').matches && Math.min(window.innerWidth, window.innerHeight) <= 600 ? 'mobile' : 'desktop',
+      credentials,
+    }),
     job: (id) => call('GET', '/api/imports/' + id),
     importSelected: (id, studyIds, importedSourceKeys) => call('POST', '/api/imports/' + id + '/import', { studyIds, importedSourceKeys }),
     async acknowledgePortalImport(id, fileId, studyId, persisted) {

@@ -8,6 +8,7 @@ import { JobState } from './states.js';
 import type { StorageProvider } from '../storage/provider.js';
 import { CloudError } from '../storage/errors.js';
 import type { PendingImports } from '../storage/pending-imports.js';
+import { OneUseLogin, type LoginCredentials } from './login-credentials.js';
 
 export class ManagerError extends Error {
   constructor(
@@ -80,9 +81,9 @@ export class JobManager {
     }
   }
 
-  create(providerId: string, ownerUserId = 'pilot', layout: 'mobile' | 'desktop' = 'desktop'): ImportJob {
+  create(providerId: string, ownerUserId = 'pilot', layout: 'mobile' | 'desktop' = 'desktop', credentials?: LoginCredentials): ImportJob {
     const { config, providers, log } = this.deps;
-    const provider = providers[providerId];
+    const provider = Object.hasOwn(providers, providerId) ? providers[providerId] : undefined;
     if (!provider) throw new ManagerError('UNKNOWN_PROVIDER', 404);
     const blocked = this.deps.preflight?.();
     if (blocked) throw new ManagerError(blocked, 503);
@@ -105,7 +106,13 @@ export class JobManager {
     job.once('terminal', (state: JobState) => void this.onTerminal(entry, state));
     this.timer(entry, config.jobTtlMs, () => void this.expire(entry));
 
-    void runner.start().catch(() => job.fail(JobState.ERROR, 'INTERNAL'));
+    const login = credentials && new OneUseLogin(credentials);
+    const revoke = () => login?.revoke();
+    if (login) job.abort.signal.addEventListener('abort', revoke, { once: true });
+    void runner.start(login).catch(() => job.fail(JobState.ERROR, 'INTERNAL')).finally(() => {
+      revoke();
+      job.abort.signal.removeEventListener('abort', revoke);
+    });
     return job;
   }
 

@@ -310,7 +310,7 @@
         '<p>' + inst.name + ' está procesando este estudio. Cuando esté disponible lo vas a ver acá y en Documentos.</p>' +
         '<p class="muted mt-2">Fecha estimada: <b class="num">' + P.fmt(s.expected) + '</b></p></div></div></section>';
     } else if (s.file && s.file.storageBackend === 'google_drive') {
-      main += '<section class="card"><h2 class="card-title">Original guardado en tu Google Drive</h2><p>' + (isDicomZip ? 'ZIP DICOM original. Este Portal no tiene visor DICOM.' : 'PDF original, sin interpretaciones ni conversiones.') + '</p><div class="btn-row mt-4"><button class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">Abrir en Drive</button><button class="btn btn-danger-ghost" data-action="cloud-trash" data-id="' + P.esc(s.file.catalogId) + '">Enviar a la papelera de Drive</button></div></section>';
+      main += '<section class="card"><h2 class="card-title">Original guardado en tu Google Drive</h2><p>' + (isDicomZip ? 'ZIP DICOM original. Este Portal no tiene visor DICOM.' : 'PDF original, sin interpretaciones ni conversiones.') + '</p><div class="btn-row mt-4"><button class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">' + (isDicomZip ? 'Abrir en Drive' : 'Ver PDF en el Portal') + '</button><button class="btn btn-danger-ghost" data-action="cloud-trash" data-id="' + P.esc(s.file.catalogId) + '">Enviar a la papelera de Drive</button></div></section>';
     } else if (s.file) {
       main += '<section class="card" aria-labelledby="h-orig">' + cardHead(isDicomZip ? 'Estudio de imágenes' : 'Documento original', null, 'h-orig') +
         (isDicomZip
@@ -409,7 +409,10 @@
   A['doc-view'] = (el) => {
     const d = P.doc(el.dataset.id);
     if (!d) return;
-    if (d.file && d.file.storageBackend === 'google_drive') return P.openCloudDocument(d);
+    const cloudPdf = d.file?.storageBackend === 'google_drive' && d.file.kind === 'PDF';
+    if (d.file?.storageBackend === 'google_drive' && !cloudPdf) return P.openCloudDocument(d);
+    const controller = cloudPdf ? new AbortController() : null;
+    let url = null;
     const h = P.overlay({
       kind: 'modal',
       size: 'xl',
@@ -417,30 +420,39 @@
       title: P.esc(d.title) + '<span class="ov-sub">' + P.esc(P.inst(d.inst).name) + ' · <span class="num">' + P.fmt(d.date) + '</span></span>',
       headActions:
         '<div class="ov-head-actions"><button type="button" class="btn btn-secondary btn-sm" data-act="dl">' + ic('download', 18) + '<span>Descargar</span></button>' +
-        (d.studyId ? '<button type="button" class="btn btn-accent btn-sm" data-act="share">' + ic('share', 18) + '<span>Compartir</span></button>' : '') + '</div>',
+        (cloudPdf ? '<button type="button" class="btn btn-secondary btn-sm" data-act="drive">' + ic('external', 18) + '<span>Abrir en Drive</span></button>'
+          : d.studyId ? '<button type="button" class="btn btn-accent btn-sm" data-act="share">' + ic('share', 18) + '<span>Compartir</span></button>' : '') + '</div>',
       body: d.file && d.file.kind === 'DICOM_ZIP'
         ? '<div class="viewer"><div class="pending-row">' + ic('scan', 24) + '<div><h2 class="card-title">Estudio de imágenes DICOM</h2><p>El archivo original se conserva como ZIP. Este Portal todavía no cuenta con visor DICOM; descargalo para abrirlo con una herramienta compatible.</p><p class="viewer-foot">' + P.fileMeta(d) + '</p></div></div></div>'
         : d.file
         ? '<div class="viewer viewer-pdf" id="pdf-host"><p class="pdf-loading"><span class="spin" aria-hidden="true"></span>Abriendo el documento…</p></div>' +
           '<p class="viewer-foot">' + P.fileMeta(d) + ' · Documento original de ' + P.esc(P.inst(d.inst).name) + '</p>'
         : '<div class="viewer">' + P.sheet(d) + '</div><p class="viewer-foot">' + P.fileMeta(d) + '</p>',
-      onClose: () => { if (url) URL.revokeObjectURL(url); },
+      onClose: () => {
+        controller?.abort();
+        if (url) URL.revokeObjectURL(url);
+      },
     });
-    let url = null;
     if (d.file && d.file.kind !== 'DICOM_ZIP') {
       const host = h.el.querySelector('#pdf-host');
-      P.files.get(d.file.key).then((blob) => {
+      const pdf = cloudPdf ? P.readCloudPdf(d, controller.signal) : P.files.get(d.file.key);
+      pdf.then((blob) => {
+        if (h.closed) return;
         if (!blob) throw new Error('missing');
         url = URL.createObjectURL(blob);
         host.innerHTML = '<iframe class="pdf-frame" title="Documento original: ' + P.esc(d.title) + '" src="' + url + '"></iframe>';
-      }).catch(() => {
+      }).catch(error => {
+        if (h.closed) return;
         host.innerHTML = P.empty({
-          compact: true, icon: 'file', title: 'El archivo no está en este dispositivo',
-          text: 'Los documentos traídos se guardan en el navegador donde los trajiste. Podés volver a traerlo desde «Traer mis estudios».',
+          compact: true, icon: 'file',
+          title: cloudPdf ? 'El PDF no está disponible en el visor' : 'El archivo no está en este dispositivo',
+          text: cloudPdf ? P.cloudMessage(error.code || 'PDF_PREVIEW_FAILED')
+            : 'Los documentos traídos se guardan en el navegador donde los trajiste. Podés volver a traerlo desde «Traer mis estudios».',
         });
       });
     }
     h.el.querySelector('[data-act="dl"]').addEventListener('click', () => P.download(d));
+    h.el.querySelector('[data-act="drive"]')?.addEventListener('click', () => P.openCloudDocument(d));
     const sh = h.el.querySelector('[data-act="share"]');
     if (sh) sh.addEventListener('click', () => { h.close(); P.openShare(d.studyId); });
   };

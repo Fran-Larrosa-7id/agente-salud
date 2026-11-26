@@ -3,6 +3,7 @@
 export const JobState = {
   CREATED: 'CREATED',
   OPENING_PROVIDER: 'OPENING_PROVIDER',
+  SIGNING_IN: 'SIGNING_IN',
   WAITING_FOR_USER_LOGIN: 'WAITING_FOR_USER_LOGIN',
   AUTHENTICATED: 'AUTHENTICATED',
   AGENT_STARTING: 'AGENT_STARTING',
@@ -53,7 +54,8 @@ const FAILURES: ReadonlySet<JobState> = new Set([
 
 const FLOW: Record<JobState, readonly JobState[]> = {
   CREATED: [S.OPENING_PROVIDER],
-  OPENING_PROVIDER: [S.WAITING_FOR_USER_LOGIN],
+  OPENING_PROVIDER: [S.WAITING_FOR_USER_LOGIN, S.SIGNING_IN],
+  SIGNING_IN: [S.AUTHENTICATED, S.HUMAN_ACTION_REQUIRED, S.AUTH_TIMEOUT],
   WAITING_FOR_USER_LOGIN: [S.AUTHENTICATED, S.AUTH_TIMEOUT],
   AUTHENTICATED: [S.AGENT_STARTING, S.SEARCHING_STUDIES],
   AGENT_STARTING: [S.AGENT_OBSERVING, S.SEARCHING_STUDIES, S.HUMAN_ACTION_REQUIRED, S.PROVIDER_PARSER_MISMATCH],
@@ -68,6 +70,7 @@ const FLOW: Record<JobState, readonly JobState[]> = {
   DOWNLOADING: [S.IMPORTING, S.FINDING_DOCUMENT, S.OPENING_STUDY, S.HUMAN_ACTION_REQUIRED, S.COMPLETED],
   IMPORTING: [S.OPENING_STUDY, S.COMPLETED],
   HUMAN_ACTION_REQUIRED: [
+    S.AUTHENTICATED,
     S.AGENT_STARTING,
     S.AGENT_OBSERVING,
     S.SEARCHING_STUDIES,
@@ -98,6 +101,7 @@ export function canTransition(from: JobState, to: JobState): boolean {
 /** Nombre del evento SSE que se emite al entrar en cada estado. */
 export const STATE_EVENT: Partial<Record<JobState, string>> = {
   OPENING_PROVIDER: 'provider_opening',
+  SIGNING_IN: 'signing_in',
   WAITING_FOR_USER_LOGIN: 'waiting_user_login',
   AUTHENTICATED: 'authenticated',
   AGENT_STARTING: 'agent_started',
@@ -120,6 +124,7 @@ export const EVENT_TYPES = [
   'snapshot',
   'provider_opening',
   'provider_opened',
+  'signing_in',
   'waiting_user_login',
   'authenticated',
   'agent_started',

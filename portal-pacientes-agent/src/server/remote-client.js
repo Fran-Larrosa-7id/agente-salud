@@ -38,7 +38,7 @@ for (const name of ['gesturestart', 'gesturemove', 'gestureend']) el('desktop').
 document.body.classList.toggle('immersive', mobile);
 const keyboard = mobileKeyboard({ input: el('keyboard-input'), toggle: el('keyboard-toggle'), tools: el('keyboard-tools'), desktop: el('desktop'), connection: () => connected && !finished ? rfb : null });
 const interactive = value => ['WAITING_FOR_USER_LOGIN', 'HUMAN_ACTION_REQUIRED'].includes(value);
-const opening = value => ['CREATED', 'OPENING_PROVIDER'].includes(value);
+const opening = value => ['CREATED', 'OPENING_PROVIDER', 'SIGNING_IN'].includes(value);
 const failed = value => ['CANCELLED', 'EXPIRED', 'AUTH_TIMEOUT', 'ERROR', 'PROVIDER_UNAVAILABLE', 'PROVIDER_CHANGED', 'AGENT_UNABLE_TO_CONTINUE'].includes(value);
 function resetConnection() { closeOptions(); clearInterval(displayTimer); clearTimeout(resizeTimer); keyboard.close(); const previous = rfb; rfb = null; connected = false; previous?.disconnect(); document.body.classList.remove('connected', 'display-changing'); controls.forEach(id => el(id).hidden = true); el('desktop').hidden = true; el('fullscreen').hidden = true; el('keyboard-toggle').hidden = true; }
 function viewport() {
@@ -194,7 +194,9 @@ async function prepare() {
       connected = true; clearTimeout(timer); el('fullscreen').hidden = false;
       el('keyboard-toggle').hidden = false;
       document.body.classList.add('connected'); controls.forEach(id => el(id).hidden = false);
-      el('status').textContent = 'Ingresá en el sitio de la institución. Detectaremos el acceso automáticamente.';
+      el('status').textContent = state === 'HUMAN_ACTION_REQUIRED'
+        ? 'Completá el paso pendiente en el sitio de la institución. Continuaremos automáticamente.'
+        : 'Ingresá en el sitio de la institución. Detectaremos el acceso automáticamente.';
       if (display?.fallback) renderDisplay(display);
       displayTimer = setInterval(() => void refreshDisplay(), 1500);
       applyZoom(); if (layout === 'mobile') void changeDisplay(layout);
@@ -213,7 +215,7 @@ async function prepare() {
 function watch() {
   clearTimeout(timer); timer = setTimeout(() => { if (!finished && !connected) message('La preparación está demorando', 'Podés reintentar el acceso o cancelar y volver más tarde.', true); }, 30000);
   stream?.close(); stream = new EventSource('/api/imports/' + config.id + '/events');
-  for (const name of ['snapshot', 'provider_opened', 'waiting_user_login', 'human_action_required', 'authenticated', 'searching_studies', 'waiting_selection', 'completed', 'error']) {
+  for (const name of ['snapshot', 'provider_opened', 'signing_in', 'waiting_user_login', 'human_action_required', 'authenticated', 'searching_studies', 'waiting_selection', 'completed', 'error']) {
     stream.addEventListener(name, event => { try { const data = JSON.parse(event.data); if (event.lastEventId) data.lastSeq = Number(event.lastEventId); observe(data); } catch {} });
   }
   let lost = 0;

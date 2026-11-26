@@ -128,6 +128,12 @@
 .ext-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; font-family: var(--font); font-size: 0.9375rem; font-weight: 600; }
 .ext-field input { min-height: 48px; padding: 0 12px; border: 1px solid #b9c2cc; border-radius: 4px; font-size: 1rem; font-weight: 400; }
 .ext-field input:focus { outline: 3px solid color-mix(in srgb, var(--tone) 35%, transparent); border-color: var(--tone); }
+.lab-consent { display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer; }
+.lab-consent + .lab-consent { margin-top: 0.75rem; }
+.lab-consent > input[type="checkbox"] {
+  position: static; opacity: 1; flex: none; width: 20px; height: 20px;
+  margin: 0.125em 0 0; accent-color: var(--teal-ink); cursor: inherit;
+}
 .ext-err { color: var(--danger-ink); font: 500 0.875rem var(--font); margin: -6px 0 12px; }
 .ext-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; border-radius: 4px;

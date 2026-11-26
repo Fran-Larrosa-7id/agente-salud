@@ -14,6 +14,7 @@
   const MOBILE_NAV = ['inicio', 'salud', 'estudios', 'documentos'];
   const SEEN = new Set();
   let lastTop = null;
+  let renderVersion = 0;
 
   P.applyPrefs = () => document.documentElement.classList.toggle('text-lg', P.db.textSize === 'grande');
 
@@ -64,6 +65,7 @@
   }
 
   function renderView(r, opts) {
+    const version = ++renderVersion;
     const identityGeneration = P.identityGeneration;
     const top = r.parts[0];
     const key = top === 'estudios' && r.parts[1] ? 'estudio' : top;
@@ -93,7 +95,12 @@
     if (skKey && !SEEN.has(key) && !(opts && opts.quiet)) {
       SEEN.add(key);
       view.innerHTML = skeleton(skKey);
-      setTimeout(() => { if (parse().parts.join('/') === r.parts.join('/')) { paint(); focusHeading(); } }, P.reducedMotion() ? 120 : 520);
+      setTimeout(() => {
+        if (version === renderVersion && parse().parts.join('/') === r.parts.join('/')) {
+          paint();
+          focusHeading();
+        }
+      }, P.reducedMotion() ? 120 : 520);
     } else {
       SEEN.add(key);
       paint();

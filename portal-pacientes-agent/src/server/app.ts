@@ -36,7 +36,13 @@ export function createApp({ config, manager, providers, info, desktop, google }:
   app.disable('x-powered-by');
   app.set('etag', false);
   app.get('/health', (_req, res) => res.set('cache-control', 'no-store').json({ ok: true }));
-  const access = installPortalAuth(app, config, manager, google);
+  const labLoginForms = info.runner === 'agent' && (config.authMode === 'google' || config.portalAuth) ? Object.fromEntries(
+    Object.values(providers).filter(p => p.loginForm).map(p => [p.id, p.loginForm!.usernameLabel]),
+  ) : undefined;
+  const termsEntries = labLoginForms ? Object.values(providers).flatMap(p =>
+    p.loginForm?.termsUrl ? [[p.id, p.loginForm.termsUrl] as const] : []) : [];
+  const labLoginTerms: Record<string, string> | undefined = termsEntries.length ? Object.fromEntries(termsEntries) : undefined;
+  const access = installPortalAuth(app, config, manager, google, labLoginForms, labLoginTerms);
   app.locals.portalAccess = access;
   desktop?.authorizeWith(access, config);
 
@@ -154,15 +160,40 @@ export function createApp({ config, manager, providers, info, desktop, google }:
   });
 
   app.post('/api/imports/:provider', (req, res) => {
+    const provider = String(req.params.provider);
+    const credentials = req.body?.credentials;
+    if (req.body && typeof req.body === 'object') delete req.body.credentials;
     try {
       const owner = access.owner(req)!;
+      if (credentials !== undefined) {
+        if (!labLoginForms || !Object.hasOwn(labLoginForms, provider)) return void res.status(400).json({ error: 'LAB_LOGIN_UNAVAILABLE' });
+        const origin = requestOrigin(req, config);
+        const local = origin && ['localhost', '127.0.0.1', '[::1]'].includes(new URL(origin).hostname) &&
+          (config.publicBaseUrl === origin || req.headers.origin === origin || ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress || ''));
+        if (!(req.secure || config.publicBaseUrl?.startsWith('https:') || local)) return void res.status(403).json({ error: 'LAB_LOGIN_REQUIRES_HTTPS' });
+        if (process.env.PWDEBUG && process.env.PWDEBUG !== '0' || process.env.DEBUG?.split(/[\s,]+/).some(value => value.includes('*') || value.startsWith('pw:'))) {
+          return void res.status(503).json({ error: 'LAB_LOGIN_UNAVAILABLE' });
+        }
+        if (credentials?.consent !== true) return void res.status(400).json({ error: 'LAB_LOGIN_CONSENT_REQUIRED' });
+        if (labLoginTerms && Object.hasOwn(labLoginTerms, provider) && credentials.providerTermsAccepted !== true) {
+          return void res.status(400).json({ error: 'LAB_TERMS_REQUIRED' });
+        }
+        if (typeof credentials.username !== 'string' || !credentials.username.trim() || credentials.username.length > 256 ||
+            typeof credentials.password !== 'string' || !credentials.password || credentials.password.length > 512) {
+          return void res.status(400).json({ error: 'INVALID_LAB_LOGIN' });
+        }
+      }
       if (config.storageProvider === 'google_drive') {
         const status = google!.db.connection(owner).status;
         if (status === 'disconnected') return void res.status(409).json({ error: 'DRIVE_NOT_CONNECTED' });
         if (status === 'reconnect_required') return void res.status(409).json({ error: 'DRIVE_TOKEN_EXPIRED' });
       }
       if (req.body?.layout !== undefined && !['mobile', 'desktop'].includes(req.body.layout)) return void res.status(400).json({ error: 'INVALID_DISPLAY' });
-      const job = manager.create(String(req.params.provider), owner, req.body?.layout === 'mobile' ? 'mobile' : 'desktop');
+      const job = manager.create(provider, owner, req.body?.layout === 'mobile' ? 'mobile' : 'desktop',
+        credentials && {
+          username: credentials.username, password: credentials.password,
+          ...(labLoginTerms && Object.hasOwn(labLoginTerms, provider) ? { providerTermsAccepted: true } : {}),
+        });
       res.status(201).json({ jobId: job.id, remoteLogin: config.remoteLogin, storageBackend: config.storageProvider });
     } catch (e) {
       if (e instanceof ManagerError) {

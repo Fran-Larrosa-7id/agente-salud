@@ -21,6 +21,8 @@
       const previous = P.accountId;
       P.authMode = mode;
       P.storageBackend = session.storageProvider || 'local';
+      P.labLoginForms = session.labLoginForms || {};
+      P.labLoginTerms = session.labLoginTerms || {};
       P.applyIdentity(mode, session.user || null);
       P.driveStatus = session.drive || 'disconnected';
       P.portalAuthEnabled = session.enabled;

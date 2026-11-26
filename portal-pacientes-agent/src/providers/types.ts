@@ -15,6 +15,15 @@ export interface ProviderConfig {
   staticHosts: string[];
   /** La URL de ingreso coincide con este patrón. */
   loginPathPattern: RegExp;
+  /** Public patient login fields and the semantics used to recognize the form. */
+  loginForm?: {
+    usernameLabel: string;
+    usernamePattern: string;
+    scriptSubmit?: boolean;
+    readyTimeoutMs?: number;
+    termsUrl?: string;
+    selectors?: { form: string; username: string; password: string; actionPath: string; submitText: string; termsCheckbox?: string };
+  };
   /** Textos que solo aparecen en el área autenticada. */
   authenticatedHints: string[];
   /** Etiquetas conocidas de la acción que entrega el PDF. */

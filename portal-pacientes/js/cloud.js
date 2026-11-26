@@ -8,6 +8,7 @@
     DRIVE_UPLOAD_FAILED: 'No pudimos terminar de guardar en Drive. Podés reintentar mientras la importación siga abierta.',
     FILE_MISSING: 'El archivo ya no está disponible en tu Drive. No lo restauramos automáticamente.',
     SESSION_EXPIRED: 'Tu sesión venció. Volvé a ingresar con Google.',
+    PDF_PREVIEW_FAILED: 'No pudimos abrir el PDF. Podés descargarlo o abrirlo en Drive.',
     IMPORT_BUSY: 'Hay una importación en curso. Intentá en unos minutos.',
     GOOGLE_ACCESS_DENIED: 'No se autorizó el acceso con Google. Revisá la cuenta elegida y volvé a intentar.',
     AGENT_OFFLINE: 'No pudimos conectar con el Portal. Revisá la conexión y reintentá.',
@@ -80,6 +81,19 @@
   P.openCloudDocument = function (document) {
     const id = encodeURIComponent(document.file.catalogId);
     window.open('/api/studies/' + id + '/open', '_blank', 'noopener,noreferrer');
+  };
+  P.readCloudPdf = async function (document, signal) {
+    const id = encodeURIComponent(document.file.catalogId);
+    const response = await fetch('/api/studies/' + id + '/download', { signal, cache: 'no-store', redirect: 'error' });
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      throw new P.agent.AgentError(error?.error || 'PDF_PREVIEW_FAILED', response.status);
+    }
+    const pdf = await response.blob();
+    if (pdf.type !== 'application/pdf' || !pdf.size || pdf.size !== document.file.bytes) {
+      throw new P.agent.AgentError('PDF_PREVIEW_FAILED');
+    }
+    return pdf;
   };
   P.actions['cloud-trash'] = async button => {
     if (!await P.confirm({ title: '¿Enviar el archivo a la papelera de tu Drive?', text: 'El original dejará de estar disponible desde el Portal. Podés restaurarlo desde la papelera de Google Drive. No se borran otros estudios.', confirmLabel: 'Enviar a la papelera', tone: 'danger' })) return;

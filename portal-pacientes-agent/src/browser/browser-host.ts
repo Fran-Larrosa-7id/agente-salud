@@ -81,7 +81,7 @@ export class BrowserHost {
     await this.getBrowser();
   }
 
-  async newContext(profile: 'desktop' | 'responsive' | 'mobile-emulation' = 'desktop'): Promise<BrowserContext> {
+  async newContext(profile: 'desktop' | 'responsive' | 'mobile-emulation' = 'desktop', sensitive = false): Promise<BrowserContext> {
     this.pendingContexts++;
     try {
       const browser = await this.getBrowser();
@@ -97,7 +97,7 @@ export class BrowserHost {
         this.contexts.delete(context);
         void this.closeIfIdle();
       });
-      if (this.opts.debugArtifacts) {
+      if (this.opts.debugArtifacts && !sensitive) {
         await context.tracing.start({ screenshots: true, snapshots: true });
         const file = path.join(this.opts.debugDir, randomUUID() + '.zip');
         const close = context.close.bind(context);

@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import type { APIResponse, BrowserContext, Frame, Page, Response, Route } from 'playwright';
+import type { APIResponse, BrowserContext, Dialog, Frame, Page, Response, Route } from 'playwright';
 import { MAX_PDF_BYTES, hasPdfMagic, validatePdf, type CapturedPdf } from '../jobs/pdf.js';
 import { MAX_MEDICAL_ARCHIVE_BYTES, validateMedicalArchive, type CapturedMedicalArchive } from '../jobs/medical-archive.js';
 import type { ProviderConfig } from '../providers/types.js';
@@ -15,9 +15,11 @@ import { DomainPolicy } from '../security/domain-policy.js';
 import { sleep } from '../util.js';
 import type { BrowserHost } from './browser-host.js';
 import { DISPLAY_COMPATIBILITY } from './display-profile.js';
-import { CENTRODM_RESPONSIVE_LOGIN_SOURCE } from './centrodm-login.js';
+import { CENTRODM_RESPONSIVE_LOGIN_SOURCE, openCentroDmPatientPortal } from './centrodm-login.js';
 import { probePixeonDownload, handlePixeonCookieConsent, clickPixeonControl } from './pixeon-download.js';
 import { COLLECTOR_SOURCE } from './collector.js';
+import { loginChallenge, submitProviderLogin } from './provider-login.js';
+import type { OneUseLogin } from '../jobs/login-credentials.js';
 import { ProviderParserMismatchError, type BrowserPort, type CentroDmStudyReference, type RdcChacabucoStudyReference, type ProviderStudyList, type ProviderStudyMetadata, type ProviderStructureEvent, type RawElement, type RawPageSnapshot } from './types.js';
 import { evaluateLogin, hasPercambResultsEvidence, isPercambResultsRoute } from './login-detector.js';
 
@@ -162,6 +164,7 @@ export class BrowserSession implements BrowserPort {
   private rdcModalObserved = false;
   private readonly providerStudies = new Map<string, { protocol: string; date?: string; deliveryDate?: string; status?: string; href: string; rowToken: string; actionToken: string; frame: number; listUrl: string }>();
   private readonly centroDmStudies = new Map<string, CentroDmStudyReference>();
+  private centroDmPatientEntryOpened = false;
   private readonly rdcChacabucoStudies = new Map<string, RdcChacabucoStudyReference>();
   private readonly rdcDocumentToken = randomUUID().replace(/-/g, '');
   private activeRdcFrameIndex: number | null = null;
@@ -211,8 +214,8 @@ export class BrowserSession implements BrowserPort {
     this.maxMedicalArchiveBytes = maxMedicalArchiveBytes;
   }
 
-  static async open(host: BrowserHost, provider: ProviderConfig, headless: boolean, maxPdfBytes = MAX_PDF_BYTES, providerDebugStructure = false, pdfDownloadTimeoutMs = 60_000, maxMedicalArchiveBytes = MAX_MEDICAL_ARCHIVE_BYTES, extraAllowedOrigins: string[] = [], pixeonViewerReadyTimeoutMs = 30_000, pixeonToolbarTimeoutMs = 30_000, responsive = false): Promise<BrowserSession> {
-    const context = await host.newContext(responsive && DISPLAY_COMPATIBILITY[provider.id]?.responsive ? 'responsive' : 'desktop');
+  static async open(host: BrowserHost, provider: ProviderConfig, headless: boolean, maxPdfBytes = MAX_PDF_BYTES, providerDebugStructure = false, pdfDownloadTimeoutMs = 60_000, maxMedicalArchiveBytes = MAX_MEDICAL_ARCHIVE_BYTES, extraAllowedOrigins: string[] = [], pixeonViewerReadyTimeoutMs = 30_000, pixeonToolbarTimeoutMs = 30_000, responsive = false, sensitive = false): Promise<BrowserSession> {
+    const context = await host.newContext(responsive && DISPLAY_COMPATIBILITY[provider.id]?.responsive ? 'responsive' : 'desktop', sensitive);
     const s = new BrowserSession(context, provider, headless, maxPdfBytes, providerDebugStructure, pdfDownloadTimeoutMs, maxMedicalArchiveBytes, extraAllowedOrigins, pixeonViewerReadyTimeoutMs, pixeonToolbarTimeoutMs);
     try {
       await s.install();
@@ -624,6 +627,76 @@ export class BrowserSession implements BrowserPort {
     if (!this.headless) await this.mainPage.bringToFront().catch(() => {});
   }
 
+  async submitLogin(login: OneUseLogin, signal: AbortSignal) {
+    const config = this.provider.loginForm;
+    if (!config) return null;
+    const loginUrl = new URL(this.provider.loginUrl);
+    const patientEntryFrames: Frame[] = [];
+    for (const frame of this.page.frames().slice(0, 8)) {
+      if (signal.aborted) break;
+      if (!this.policy.isAllowedNavigation(frame.url()) || !/^https?:/.test(frame.url())) continue;
+      const url = new URL(frame.url());
+      if (url.protocol !== loginUrl.protocol || url.port !== loginUrl.port ||
+          !this.provider.allowedHosts.includes(url.hostname)) continue;
+      if (this.provider.id === 'centrodm') {
+        if (url.origin !== loginUrl.origin) continue;
+        patientEntryFrames.push(frame);
+      }
+      if (!this.provider.loginPathPattern.test(url.pathname)) continue;
+      const result = await submitProviderLogin(frame, config, login, signal,
+        config.selectors ? url.origin : undefined).catch(() => null);
+      if (result) return result;
+    }
+    if (!this.centroDmPatientEntryOpened) {
+      for (const frame of patientEntryFrames) {
+        if (signal.aborted) break;
+        if (await openCentroDmPatientPortal(frame, loginUrl.origin).catch(() => false)) {
+          this.centroDmPatientEntryOpened = true;
+          break;
+        }
+      }
+    }
+    return null;
+  }
+
+  watchLoginResponses(onStatus?: (status: number) => void) {
+    const labwin = this.provider.id === 'percamb';
+    const loginPage = this.mainPage;
+    const loginPath = this.provider.loginForm?.selectors?.actionPath;
+    let status = 0;
+    let rejected = false;
+    const onResponse = (response: Response) => {
+      try {
+        const request = response.request();
+        const frame = request.frame();
+        const url = new URL(response.url());
+        if (frame.page() !== loginPage || request.method() !== 'POST' ||
+            !this.provider.allowedHosts.includes(url.hostname) || !this.policy.isAllowedNavigation(url.href)) return;
+        if (labwin && (!request.isNavigationRequest() || (loginPath && url.pathname !== loginPath))) return;
+        if (labwin || response.status() === 401 || response.status() >= 500) status = response.status();
+        onStatus?.(response.status());
+      } catch { /* Requests without a document cannot be a patient form submission. */ }
+    };
+    const onDialog = (dialog: Dialog) => {
+      if (status && dialog.type() === 'alert') {
+        const message = dialog.message().slice(0, 512).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        rejected ||= /(?:USUARIO|DNI|CONTRASENA|CLAVE|CREDENCIALES|PASSWORD|DATOS INGRESADOS).{0,60}(?:INCORRECT|INVALID|NO VALID|ERRONE|NO COINCIDEN)|(?:NO EXISTE|NO SE ENCONTRO).{0,25}(?:USUARIO|CUENTA)/s.test(message);
+      }
+      // Keep Playwright's default dismissal behavior. The literal alert is never logged.
+      void dialog.dismiss().catch(() => {});
+    };
+    this.context.on('response', onResponse);
+    if (labwin) loginPage.on('dialog', onDialog);
+    return {
+      status: () => status,
+      rejected: () => rejected,
+      stop: () => {
+        this.context.off('response', onResponse);
+        if (labwin) loginPage.off('dialog', onDialog);
+      },
+    };
+  }
+
   /** Cierra pestañas secundarias (PDF abiertos, etc.) y vuelve a la principal. */
   async closeExtraPages(): Promise<void> {
     for (const p of this.context.pages()) {
@@ -661,8 +734,10 @@ export class BrowserSession implements BrowserPort {
 
   /* ---------------- BrowserPort (lo que usan el detector de login y el agente) ---------------- */
 
-  async loginSnapshot(hints: string[]): Promise<RawPageSnapshot> {
+  async loginSnapshot(hints: string[], focusChallenge = false): Promise<RawPageSnapshot> {
     // Solo durante el login. No se adoptan visores de descarga ni ventanas de otros hosts.
+    let pending: { page: Page; value: RawPageSnapshot } | undefined;
+    let current: RawPageSnapshot | undefined;
     for (const page of [...this.context.pages()].reverse().slice(0, 8)) {
       if (page.isClosed() || !this.policy.isAllowedNavigation(page.url())) continue;
       let hostname = ''; try { hostname = new URL(page.url()).hostname; } catch { continue; }
@@ -670,13 +745,22 @@ export class BrowserSession implements BrowserPort {
       const value = await this.snapshot(hints, page).catch(() => null);
       const decision = value ? evaluateLogin(value, this.provider) : null;
       this.logPercambLoginProbe('percamb_login_probe', page.url(), value, !!decision?.authenticated);
-      if (!value || !decision?.authenticated) continue;
+      if (!value) continue;
+      if (page === this.page) current = value;
+      if (!decision?.authenticated) {
+        if (focusChallenge && !pending && loginChallenge(value)) pending = { page, value };
+        continue;
+      }
       let id = this.loginIds.get(page); if (!id) { id = randomUUID(); this.loginIds.set(page, id); }
       this.loginCandidate = { page, id };
       return { ...value, loginPageId: id };
     }
     this.loginCandidate = null;
-    return this.snapshot(hints);
+    if (pending) {
+      this.page = pending.page;
+      return pending.value;
+    }
+    return current || this.snapshot(hints);
   }
 
   async confirmLogin(snapshot: RawPageSnapshot): Promise<boolean> {
@@ -696,13 +780,17 @@ export class BrowserSession implements BrowserPort {
 
   async snapshot(hints: string[], page = this.page): Promise<RawPageSnapshot> {
     const frames = page.frames();
+    const loginSelectors = this.provider.loginForm?.selectors;
+    const passwordSelector = loginSelectors ? `${loginSelectors.form} ${loginSelectors.password}` : undefined;
     let merged: RawPageSnapshot | null = null;
     for (let i = 0; i < frames.length && i < 8; i++) {
       const f = frames[i];
       if (i > 0 && !this.policy.isAllowedNavigation(f.url())) continue;
       let part: RawPageSnapshot;
       try {
-        part = (await f.evaluate(`(${COLLECTOR_SOURCE})(${JSON.stringify({ frame: i, hints })})`)) as RawPageSnapshot;
+        const labwinResults = isPercambResultsRoute(f.url(), this.provider);
+        const rdcLogin = this.provider.id === 'rdcchacabuco';
+        part = (await f.evaluate(`(${COLLECTOR_SOURCE})(${JSON.stringify({ frame: i, hints, passwordSelector, labwinResults, rdcLogin })})`)) as RawPageSnapshot;
       } catch {
         if (i === 0) throw new Error('SNAPSHOT_FAILED');
         continue;
@@ -714,8 +802,11 @@ export class BrowserSession implements BrowserPort {
       merged.headings.push(...part.headings);
       merged.hintHits = [...new Set([...merged.hintHits, ...part.hintHits])];
       merged.hasPasswordField ||= part.hasPasswordField;
+      merged.loginRejected ||= part.loginRejected;
+      merged.termsRequired ||= part.termsRequired;
       merged.captcha ||= part.captcha;
       merged.otp ||= part.otp;
+      merged.explicitOtp ||= part.explicitOtp;
       merged.modal ||= part.modal;
       merged.modalText ||= part.modalText;
       merged.noResultsText ||= part.noResultsText;
@@ -737,10 +828,13 @@ export class BrowserSession implements BrowserPort {
     }
     if (this.provider.studyExtractor === 'labwin') {
       const resultsHint = merged.hintHits.some((h) => /RESULTADOS ONLINE/i.test(h));
+      const resultsRoute = isPercambResultsRoute(merged.url, this.provider);
       const pdfAction = merged.elements.some((e) => /pdf|descarg|download|imprim|print|informe/i.test(e.label + ' ' + e.iconHint));
       const resultHeading = merged.headings.some((h) => /RESULTADOS ONLINE/i.test(h));
-      const detected = resultsHint && page === this.page ? await this.extractLabwinRows() : null;
-      const resultsList = resultsHint && (resultHeading || merged.noResultsText || merged.collections.length > 0 || !!detected?.resultActions);
+      const detected = !merged.hasPasswordField && (resultsHint || resultsRoute) && page === this.page ? await this.extractLabwinRows() : null;
+      const recognizedRows = detected?.rows.some(row => row.href || (row.date && row.protocol));
+      const resultsList = (resultsHint && (resultHeading || merged.noResultsText || merged.collections.length > 0 || !!detected?.resultActions)) ||
+        (resultsRoute && recognizedRows);
       merged.pageType = resultsList && !pdfAction ? 'results_list' : pdfAction || merged.isPdfViewer || merged.pdfEmbeds.length ? 'result_detail' : 'unknown';
     }
     return merged;
@@ -757,7 +851,7 @@ export class BrowserSession implements BrowserPort {
         passwordVisible: snap.hasPasswordField,
         captcha: snap.captcha,
         otp: snap.otp,
-        otpSuppressed: snap.otp && hasPercambResultsEvidence(snap, this.provider),
+        otpSuppressed: snap.otp && !snap.explicitOtp && hasPercambResultsEvidence(snap, this.provider),
         modal: snap.modal,
       } : {}),
       authenticated,
@@ -1048,10 +1142,7 @@ export class BrowserSession implements BrowserPort {
   async isPercambResultsPage(): Promise<boolean> {
     if (!isPercambResultsRoute(this.page.url(), this.provider)) return false;
     const snap = await this.snapshot(this.provider.authenticatedHints).catch(() => null);
-    if (!snap || snap.hasPasswordField || snap.captcha || snap.modal) return false;
-    if (snap.otp && !hasPercambResultsEvidence(snap, this.provider)) return false;
-    return [...snap.hintHits, ...snap.headings].some((text) => /RESULTADOS ONLINE/i.test(text)) ||
-      snap.pageType === 'results_list' || snap.collections.length > 0;
+    return !!snap && evaluateLogin(snap, this.provider).authenticated;
   }
 
   async isCentroDmResultsPage(): Promise<boolean> {

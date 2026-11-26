@@ -36,6 +36,7 @@ export type HumanReason =
   | 'mfa'
   | 'session_expired'
   | 'unknown_modal'
+  | 'login_form_returned'
   | 'ambiguous'
   | 'security_check'
   | 'portal_changed';

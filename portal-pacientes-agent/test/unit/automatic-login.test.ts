@@ -24,7 +24,7 @@ test('RDC reconoce Sus estudios realizados en index.php#/grilla sin depender del
   assert.equal(evaluateLogin({ ...grid, hintHits: [], collections: [] }, rdcChacabuco).authenticated, false);
   for (const flag of ['hasPasswordField', 'captcha', 'otp', 'modal']) assert.equal(evaluateLogin({ ...grid, [flag]: true }, rdcChacabuco).authenticated, false);
 });
-test('Pérez Cambet reconoce la ruta autenticada /rol aunque no lea el texto y descarta rutas o desafíos ajenos', async () => {
+test('Pérez Cambet exige evidencia del listado en /rol y mantiene bloqueos de login y desafíos', async () => {
   const results = snap({
     url: 'https://biodatasa.com.ar/lwcloud/percamb/rol',
     headings: ['RESULTADOS ONLINE'],
@@ -32,18 +32,20 @@ test('Pérez Cambet reconoce la ruta autenticada /rol aunque no lea el texto y d
   assert.equal(evaluateLogin(results, percamb).authenticated, true);
   assert.equal(await waitForLogin(new FakePort(results), percamb, { timeoutMs: 1000, pollMs: 1, signal: new AbortController().signal }), 'authenticated');
   assert.equal(evaluateLogin({ ...results, otp: true }, percamb).authenticated, true, 'an ambiguous filter must not block the confirmed results page');
-  assert.equal(evaluateLogin({ ...results, headings: [], hintHits: ['RESULTADOS ONLINE'], otp: true }, percamb).authenticated, true, 'the collector hint is equivalent to a visible results heading');
+  assert.equal(evaluateLogin({ ...results, headings: [], hintHits: ['RESULTADOS ONLINE'] }, percamb).authenticated, false, 'loose page copy does not establish the results view');
   assert.equal(evaluateLogin({ ...results, headings: [], pageType: 'results_list', otp: true }, percamb).authenticated, true, 'a structurally recognized results list also confirms the page');
+  assert.equal(evaluateLogin({ ...results, otp: true, explicitOtp: true }, percamb).authenticated, false, 'a real OTP field or instruction remains blocking on the results route');
   assert.equal(evaluateLogin({ ...results, otp: true, headings: ['Security verification'] }, percamb).authenticated, false, 'OTP outside the results heading remains blocking');
   const routeOnly = snap({ url: 'https://biodatasa.com.ar/lwcloud/percamb/rol' });
   assert.equal(isPercambResultsRoute(routeOnly.url, percamb), true);
   assert.equal(isPercambResultsRoute('https://example.test/lwcloud/percamb/rol', percamb), false);
-  assert.equal(evaluateLogin(routeOnly, percamb).authenticated, true);
+  assert.equal(evaluateLogin(routeOnly, percamb).authenticated, false);
+  assert.equal(evaluateLogin({ ...routeOnly, noResultsText: true, elements: [el('out', 'Cerrar sesión')] }, percamb).authenticated, true);
   assert.equal(evaluateLogin({ ...routeOnly, otp: true }, percamb).authenticated, false, 'OTP without visible results remains blocking');
-  assert.equal(await waitForLogin(new FakePort(routeOnly), percamb, { timeoutMs: 1000, pollMs: 1, signal: new AbortController().signal }), 'authenticated');
+  assert.equal(await waitForLogin(new FakePort(routeOnly), percamb, { timeoutMs: 10, pollMs: 1, signal: new AbortController().signal }), 'timeout');
   assert.equal(evaluateLogin({ ...results, url: 'https://example.test/lwcloud/percamb/rol' }, percamb).authenticated, false);
   assert.equal(evaluateLogin({ ...results, url: percamb.loginUrl }, percamb).authenticated, false);
-  for (const flag of ['hasPasswordField', 'captcha', 'modal']) {
+  for (const flag of ['hasPasswordField', 'loginRejected', 'captcha', 'modal']) {
     assert.equal(evaluateLogin({ ...results, [flag]: true }, percamb).authenticated, false);
   }
 });

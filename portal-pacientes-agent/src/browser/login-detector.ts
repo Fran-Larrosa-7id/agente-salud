@@ -32,8 +32,9 @@ export function isPercambResultsRoute(url: string, provider: ProviderConfig): bo
  */
 export function hasPercambResultsEvidence(snap: RawPageSnapshot, provider: ProviderConfig): boolean {
   return isPercambResultsRoute(snap.url, provider) && (
-    [...snap.hintHits, ...snap.headings].some(text => fold(text).includes('RESULTADOS ONLINE')) ||
-    snap.pageType === 'results_list'
+    snap.headings.some(text => fold(text).includes('RESULTADOS ONLINE')) ||
+    snap.pageType === 'results_list' ||
+    (snap.noResultsText && snap.elements.some(element => LOGOUT.test(element.label)))
   );
 }
 
@@ -44,7 +45,7 @@ const LOGOUT = /cerrar sesi[oó]n|salir|logout|log out|desconectar/i;
  * - no hay campo de contraseña visible (obligatoria), y
  * - salió de la URL de ingreso o aparece una pista del área autenticada, y
  * - en total, al menos 3 de las 5 señales, o evidencia específica compuesta
- *   del proveedor (ruta LabWin/listado responsive Centro DM).
+ *   del proveedor (listado LabWin o listado responsive Centro DM).
  */
 export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): { authenticated: boolean; score: number; signals: LoginSignals } {
   let path = '';
@@ -64,26 +65,25 @@ export function evaluateLogin(snap: RawPageSnapshot, provider: ProviderConfig): 
   };
   const score = Object.values(signals).filter(Boolean).length;
   const percambResultsPage = hasPercambResultsEvidence(snap, provider);
-  const otpChallenge = snap.otp && !percambResultsPage;
+  const otpChallenge = snap.otp && (snap.explicitOtp || !percambResultsPage);
   const noChallenge = !snap.captcha && !otpChallenge && !snap.modal;
+  if (isPercambResultsRoute(snap.url, provider)) {
+    return { authenticated: signals.noPasswordField && noChallenge && !snap.loginRejected && percambResultsPage, score, signals };
+  }
   const specificHint = snap.hintHits.some(hint => !/^(ESTUDIOS|PERFIL)$/.test(fold(hint).trim()));
   const typedStudies = snap.collections.some(collection => {
     const headers = fold(collection.headers.join(' '));
     return /FECHA/.test(headers) && /MODALIDAD/.test(headers) && /ESTUDIO|DESCRIPCION/.test(headers);
   });
   const centroAction = snap.elements.some(element => /\/funcion\/llamadoURL\.php(?:\?|$)/i.test(element.href));
-  // LabWin redirige a /rol al terminar el ingreso. En algunas variantes de la página
-  // el listado se dibuja en controles legacy que el colector no reconoce como texto;
-  // el host permitido + esta ruta exacta son la señal específica de autenticación.
-  const percambResultsRoute = isPercambResultsRoute(snap.url, provider);
   // Composite evidence: visible study headers + valid dated row + same-origin
   // study link, even when Bootstrap hides its action menu on narrow screens.
   // Password/challenge guards and consecutive confirmation still apply.
   const centroResponsive = provider.studyExtractor === 'centrodm' && snap.centroDmResponsiveStudyList === true;
   const evidence = provider.studyExtractor === 'centrodm'
     ? centroResponsive || (specificHint || signals.logoutAction) && (typedStudies || centroAction || snap.centroDmStudyList === true || (snap.noResultsText && signals.logoutAction))
-    : specificHint && (signals.leftLoginUrl || signals.hasCollection || signals.logoutAction) || percambResultsRoute;
-  const authenticated = signals.noPasswordField && noChallenge && evidence && (score >= 3 || percambResultsRoute || centroResponsive);
+    : specificHint && (signals.leftLoginUrl || signals.hasCollection || signals.logoutAction);
+  const authenticated = signals.noPasswordField && noChallenge && evidence && (score >= 3 || centroResponsive);
   return { authenticated, score, signals };
 }
 
@@ -94,9 +94,9 @@ export type LoginWaitResult = 'authenticated' | 'timeout' | 'aborted';
  * Exige dos lecturas positivas seguidas para no confundir una transición con el área autenticada.
  */
 export async function waitForLogin(
-  port: BrowserPort,
+  port: Pick<BrowserPort, 'snapshot' | 'loginSnapshot' | 'confirmLogin'>,
   provider: ProviderConfig,
-  opts: { timeoutMs: number; signal: AbortSignal; pollMs?: number },
+  opts: { timeoutMs: number; signal: AbortSignal; pollMs?: number; onPending?: (snap: RawPageSnapshot | null) => Promise<void> },
 ): Promise<LoginWaitResult> {
   const deadline = Date.now() + opts.timeoutMs;
   const poll = opts.pollMs ?? 1000;
@@ -115,6 +115,7 @@ export async function waitForLogin(
       }
     } else {
       streak = 0;
+      await opts.onPending?.(snap);
     }
     await sleep(poll, opts.signal);
   }

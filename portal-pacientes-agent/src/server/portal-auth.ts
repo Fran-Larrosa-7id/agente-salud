@@ -23,7 +23,11 @@ export function requestOrigin(req: RequestLike, config?: Config): string | null 
 }
 const cookie = (req: RequestLike, name: string) => new RegExp('(?:^|;\\s*)' + name + '=([a-f0-9]{64})(?:;|$)').exec(req.headers.cookie || '')?.[1] || '';
 
-export function installPortalAuth(app: Express, config: Config, manager: JobManager, google?: GoogleServices): PortalAccess {
+export function installPortalAuth(
+  app: Express, config: Config, manager: JobManager, google?: GoogleServices,
+  labLoginForms?: Record<string, string>,
+  labLoginTerms?: Record<string, string>,
+): PortalAccess {
   const googleMode = config.authMode === 'google';
   if (googleMode && (!google || !config.google)) throw new Error('GOOGLE_NOT_CONFIGURED');
   const enabled = googleMode || !!config.portalAuth;
@@ -55,6 +59,8 @@ export function installPortalAuth(app: Express, config: Config, manager: JobMana
   app.get('/api/auth/session', (req, res) => {
     const user = resolve(req);
     res.json({ enabled, authenticated: !!user, mode: config.authMode, storageProvider: config.storageProvider,
+      ...(labLoginForms ? { labLoginForms } : {}),
+      ...(labLoginTerms ? { labLoginTerms } : {}),
       ...(googleMode ? { user: user ? { id: user.id, email: user.email, displayName: user.displayName } : null, drive: user ? google!.db.connection(user.id).status : 'disconnected' } : {}) });
   });
   app.post('/api/auth/login', (req, res) => {

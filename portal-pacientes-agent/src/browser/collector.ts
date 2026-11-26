@@ -10,6 +10,7 @@
 export const COLLECTOR_SOURCE = String.raw`(function (args) {
   var FRAME = args.frame;
   var HINTS = args.hints || [];
+  var PASSWORD_FIELDS = 'input[type=password]' + (args.passwordSelector ? ', ' + args.passwordSelector : '');
   var MAX_EL = 160;
   var DATE = /\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/;
   function norm(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
@@ -154,7 +155,7 @@ export const COLLECTOR_SOURCE = String.raw`(function (args) {
       disabled: !!el.disabled || el.getAttribute('aria-disabled') === 'true',
       collection: mem ? mem.c : undefined,
       row: mem ? mem.r : undefined,
-      inPasswordForm: !!(form && form.querySelector('input[type=password]')),
+      inPasswordForm: !!(form && form.querySelector(PASSWORD_FIELDS)),
       isSubmit: type === 'submit' || (tag === 'button' && !type && !!form)
     });
   });
@@ -162,7 +163,8 @@ export const COLLECTOR_SOURCE = String.raw`(function (args) {
   /* ---------- Señales ---------- */
   var bodyText = fold(document.body ? document.body.innerText : '');
   var hintHits = HINTS.filter(function (h) { return bodyText.indexOf(fold(h)) >= 0; });
-  var pw = Array.prototype.slice.call(document.querySelectorAll('input[type=password]')).some(visible);
+  var pw = Array.prototype.slice.call(document.querySelectorAll(PASSWORD_FIELDS)).some(visible);
+  var termsError = args.rdcLogin ? document.getElementById('error') : null;
   var captchaEl = document.querySelector('iframe[src*="recaptcha"],iframe[src*="hcaptcha"],iframe[src*="turnstile"],.g-recaptcha,.h-captcha,.cf-turnstile,img[src*="captcha" i],[id*="captcha" i],[class*="captcha" i]');
   var captcha = !!(captchaEl && visible(captchaEl)) || /NO SOY UN ROBOT|VERIFICA QUE ERES HUMANO|CAPTCHA/.test(bodyText);
   function inputEvidence(el) {
@@ -176,9 +178,18 @@ export const COLLECTOR_SOURCE = String.raw`(function (args) {
     if (/(?:^|[^a-z0-9])(OTP|ONE[_. -]?TIME[_. -]?CODE|VERIFICATION[_. -]?CODE|CODIGO[_. -]?VERIFICACION|TOKEN[_. -]?VERIFICACION|SECURITY[_. -]?CODE)(?:$|[^a-z0-9])/i.test(identifier)) return true;
     return /\b(OTP|CODIGO|CÓDIGO|VERIFICACION|VERIFICATION|TOKEN|SEGUNDO FACTOR|ONE.TIME.CODE)\b/i.test(attrs);
   }
-  var otpInput = Array.prototype.slice.call(document.querySelectorAll('input[autocomplete="one-time-code"]')).some(visible);
+  function otpField(el) {
+    if (!visible(el)) return false;
+    // LabWin reuses the one-time-code autocomplete hint on ordinary search inputs.
+    // Only recognize these known filter labels on its results route.
+    var filter = /^(DESDE\s*\/\s*FECHA EXACTA|HASTA|PROTOCOLO|NOMBRE|DOCUMENTO)$/.test(fold(el.getAttribute('placeholder')));
+    var verificationLabel = /OTP|VERIFICACION|VERIFICATION|SEGURIDAD|SECURITY|TOKEN/.test(fold(
+      [el.getAttribute('aria-label'), el.getAttribute('name'), el.id].join(' ')));
+    return !args.labwinResults || !filter || verificationLabel;
+  }
+  var otpInput = Array.prototype.slice.call(document.querySelectorAll('input[autocomplete="one-time-code"]')).some(otpField);
   var labeledCodeInput = Array.prototype.slice.call(document.querySelectorAll('input[type=text],input[type=tel],input[type=number],input:not([type])'))
-    .some(function (el) { return visible(el) && inputEvidence(el); });
+    .some(function (el) { return otpField(el) && inputEvidence(el); });
   var explicitOtpCopy = /(?:INGRESA|INTRODUCE|ESCRIBE|INGRESE|INTRODUZCA|ENTER|PROVIDE) (?:EL |TU |THE )?(?:CODIGO|TOKEN|OTP)|(?:CODIGO|TOKEN|OTP) (?:DE VERIFICACION|DE SEGURIDAD|QUE (?:TE )?ENVIAMOS|REQUERIDO|DE UN SOLO USO)|(?:AUTENTICACION|VERIFICACION) (?:DE )?DOS FACTORES (?:REQUERIDA|NECESARIA)|SEGUNDO FACTOR (?:REQUERIDO|NECESARIO)/.test(bodyText);
   var otp = otpInput || labeledCodeInput || explicitOtpCopy;
   var modalEl = Array.prototype.slice.call(document.querySelectorAll('[role=dialog],[role=alertdialog],[aria-modal=true],.modal.in,.modal.show,.swal2-popup,.ui-dialog,.bootbox')).filter(visible)[0];
@@ -199,8 +210,11 @@ export const COLLECTOR_SOURCE = String.raw`(function (args) {
     headings: headings,
     hintHits: hintHits,
     hasPasswordField: pw,
+    termsRequired: !!termsError && visible(termsError) && /ACEPTAR LOS TERMINOS Y CONDICIONES/.test(fold(textOf(termsError))),
+    loginRejected: /(?:USUARIO|CONTRASENA|CLAVE|CREDENCIALES|DOCUMENTO|PASSWORD|USERNAME).{0,45}(?:INCORRECT[OA]S?|INVALID[OA]S?|NO (?:VALID[OA]S?|ENCONTRAD[OA]S?|REGISTRAD[OA]S?|EXISTE)|NO COINCIDEN)|(?:INVALID|INCORRECT).{0,30}(?:CREDENTIALS|PASSWORD|USERNAME)/.test(bodyText),
     captcha: captcha,
     otp: otp,
+    explicitOtp: otpInput || explicitOtpCopy,
     modal: !!modalEl,
     modalText: modalEl ? textOf(modalEl) : '',
     noResultsText: /NO (SE ENCONTRARON|HAY|EXISTEN|TIENE) (RESULTADOS|ESTUDIOS|PROTOCOLOS|REGISTROS|DATOS)|SIN RESULTADOS/.test(bodyText),

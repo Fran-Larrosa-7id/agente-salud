@@ -1,3 +1,17 @@
+import type { Frame } from 'playwright';
+
+/** Follow the patient entry in the current document, including the provider's menu iframe. */
+export async function openCentroDmPatientPortal(frame: Frame, origin: string): Promise<boolean> {
+  const link = frame.locator('a[href="indexp.php"]:visible').filter({ hasText: /^\s*Portal\s+Paciente\s*$/i });
+  const destination = new URL('/indexp.php', origin).href;
+  const matches = await link.evaluateAll((anchors, url) =>
+    location.origin === new URL(url).origin && anchors.length === 1 &&
+    (anchors[0] as HTMLAnchorElement).href === url, destination);
+  if (!matches) return false;
+  await link.click({ timeout: 1000, noWaitAfter: true });
+  return true;
+}
+
 /** Login evidence only. Never reads field values, clicks menus or returns study IDs. */
 export const CENTRODM_RESPONSIVE_LOGIN_SOURCE = String.raw`(() => {
   const visible = el => !!el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden' && getComputedStyle(el).display !== 'none';

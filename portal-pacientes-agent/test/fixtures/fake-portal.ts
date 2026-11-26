@@ -21,18 +21,38 @@ export async function startFakePortal() {
   const page = (title: string, body: string) =>
     `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${title}</title></head><body>${body}</body></html>`;
 
-  app.get('/lwcloud/fake/login', (req, res) => {
-    const mode = req.query.mode === 'mismatch' ? '<input type="hidden" name="mode" value="mismatch">' : '';
-    res.send(page('Iniciar Sesión | LW Cloud', `<form name="form1" method="post" action="/lwcloud/fake/login">
-      <label>USUARIO/DNI: <input type="text" name="usuario"></label>
-      <label>CONTRASEÑA: <input type="password" name="pass"></label>${mode}
+  const loginPaths = ['/lwcloud/fake/login', '/lwcloud/percamb/login'];
+  app.get(loginPaths, (req, res) => {
+    const mode = ['mismatch', 'verify', 'legacy-results', 'alert'].includes(String(req.query.mode)) ? `<input type="hidden" name="mode" value="${req.query.mode}">` : '';
+    const passwordType = req.query.visible === '1' ? 'text' : 'password';
+    res.send(page('Iniciar Sesión | LW Cloud', `<form name="form1" method="post" action="${req.path}">
+      <input type="hidden" value="1" name="enviar">${mode}
+      <label for="usuario">USUARIO/DNI:</label><input type="text" name="usuario" class="col-lg-12 custom-form-control">
+      <label for="pass">CONTRASEÑA:</label><input id="password" type="${passwordType}" name="pass" class="col-lg-10 custom-form-control">
       <button type="submit">Entrar</button></form>`));
   });
-  app.post('/lwcloud/fake/login', (req, res) => {
+  app.post(loginPaths, (req, res) => {
+    if (req.body.enviar !== '1') return void res.sendStatus(400);
     const ok = req.body.usuario === FAKE_USER.usuario && req.body.pass === FAKE_USER.pass;
+    if (!ok && req.body.mode === 'alert') {
+      return void res.send(page('Error', '<script>alert("Usuario y/o Password incorrectos. qa-dialog-private-marker")</script>'));
+    }
     if (!ok) return void res.status(401).send(page('Error', '<p>Usuario o contraseña incorrectos</p><a href="/lwcloud/fake/login">Volver</a>'));
+    if (req.body.mode === 'verify') {
+      res.cookie('challenge', 'pending', { httpOnly: true });
+      return void res.redirect('/lwcloud/percamb/verificar');
+    }
     res.setHeader('set-cookie', SID + '; Path=/; HttpOnly');
-    res.redirect(302, req.body.mode === 'mismatch' ? '/lwcloud/fake/resultados-mismatch' : '/lwcloud/fake/resultados');
+    res.redirect(302, req.path === loginPaths[1] ? '/lwcloud/percamb/rol' + (req.body.mode === 'legacy-results' ? '?legacy=1' : '')
+      : req.body.mode === 'mismatch' ? '/lwcloud/fake/resultados-mismatch' : '/lwcloud/fake/resultados');
+  });
+  app.get('/lwcloud/percamb/verificar', (_req, res) => res.send(page('Verificación', `<h1>Verificación de seguridad</h1>
+    <form method="post"><label>Código de verificación <input name="code" autocomplete="one-time-code"></label>
+    <button type="submit">Verificar</button></form>`)));
+  app.post('/lwcloud/percamb/verificar', (req, res) => {
+    if (!req.headers.cookie?.includes('challenge=pending') || req.body.code !== '654321') return void res.sendStatus(403);
+    res.setHeader('set-cookie', SID + '; Path=/; HttpOnly');
+    res.redirect('/lwcloud/percamb/rol');
   });
 
   app.get('/lwcloud/fake/resultados-div', (req, res) => {
@@ -97,8 +117,8 @@ export async function startFakePortal() {
       <label>Código de verificación <input type="text" autocomplete="one-time-code" name="verification"></label></main>`));
   });
 
-  app.get('/lwcloud/fake/resultados', (req, res) => {
-    if (!authed(req)) return void res.redirect('/lwcloud/fake/login');
+  app.get(['/lwcloud/fake/resultados', '/lwcloud/percamb/rol'], (req, res) => {
+    if (!authed(req)) return void res.redirect(req.path === '/lwcloud/percamb/rol' ? loginPaths[1] : loginPaths[0]);
     const rows = [
       ['28/05/2026', '1001', '30/05/2026', 'Finalizado'],
       ['14/01/2026', '1002', '16/01/2026', 'Finalizado'],
@@ -116,8 +136,9 @@ export async function startFakePortal() {
       ['01/10/2025', '1013', '02/10/2025', 'Finalizado'],
       ['01/11/2025', '1014', '02/11/2025', 'Finalizado'],
     );
-    res.send(page('Resultados', `<header><h1>RESULTADOS ONLINE</h1><p>Paciente: PEREZ JUAN · DNI 30111222</p>
+    res.send(page('Resultados', `<header>${req.query.legacy === '1' ? '' : '<h1>RESULTADOS ONLINE</h1>'}<p>Paciente: PEREZ JUAN · DNI 30111222</p>
       <nav><a href="/lwcloud/fake/cambiar-clave">Cambiar contraseña</a> <a href="https://externo.example.com/">Nuestro sitio</a> <a href="/lwcloud/fake/login">Cerrar sesión</a></nav></header>
+      ${req.query.legacy === '1' ? '<form><input name="codigo" placeholder="Protocolo" autocomplete="one-time-code"><input name="paciente" placeholder="Nombre" autocomplete="one-time-code"><input name="documento" placeholder="Documento" autocomplete="one-time-code"></form>' : ''}
       <table><thead><tr><th>Fecha</th><th>Protocolo</th><th>Fecha entrega</th><th>Estado</th><th></th></tr></thead><tbody>
       ${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}<td><a href="/lwcloud/fake/protocolo/${r[1]}">Ver</a></td></tr>`).join('')}
       </tbody></table>`));

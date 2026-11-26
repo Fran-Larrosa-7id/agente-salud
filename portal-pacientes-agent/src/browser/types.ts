@@ -45,8 +45,11 @@ export interface RawPageSnapshot {
   /** Pistas de área autenticada encontradas en el texto visible (solo las pistas, no el texto). */
   hintHits: string[];
   hasPasswordField: boolean;
+  termsRequired?: boolean;
+  loginRejected?: boolean;
   captcha: boolean;
   otp: boolean;
+  explicitOtp?: boolean;
   modal: boolean;
   modalText: string;
   noResultsText: boolean;

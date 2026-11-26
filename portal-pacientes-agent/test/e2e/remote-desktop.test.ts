@@ -11,12 +11,76 @@ import { JobState as S } from '../../src/jobs/states.js';
 import { fakeRunnerFactory } from '../../src/jobs/fake-runner.js';
 import { AGENT_ROOT } from '../../src/config.js';
 import { RulesModel } from '../../src/llm/rules.js';
+import { percamb } from '../../src/providers/percamb/percamb.provider.js';
 import { createApp } from '../../src/server/app.js';
 import { RemoteDesktop } from '../../src/server/remote-desktop.js';
 import { silentLogger } from '../../src/security/logger.js';
 import { startFakePortal, FAKE_USER } from '../fixtures/fake-portal.js';
 import { testConfig, testProvider, waitFor } from '../helpers.js';
 import { testBrowserChannel, testChromiumSandbox } from '../browser-channel.js';
+
+test('el MFA posterior al login invisible abre noVNC sobre el mismo Chromium y continúa solo', {
+  timeout: 45_000, skip: process.env.TEST_REMOTE_DESKTOP !== 'true',
+}, async () => {
+  const portal = await startFakePortal();
+  const config = testConfig({
+    remoteLogin: true, headless: false, portalDir: path.resolve(AGENT_ROOT, '../portal-pacientes'),
+    portalAuth: { username: '1234', password: '1234' }, loginTimeoutMs: 25_000,
+  });
+  const providers = { percamb: { ...percamb, allowedHosts: ['127.0.0.1'], requireHttps: false, loginUrl: portal.url + '/lwcloud/percamb/login?mode=verify&visible=1' } };
+  const host = new BrowserHost({ headless: false, channel: testBrowserChannel, chromiumSandbox: testChromiumSandbox, debugArtifacts: false, debugDir: '' });
+  const desktop = new RemoteDesktop();
+  const manager = new JobManager({ config, providers, log: silentLogger,
+    runnerFactory: (job, deps) => new AgentImportRunner(job, deps, { host, createModel: () => new RulesModel(), loginPollMs: 100 }),
+  });
+  const server = createApp({ config, manager, providers, desktop, info: { runner: 'agent', model: 'rules', modelReady: true } }).listen(0, '127.0.0.1');
+  desktop.attach(server, manager);
+  await new Promise(resolve => server.once('listening', resolve));
+  const base = 'http://127.0.0.1:' + (server.address() as AddressInfo).port;
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true, channel: testBrowserChannel });
+    const client = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+    await client.goto(base + '/#/login');
+    await client.click('#login-form [type=submit]');
+    await client.waitForSelector('.home-head');
+    await client.goto(base + '/#/traer?inst=pc');
+    await client.getByLabel('Usuario o DNI').fill(FAKE_USER.usuario);
+    await client.getByLabel('Contraseña', { exact: true }).fill(FAKE_USER.pass);
+    await client.getByRole('checkbox').check();
+    await client.getByRole('button', { name: 'Conectar y buscar estudios' }).click();
+    const openDesktop = client.getByRole('link', { name: 'Abrir navegador seguro' });
+    await openDesktop.waitFor();
+    assert.equal(client.context().pages().length, 1);
+    const [job] = manager.activeJobs();
+    assert.equal(job.human, 'mfa');
+    const worker = manager.remotePage(job.id)!;
+    const context = worker.context();
+    assert.ok((await context.cookies()).some(cookie => cookie.name === 'challenge' && cookie.value === 'pending'));
+    const popup = client.waitForEvent('popup');
+    await openDesktop.click();
+    const remote = await popup;
+    const canvas = remote.locator('#desktop canvas');
+    await canvas.waitFor({ state: 'visible' });
+    await remote.getByText('Completá el paso pendiente', { exact: false }).waitFor();
+    await canvas.click({ position: { x: 200, y: 200 } });
+    await worker.locator('input[name=code]').focus();
+    await remote.keyboard.type('654321');
+    await worker.waitForFunction(() => document.querySelector<HTMLInputElement>('input[name=code]')?.value === '654321');
+    await remote.keyboard.press('Enter');
+    await client.waitForSelector('.res-list');
+    assert.equal(job.state, S.WAITING_SELECTION);
+    assert.equal(manager.remotePage(job.id), worker);
+    assert.equal(worker.context(), context);
+    assert.equal(host.openContexts, 1);
+    assert.equal((await client.request.post(base + '/api/imports/' + job.id + '/desktop')).status(), 409);
+    assert.equal(job.eventsSince(0).filter(event => event.type === 'authenticated').length, 1);
+  } finally {
+    await desktop.stop(); await manager.shutdown(); await host.close(); await browser?.close();
+    server.closeAllConnections();
+    await new Promise<void>(resolve => server.close(() => resolve())); await portal.close();
+  }
+});
 
 // Esta prueba requiere los paquetes de la imagen y DISPLAY: npm run test:remote.
 test('noVNC detecta login automáticamente, conserva contexto y muestra selección en ambas pestañas', {

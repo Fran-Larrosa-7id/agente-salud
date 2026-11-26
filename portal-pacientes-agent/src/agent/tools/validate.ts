@@ -83,6 +83,8 @@ export function validateHumanActionEvidence(reason: HumanReason, page: RawPageSn
       return page.modal && /confirm|verific|seguridad|c[oó]digo|aceptar|continuar|autorizar/i.test(page.modalText);
     case 'ambiguous':
       return page.modal && page.modalText.trim().length > 0;
+    case 'login_form_returned':
+      return false; // Only the login runner observes the POST response.
     case 'portal_changed':
       return page.pageType === 'unknown' && page.hintHits.length === 0 && !page.hasPasswordField;
   }

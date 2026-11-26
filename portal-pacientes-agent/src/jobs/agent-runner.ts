@@ -10,6 +10,8 @@ import type { HumanReason, ImportJob } from './job.js';
 import type { JobRunner, RunnerDeps, RunnerFactory } from './runner.js';
 import { JobState } from './states.js';
 import { DESKTOP_VIEWPORT } from '../browser/display-profile.js';
+import { loginChallenge } from '../browser/provider-login.js';
+import type { OneUseLogin } from './login-credentials.js';
 
 const S = JobState;
 const importMetadata = () => ({ importedAt: new Date().toISOString(), importedBy: 'agent' as const });
@@ -31,10 +33,7 @@ export interface AgentRunnerOptions {
   loginPollMs?: number;
 }
 
-/**
- * Runner real: navegador visible + detección de login + agente de IA.
- * La contraseña la escribe el paciente en la ventana del laboratorio; este runner nunca la ve.
- */
+/** Reuses one isolated browser session for sign-in, discovery and import. */
 export class AgentImportRunner implements JobRunner {
   remotePage() { return this.session?.activePage(); }
   session: BrowserSession | null = null;
@@ -43,6 +42,7 @@ export class AgentImportRunner implements JobRunner {
   private readonly downloads = { used: 0 };
   private disposePromise: Promise<void> | null = null;
   private openingSession: Promise<BrowserSession> | null = null;
+  private sensitive = false;
 
   constructor(
     private readonly job: ImportJob,
@@ -76,9 +76,10 @@ export class AgentImportRunner implements JobRunner {
     return this.agent;
   }
 
-  async start(): Promise<void> {
+  async start(credentials?: OneUseLogin): Promise<void> {
     const { job } = this;
     const { provider, config, log } = this.deps;
+    this.sensitive = !!credentials;
     try {
       job.transition(S.OPENING_PROVIDER);
       this.openingSession = BrowserSession.open(
@@ -88,6 +89,7 @@ export class AgentImportRunner implements JobRunner {
         provider.id === 'centrodm' ? config.pixeonViewerReadyTimeoutMs : undefined,
         provider.id === 'centrodm' ? config.pixeonToolbarTimeoutMs : undefined,
         config.remoteLogin && job.remoteLayout === 'mobile',
+        this.sensitive,
       );
       const session = await this.openingSession;
       this.session = session;
@@ -141,15 +143,17 @@ export class AgentImportRunner implements JobRunner {
       session.onUserClosed = () => job.fail(S.CANCELLED, 'WINDOW_CLOSED');
       await session.gotoLogin();
       job.push('provider_opened');
-      job.transition(S.WAITING_FOR_USER_LOGIN, { timeoutMs: config.loginTimeoutMs });
+      if (credentials) job.transition(S.SIGNING_IN);
+      else job.transition(S.WAITING_FOR_USER_LOGIN, { timeoutMs: config.loginTimeoutMs });
 
-      const login = await waitForLogin(session, provider, {
+      const options = {
         timeoutMs: config.loginTimeoutMs,
         signal: this.signal,
-        ...(this.opts.loginPollMs ? { pollMs: this.opts.loginPollMs } : {}),
-      });
+        pollMs: this.opts.loginPollMs,
+      };
+      const login = credentials ? await this.signIn(session, credentials, options) : await waitForLogin(session, provider, options);
       if (login === 'aborted') return;
-      if (login === 'timeout') return void job.fail(S.AUTH_TIMEOUT, 'LOGIN_TIMEOUT');
+      if (login === 'timeout') return void job.fail(S.AUTH_TIMEOUT, job.state === S.HUMAN_ACTION_REQUIRED ? 'HUMAN_ACTION_TIMEOUT' : 'LOGIN_TIMEOUT');
       if (this.signal.aborted) return;
       job.transition(S.AUTHENTICATED);
       // Return the same authenticated page to the proven extraction geometry.
@@ -157,6 +161,76 @@ export class AgentImportRunner implements JobRunner {
       await this.discover(session);
     } catch (e) {
       this.handleError(e);
+    } finally {
+      credentials?.revoke();
+    }
+  }
+
+  private async signIn(session: BrowserSession, credentials: OneUseLogin, options: Parameters<typeof waitForLogin>[2]) {
+    const { provider, log } = this.deps;
+    const deadline = Date.now() + Math.min(provider.loginForm?.readyTimeoutMs ?? 3500, options.timeoutMs);
+    const labwin = provider.id === 'percamb';
+    const responses = session.watchLoginResponses(labwin
+      ? status => log.info(this.job.id, 'percamb_login_response', { status })
+      : undefined);
+    let submission: Awaited<ReturnType<BrowserSession['submitLogin']>> = null;
+    const clear = async () => {
+      const inputs = submission;
+      submission = null;
+      await inputs?.clear();
+    };
+    try {
+      try {
+        while (!this.signal.aborted && Date.now() < deadline) {
+          const snap = await session.loginSnapshot(provider.authenticatedHints, true).catch(() => null);
+          if (snap && (loginChallenge(snap) || evaluateLogin(snap, provider).authenticated)) break;
+          submission = await session.submitLogin(credentials, this.signal);
+          if (submission) break;
+          await sleep(options.pollMs ?? 250, this.signal);
+        }
+      } finally {
+        credentials.revoke();
+      }
+      if (labwin && !this.signal.aborted) log.info(this.job.id, 'percamb_login_attempt', {
+        outcome: submission?.submitted ? 'clicked' : submission ? 'interrupted' : 'form_not_submitted',
+      });
+
+      const autoWait = Date.now() + Math.min(submission?.submitted ? 6500 : 900, options.timeoutMs);
+      return await waitForLogin({
+        snapshot: hints => session.loginSnapshot(hints, true),
+        confirmLogin: snap => session.confirmLogin(snap),
+      }, provider, {
+        ...options,
+        onPending: async snap => {
+          if (this.job.state === S.HUMAN_ACTION_REQUIRED || this.signal.aborted) return;
+          const challenge = snap ? loginChallenge(snap) : null;
+          if (submission && responses.status() >= 500 && !challenge) {
+            this.job.fail(S.PROVIDER_UNAVAILABLE, 'PROVIDER_UNAVAILABLE');
+            return;
+          }
+          if (submission && snap?.termsRequired && !challenge) {
+            this.job.fail(S.ERROR, 'LAB_TERMS_REQUIRED');
+            return;
+          }
+          if (submission && (snap?.loginRejected || responses.rejected() || responses.status() === 401) && challenge !== 'captcha' && challenge !== 'mfa') {
+            this.job.fail(S.ERROR, 'INVALID_LAB_CREDENTIALS');
+            return;
+          }
+          if (!challenge && Date.now() < autoWait) return;
+          // A slow provider is allowed the login deadline. Offer help for visible login or challenge UI.
+          if (!challenge && submission?.submitted && !snap?.hasPasswordField) return;
+          const returnedToForm = labwin && responses.status() >= 200 && responses.status() < 400 && snap?.hasPasswordField;
+          await clear();
+          if (this.signal.aborted) return;
+          await session.activePage().bringToFront().catch(() => {});
+          if (!this.signal.aborted) {
+            this.job.transition(S.HUMAN_ACTION_REQUIRED, { reason: challenge || (returnedToForm ? 'login_form_returned' : 'ambiguous') });
+          }
+        },
+      });
+    } finally {
+      responses.stop();
+      await clear();
     }
   }
 
@@ -325,6 +399,7 @@ export class AgentImportRunner implements JobRunner {
         job.current = { studyId, index: i, total: studyIds.length };
         if (isCentroDm) this.deps.log.info(job.id, 'centrodm_study_start', { index: i + 1, count: studyIds.length });
         job.transition(S.OPENING_STUDY, { studyId, index: i, total: studyIds.length });
+        if (this.sensitive && await this.labSessionExpired(session)) return;
         if (providerOwned) {
           this.deps.log.debug(job.id, 'provider_study_opening', { step: i + 1, count: session.openPages() });
           let opened = false;
@@ -339,6 +414,7 @@ export class AgentImportRunner implements JobRunner {
             else if ((isCentroDm || isRdcChacabuco) && error instanceof UnexpectedDomainError) openingFailure = 'UNEXPECTED_DOMAIN';
             else throw error;
           }
+          if (!opened && this.sensitive && await this.labSessionExpired(session)) return;
           if (openingFailure) {
             this.retainFailedViewer(session, openingFailure, i === studyIds.length - 1);
             job.failures.push({ studyId, code: openingFailure });
@@ -589,6 +665,15 @@ export class AgentImportRunner implements JobRunner {
     else this.job.fail(S.AGENT_UNABLE_TO_CONTINUE, code);
   }
 
+  private async labSessionExpired(session: BrowserSession): Promise<boolean> {
+    // If an earlier document is already ready, let the existing partial-import path persist it.
+    if (this.job.files.length || !this.deps.provider.loginPathPattern.test(new URL(session.activePage().url()).pathname)) return false;
+    const snap = await session.snapshot([]).catch(() => null);
+    if (!snap?.hasPasswordField) return false;
+    this.job.fail(S.AGENT_UNABLE_TO_CONTINUE, 'LAB_SESSION_EXPIRED');
+    return true;
+  }
+
   private handleError(e: unknown): void {
     if (this.job.isTerminal) return;
     if (e instanceof ProviderUnavailableError) {
@@ -600,7 +685,7 @@ export class AgentImportRunner implements JobRunner {
       this.job.fail(S.ERROR, 'BROWSER_NOT_INSTALLED');
     } else {
       // Solo para desarrollo: el error puede contener datos de la página, por eso no va al log normal.
-      if (process.env.AGENT_DEBUG_ERRORS === 'true') console.error(e);
+      if (!this.sensitive && process.env.AGENT_DEBUG_ERRORS === 'true') console.error(e);
       this.deps.log.warn(this.job.id, 'runner_error', { state: this.job.state, errorCode: 'INTERNAL' });
       this.job.fail(S.ERROR, 'INTERNAL');
     }
@@ -620,7 +705,7 @@ export class AgentImportRunner implements JobRunner {
   async resume(_beforeResume: () => Promise<void>): Promise<boolean> {
     // Compatibilidad: nunca saltar las dos lecturas ni revocar un desafío pendiente.
     return !!this.session && !this.signal.aborted && !this.job.isTerminal &&
-      this.job.state !== S.WAITING_FOR_USER_LOGIN && this.job.state !== S.HUMAN_ACTION_REQUIRED && this.job.state !== S.OPENING_PROVIDER;
+      !([S.WAITING_FOR_USER_LOGIN, S.HUMAN_ACTION_REQUIRED, S.OPENING_PROVIDER, S.SIGNING_IN] as JobState[]).includes(this.job.state);
   }
 
   dispose(): Promise<void> {

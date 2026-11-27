@@ -22,47 +22,46 @@
      ===================================================================== */
   S.inicio = function () {
     const studies = P.studies();
-    const docs = P.documents();
-    const sources = P.sourceInstitutions();
-    return { title: 'Inicio', html:
-      '<header class="home-head"><div><p class="home-date">' + P.fmtToday() + '</p><h1 class="page-title" tabindex="-1">Bienvenido</h1><p class="page-sub">Tus estudios importados, en un solo lugar.</p></div></header>' +
-      '<section class="stats" aria-label="Tus archivos"><a class="stat" href="#/estudios"><span class="stat-label">' + ic('flask', 20) + 'Estudios</span><span class="stat-value num">' + studies.length + '</span><span class="stat-sub">guardados en tu portal</span></a><a class="stat" href="#/documentos"><span class="stat-label">' + ic('file', 20) + 'Documentos</span><span class="stat-value num">' + docs.length + '</span><span class="stat-sub">archivos originales disponibles</span></a></section>' +
-      featureCard(!studies.length) +
-      '<section class="card" aria-labelledby="h-recientes">' + cardHead('Tus estudios', studies.length ? ['Ver todos', '#/estudios'] : null, 'h-recientes') +
-      (studies.length ? '<ul class="study-list">' + studies.slice(0, 4).map(P.studyRowCompact).join('') + '</ul>' : P.empty({ compact: true, icon: 'flask', title: 'Todavía no tenés estudios guardados', text: 'Elegí una institución para traer tus archivos originales.', action: '<a class="btn btn-accent" href="#/traer">Traer mis primeros estudios</a>' })) + '</section>'
-    };
-  };
-  function featureCard(empty) {
-    const chips = [['PC', 'teal', 'Pérez Cambet', 18], ['CDM', 'sky', 'Centro DM', 78], ['RDC', 'sky', 'RDC Chacabuco', 138]];
-    const art =
-      '<svg class="feature-art" viewBox="0 0 380 200" aria-hidden="true" focusable="false">' +
-      chips.map((c, i) =>
-        '<g class="fa-chip" style="--d:' + i * 90 + 'ms"><rect x="0" y="' + c[3] + '" width="168" height="44" rx="10" class="fa-chip-bg"/>' +
-        '<rect x="10" y="' + (c[3] + 10) + '" width="24" height="24" rx="6" class="fa-mono t-' + c[1] + '"/>' +
-        '<text x="22" y="' + (c[3] + 26.5) + '" text-anchor="middle" class="fa-mono-t">' + c[0] + '</text>' +
-        '<text x="42" y="' + (c[3] + 27) + '" class="fa-name">' + c[2] + '</text></g>'
-      ).join('') +
-      chips.map((c, i) => '<path class="fa-line" style="--d:' + (250 + i * 90) + 'ms" d="M168 ' + (c[3] + 22) + ' C 212 ' + (c[3] + 22) + ', 222 100, 262 100"/>').join('') +
-      '<g class="fa-target"><rect x="256" y="28" width="118" height="144" rx="14" fill="#fff"/>' +
-      '<rect x="270" y="42" width="22" height="22" rx="6" fill="#0F8B8D"/><path d="M281 48v10M276 53h10" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>' +
-      '<rect x="298" y="47" width="58" height="6" rx="3" fill="#DCE4EC"/><rect x="298" y="57" width="38" height="5" rx="2.5" fill="#EEF2F6"/>' +
-      [80, 108, 136].map((y, i) =>
-        '<g class="fa-row" style="--d:' + (620 + i * 110) + 'ms"><circle cx="279" cy="' + y + '" r="8" fill="#DFF3EF"/><path d="M275.5 ' + y + 'l2.4 2.4 4.6-4.8" stroke="#087477" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-        '<rect x="294" y="' + (y - 7) + '" width="' + [60, 48, 54][i] + '" height="6" rx="3" fill="#C9D3DE"/><rect x="294" y="' + (y + 3) + '" width="34" height="5" rx="2.5" fill="#E6ECF2"/></g>'
-      ).join('') +
-      '</g></svg>';
+    const sources = Array.from(new Set(studies.map((s) => s.inst))).filter((id) => id !== 'yo');
+    const name = P.firstName();
+    const where = P.authMode === 'google' ? 'guardados en tu Google Drive' : 'guardados en este navegador';
+    const sub = studies.length
+      ? '<span class="num">' + P.plural(studies.length, 'estudio', 'estudios') + '</span>' + (sources.length ? ' de ' + P.plural(sources.length, 'institución', 'instituciones') : '') + ', ' + where + '.'
+      : 'Acá vas a tener tus estudios de distintas instituciones, juntos y con su origen.';
+    const head = '<header class="home-head"><h1 class="page-title" tabindex="-1">Hola' + (name ? ', ' + P.esc(name) : '') + '</h1><p class="page-sub">' + sub + '</p></header>';
 
+    if (!studies.length) {
+      return { title: 'Inicio', html: head + bringPanel(true) +
+        '<section class="home-avail" aria-labelledby="h-avail"><h2 class="sec-title" id="h-avail">Instituciones disponibles</h2>' +
+        '<ul class="src-rows">' + P.INSTITUTIONS.filter((i) => i.compatible).map((i) =>
+          '<li><a class="src-row" href="#/traer?inst=' + i.id + '">' + P.mono(i.id, 'md') + '<span class="src-row-t"><b>' + P.esc(i.name) + '</b><span>' + P.esc(i.kind) + '</span></span>' + ic('chevron-right', 18, 'chev') + '</a></li>').join('') +
+        '</ul></section>' };
+    }
+
+    const perInst = sources.map((id) => [id, studies.filter((s) => s.inst === id).length]);
+    return { title: 'Inicio', html: head +
+      '<div class="home-grid">' +
+      '<section class="home-recent" aria-labelledby="h-recientes"><div class="sec-head"><h2 class="sec-title" id="h-recientes">Últimos estudios</h2>' +
+      (studies.length > 4 ? '<a class="link" href="#/estudios">Ver los ' + studies.length + ' estudios' + ic('arrow-right', 18) + '</a>' : '<a class="link" href="#/estudios">Ver en Estudios' + ic('arrow-right', 18) + '</a>') + '</div>' +
+      '<ul class="list study-list">' + studies.slice(0, 4).map(P.studyRow).join('') + '</ul></section>' +
+      '<aside class="home-side">' + bringPanel(false) +
+      (perInst.length ? '<section class="home-sources" aria-labelledby="h-src"><h2 class="sec-title" id="h-src">Tus instituciones</h2><ul class="src-rows">' +
+        perInst.map((x) => { const i = P.inst(x[0]); return '<li><a class="src-row" href="#/estudios" data-action="est-inst-go" data-id="' + i.id + '">' + P.mono(i.id, 'md') + '<span class="src-row-t"><b>' + P.esc(i.name) + '</b><span>' + P.esc(i.kind) + '</span></span><span class="src-row-n num">' + x[1] + '</span></a></li>'; }).join('') +
+        '</ul></section>' : '') +
+      '</aside></div>' };
+  };
+  /* Bloque «Traer mis estudios» con la ilustración animada. */
+  function bringPanel(first) {
     return (
-      '<section class="feature" aria-labelledby="feature-t">' +
-      '<div class="feature-copy">' +
-      '<p class="feature-kicker">' + ic('import', 18) + 'Traer mis estudios</p>' +
-      '<h2 class="feature-title" id="feature-t">' + (empty ? 'Empezá trayendo tus estudios' : '¿Tenés estudios en otro laboratorio?') + '</h2>' +
-      '<p class="feature-text">Traelos a tu historial sin descargarlos y subirlos manualmente. Elegís la institución, iniciás sesión y listo.</p>' +
-      '<div class="feature-actions"><a class="btn btn-accent btn-lg" href="#/traer">' + (empty ? 'Traer mis primeros estudios' : 'Traer mis estudios') + ic('arrow-right', 20) + '</a>' +
-      '<span class="feature-note">' + ic('lock', 16) + 'Nunca guardamos tu contraseña de otras instituciones.</span></div>' +
-      '</div>' + art + '</section>'
+      '<section class="bring' + (first ? ' bring-first' : '') + '" aria-labelledby="bring-t">' +
+      '<div class="bring-art" data-art>' + P.art.gather() + '</div>' +
+      '<div class="bring-copy"><h2 class="bring-title" id="bring-t">' + (first ? 'Traé tus primeros estudios' : 'Sumá estudios de otra institución') + '</h2>' +
+      '<p class="bring-text">Elegís la institución, ingresás en su sitio y guardamos los originales en tu cuenta. Sin descargar ni subir archivos.</p>' +
+      '<a class="btn btn-accent' + (first ? ' btn-lg' : '') + '" href="#/traer">' + ic('import', 20) + 'Traer mis estudios</a>' +
+      '<p class="bring-note">' + ic('lock', 16) + 'Nunca guardamos tu contraseña de otras instituciones.</p></div></section>'
     );
   }
+  A['est-inst-go'] = (el, e) => { e.preventDefault(); Object.assign(est, { q: '', type: 'todos', year: 'todos', inst: el.dataset.id, sort: 'desc' }); location.hash = '#/estudios'; };
 
   /* =====================================================================
      MI SALUD
@@ -82,7 +81,7 @@
       '<div class="tabs" role="tablist" aria-label="Categorías de Mi salud">' +
       SALUD_TABS.map((t) =>
         '<a class="tab" role="tab" href="#/salud/' + t[0] + '" aria-selected="' + (t[0] === tab) + '"' + (t[0] === tab ? ' aria-current="page"' : '') + '>' + t[1] +
-        (counts[t[0]] != null ? ' <span class="tab-count num">' + counts[t[0]] + '</span>' : '') + '</a>'
+        (counts[t[0]] ? ' <span class="tab-count num">' + counts[t[0]] + '</span>' : '') + '</a>'
       ).join('') + '</div>';
 
     const body = { resumen: saludResumen, antecedentes: saludAntecedentes, alergias: saludAlergias, medicacion: saludMedicacion, vacunas: saludVacunas }[tab]();
@@ -95,47 +94,51 @@
 
   function saludResumen() {
     const sources = P.sourceInstitutions();
-    const block = (id, icon, title, count, items, href) =>
-      '<section class="sum-block" aria-labelledby="sum-' + id + '">' +
-      '<div class="sum-head"><span class="sum-icon sum-' + id + '" aria-hidden="true">' + ic(icon, 22) + '</span>' +
-      '<h2 class="sum-title" id="sum-' + id + '">' + title + '</h2><span class="sum-count num">' + count + '</span>' +
-      '<a class="link" href="' + href + '">Ver detalle' + ic('arrow-right', 18) + '</a></div>' +
-      '<ul class="sum-items">' + items + '</ul></section>';
-    const li = (main, sub, inst) => '<li><span class="sum-main">' + main + '</span><span class="sum-sub">' + sub + '</span>' + P.instBadge(inst) + '</li>';
-
+    const rows = [
+      ['alergias', 'alert', 'Alergias', P.db.allergies, (a) => a.name, 'Todavía no hay alergias registradas.', 'registrada', 'registradas'],
+      ['antecedentes', 'clipboard', 'Antecedentes', P.db.conditions, (c) => c.name, 'Todavía no hay antecedentes registrados.', 'registrado', 'registrados'],
+      ['medicacion', 'pill', 'Medicación actual', P.activeMeds(), (m) => m.name + ' ' + m.dose, 'No hay medicación activa registrada.', 'activa', 'activas'],
+      ['vacunas', 'syringe', 'Vacunas', P.db.vaccines, (v) => v.name, 'Todavía no hay vacunas registradas.', 'aplicada', 'aplicadas'],
+    ];
     return (
       '<div class="salud-grid">' +
-      '<div class="card sum-card">' +
-      block('alergias', 'alert', 'Alergias', P.db.allergies.length, P.db.allergies.map((a) => li(a.name, a.type + ' · ' + a.reaction, a.inst)).join(''), '#/salud/alergias') +
-      block('antecedentes', 'clipboard', 'Antecedentes', P.db.conditions.length, P.db.conditions.map((c) => li(P.esc(c.name), c.category + (c.since ? ' · desde ' + c.since : ''), c.inst)).join(''), '#/salud/antecedentes') +
-      block('medicacion', 'pill', 'Medicación actual', P.activeMeds().length, P.activeMeds().map((m) => li(m.name + ' ' + m.dose, m.how, m.inst)).join(''), '#/salud/medicacion') +
-      block('vacunas', 'syringe', 'Vacunas', P.db.vaccines.length, P.db.vaccines.slice(0, 2).map((v) => li(v.name, v.dose + ' · <span class="num">' + P.fmt(v.date) + '</span>', v.inst)).join(''), '#/salud/vacunas') +
-      '</div>' +
+      '<ul class="list hrows" aria-label="Resumen de tu salud">' + rows.map((x) => {
+        const list = x[3];
+        const peek = list.slice(0, 3).map((it) => P.esc(x[4](it))).join(', ') + (list.length > 3 ? ' y ' + (list.length - 3) + ' más' : '');
+        return '<li><a class="hrow' + (list.length ? '' : ' is-empty') + '" href="#/salud/' + x[0] + '">' +
+          '<span class="ty ty-' + x[0] + '" aria-hidden="true">' + ic(x[1], 20) + '</span>' +
+          '<span class="hrow-main"><span class="hrow-t">' + x[2] + '</span><span class="hrow-s">' + (list.length ? peek : x[5]) + '</span></span>' +
+          (list.length ? '<span class="hrow-n"><span class="num">' + list.length + '</span> ' + (list.length === 1 ? x[6] : x[7]) + '</span>' : '') +
+          ic('chevron-right', 20, 'chev') + '</a></li>';
+      }).join('') + '</ul>' +
       '<aside class="salud-aside">' +
-      '<section class="card"><h2 class="card-title">¿De dónde viene esta información?</h2>' +
+      '<section class="panel"><h2 class="sec-title">¿De dónde viene esta información?</h2>' +
       '<p class="muted mt-2">Cada dato muestra la institución que lo registró. Así sabés siempre a quién consultar.</p>' +
       '<ul class="source-list">' + sources.map((id) => {
         const i = P.inst(id);
-        return '<li>' + P.mono(id, 'md') + '<span><b>' + i.name + '</b><span>' + i.kind + '</span></span></li>';
+        return '<li>' + P.mono(id, 'md') + '<span><b>' + P.esc(i.name) + '</b><span>' + P.esc(i.kind) + '</span></span></li>';
       }).join('') +
       '<li>' + P.mono('yo', 'md') + '<span><b>Declarado por vos</b><span>Datos que informaste en tu perfil</span></span></li></ul>' +
       '</section>' +
-      '<section class="note-card"><p>' + ic('info', 20) + '<span>El portal organiza tu información pero no reemplaza la consulta. Si ves un dato incorrecto, avisale a la institución que lo registró.</span></p></section>' +
+      '<p class="side-note">' + ic('info', 18) + '<span>El portal organiza tu información pero no reemplaza la consulta. Si ves un dato incorrecto, avisale a la institución que lo registró.</span></p>' +
       '</aside></div>'
     );
   }
 
+  const noData = (icon, title, text) => P.empty({ icon, title, text });
+
   function saludAntecedentes() {
+    if (!P.db.conditions.length) return noData('clipboard', 'No hay antecedentes registrados', 'Cuando una institución registre una enfermedad, cirugía o antecedente familiar, lo vas a ver acá con su origen.');
     return (
       '<p class="panel-intro">Enfermedades, cirugías y antecedentes familiares registrados por tus instituciones o informados por vos.</p>' +
       '<ul class="info-list">' + P.db.conditions.map((c) => {
         const related = c.related.map((id) => P.study(id)).filter(Boolean);
         return (
-          '<li class="info-item"><span class="ty ty-cond" aria-hidden="true">' + ic('clipboard', 22) + '</span><div class="info-main">' +
+          '<li class="info-item"><span class="ty ty-antecedentes" aria-hidden="true">' + ic('clipboard', 20) + '</span><div class="info-main">' +
           '<div class="info-top"><h2 class="info-name">' + P.esc(c.name) + '</h2>' + P.badge('neutral', c.category) + '</div>' +
           '<dl class="facts">' + (c.since ? '<div><dt>Diagnosticado</dt><dd class="num">' + c.since + '</dd></div>' : '') +
           '<div><dt>Observaciones</dt><dd>' + P.esc(c.note) + '</dd></div></dl>' +
-          (related.length ? '<p class="related">Documentación asociada: ' + related.map((s) => '<a class="link" href="#/estudios/' + s.id + '">' + ic('file', 16) + P.esc(s.name) + ' · <span class="num">' + P.fmt(s.date) + '</span></a>').join('') + '</p>' : '') +
+          (related.length ? '<p class="related">Documentación asociada: ' + related.map((s) => '<a class="link" href="#/estudios/' + s.id + '">' + ic('file', 16) + P.esc(s.name) + ', <span class="num">' + P.fmt(s.date) + '</span></a>').join('') + '</p>' : '') +
           P.prov(c.inst, c.date) +
           '</div></li>'
         );
@@ -144,12 +147,13 @@
   }
 
   function saludAlergias() {
+    if (!P.db.allergies.length) return noData('alert', 'No hay alergias registradas', 'Si tenés alguna alergia, contásela a tu profesional de salud para que quede registrada.');
     return (
       '<div class="callout callout-warm">' + ic('info', 20) + '<p>Mostrá esta información a cualquier profesional que te atienda, sobre todo antes de recibir un medicamento nuevo.</p></div>' +
       '<ul class="info-list">' + P.db.allergies.map((a) =>
-        '<li class="info-item info-allergy"><span class="ty ty-allergy" aria-hidden="true">' + ic('alert', 22) + '</span><div class="info-main">' +
-        '<div class="info-top"><h2 class="info-name">' + a.name + '</h2>' + P.badge('warning', 'Alergia', 'alert') + '</div>' +
-        '<dl class="facts"><div><dt>Tipo</dt><dd>' + a.type + '</dd></div><div><dt>Reacción registrada</dt><dd>' + a.reaction + '</dd></div></dl>' +
+        '<li class="info-item info-allergy"><span class="ty ty-alergias" aria-hidden="true">' + ic('alert', 20) + '</span><div class="info-main">' +
+        '<div class="info-top"><h2 class="info-name">' + P.esc(a.name) + '</h2>' + P.badge('warning', 'Alergia', 'alert') + '</div>' +
+        '<dl class="facts"><div><dt>Tipo</dt><dd>' + P.esc(a.type) + '</dd></div><div><dt>Reacción registrada</dt><dd>' + P.esc(a.reaction) + '</dd></div></dl>' +
         P.prov(a.inst, a.date) + '</div></li>'
       ).join('') + '</ul>' +
       '<p class="muted mt-4">¿Falta alguna alergia? Contásela a tu profesional de salud para que quede registrada.</p>'
@@ -158,21 +162,23 @@
 
   function saludMedicacion() {
     const act = P.activeMeds(), past = P.pastMeds();
+    if (!act.length && !past.length) return noData('pill', 'No hay medicación registrada', 'Las indicaciones que registren tus instituciones van a aparecer acá, con quién las indicó y desde cuándo.');
     return (
       '<section aria-labelledby="h-med-act"><h2 class="section-h" id="h-med-act">Medicación actual <span class="num">' + act.length + '</span></h2>' +
-      '<ul class="info-list">' + act.map((m) => P.medRow(m)).join('') + '</ul></section>' +
-      '<section aria-labelledby="h-med-past" class="mt-8"><h2 class="section-h" id="h-med-past">Medicación anterior <span class="num">' + past.length + '</span></h2>' +
-      '<ul class="info-list info-list-quiet">' + past.map((m) => P.medRow(m)).join('') + '</ul></section>' +
+      (act.length ? '<ul class="info-list">' + act.map((m) => P.medRow(m)).join('') + '</ul>' : '<p class="muted">No hay medicación activa registrada.</p>') + '</section>' +
+      (past.length ? '<section aria-labelledby="h-med-past" class="mt-8"><h2 class="section-h" id="h-med-past">Medicación anterior <span class="num">' + past.length + '</span></h2>' +
+      '<ul class="info-list info-list-quiet">' + past.map((m) => P.medRow(m)).join('') + '</ul></section>' : '') +
       '<p class="muted mt-4">No cambies ni suspendas una medicación sin hablar antes con tu profesional de salud.</p>'
     );
   }
 
   function saludVacunas() {
+    if (!P.db.vaccines.length) return noData('syringe', 'No hay vacunas registradas', 'Cuando una institución registre una vacuna aplicada, la vas a ver acá con la dosis y la fecha.');
     return (
       '<ul class="info-list">' + P.db.vaccines.map((v) =>
-        '<li class="info-item"><span class="ty ty-vac" aria-hidden="true">' + ic('syringe', 22) + '</span><div class="info-main">' +
-        '<div class="info-top"><h2 class="info-name">' + v.name + '</h2>' + P.badge('success', 'Aplicada', 'check') + '</div>' +
-        '<dl class="facts"><div><dt>Dosis</dt><dd>' + v.dose + '</dd></div><div><dt>Fecha</dt><dd class="num">' + P.fmt(v.date) + '</dd></div></dl>' +
+        '<li class="info-item"><span class="ty ty-vacunas" aria-hidden="true">' + ic('syringe', 20) + '</span><div class="info-main">' +
+        '<div class="info-top"><h2 class="info-name">' + P.esc(v.name) + '</h2>' + P.badge('success', 'Aplicada', 'check') + '</div>' +
+        '<dl class="facts"><div><dt>Dosis</dt><dd>' + P.esc(v.dose) + '</dd></div><div><dt>Fecha</dt><dd class="num">' + P.fmt(v.date) + '</dd></div></dl>' +
         P.prov(v.inst, v.date) + '</div></li>'
       ).join('') + '</ul>'
     );
@@ -216,7 +222,7 @@
       });
     }
     let html = '<p class="result-count" role="status">' + P.plural(list.length, 'estudio', 'estudios') + '</p>';
-    if (est.sort === 'az') return html + '<div class="card card-flush"><ul class="study-list">' + list.map(P.studyRow).join('') + '</ul></div>';
+    if (est.sort === 'az') return html + '<ul class="list study-list">' + list.map(P.studyRow).join('') + '</ul>';
     const groups = [];
     list.forEach((s) => {
       const y = (s.date || '').slice(0, 4) || 'sin-fecha';
@@ -226,14 +232,14 @@
     });
     return html + groups.map((g) =>
       '<section class="year-group" aria-labelledby="y-' + g.y + '"><h2 class="group-h" id="y-' + g.y + '"><span class="num">' + (g.y === 'sin-fecha' ? 'Sin fecha' : g.y) + '</span><span>' + P.plural(g.items.length, 'estudio', 'estudios') + '</span></h2>' +
-      '<div class="card card-flush"><ul class="study-list">' + g.items.map(P.studyRow).join('') + '</ul></div></section>'
+      '<ul class="list study-list">' + g.items.map(P.studyRow).join('') + '</ul></section>'
     ).join('');
   }
 
   function archivedStudies() {
-    const section = (title, list, hidden) => !list.length ? '' : '<details class="card mt-4 study-archive"><summary>' + title + ' (' + list.length + ')</summary>' +
-      '<p>' + (hidden ? 'Podés volver a mostrar estos estudios. No eliminamos sus archivos de Drive.' : 'Conservamos sus metadatos. Si restaurás el original desde la papelera de Drive, usá Actualizar para volver a verlo disponible.') + '</p><ul class="study-list">' + list.map(s =>
-        '<li><a class="link" href="#/estudios/' + P.esc(s.id) + '">' + P.esc(s.name) + '</a><p>' + P.esc(P.inst(s.inst).name) + ' · ' + P.esc(P.fmt(s.date)) + '</p>' +
+    const section = (title, list, hidden) => !list.length ? '' : '<details class="disclosure study-archive"><summary><span class="disc-t">' + title + ' <span class="num disc-n">' + list.length + '</span></span>' + ic('chevron-down', 20, 'disc-chev') + '</summary>' +
+      '<p class="disc-text">' + (hidden ? 'Podés volver a mostrar estos estudios. No eliminamos sus archivos de Drive.' : 'Conservamos sus metadatos. Si restaurás el original desde la papelera de Drive, usá Actualizar para volver a verlo disponible.') + '</p><ul class="study-list">' + list.map(s =>
+        '<li><div class="arch-t"><a class="link" href="#/estudios/' + P.esc(s.id) + '">' + P.esc(s.name) + '</a><p class="muted">' + P.esc(P.inst(s.inst).name) + ', <span class="num">' + P.esc(P.fmt(s.date)) + '</span></p></div>' +
         '<button class="btn btn-secondary" data-action="cloud-visibility" data-id="' + P.esc(s.file.catalogId) + '" data-hidden="' + !hidden + '">' + (hidden ? 'Volver a mostrar' : 'Ocultar de mi biblioteca') + '</button></li>'
       ).join('') + '</ul></details>';
     return section('Estudios no disponibles', P.unavailableStudies(), false) + section('Estudios ocultos', P.hiddenStudies(), true);
@@ -302,15 +308,21 @@
     const shares = P.db.shares.filter((x) => x.studyId === s.id && P.shareStatus(x) === 'activo');
 
     let main = '';
-    if (s.file?.storageBackend === 'google_drive') main += '<section class="card"><button class="btn btn-secondary" data-action="cloud-visibility" data-id="' + P.esc(s.file.catalogId) + '" data-hidden="' + !s.hidden + '">' + (s.hidden ? 'Volver a mostrar en mi biblioteca' : 'Ocultar de mi biblioteca') + '</button><p class="muted">Esta preferencia se sincroniza con tu cuenta y no elimina el archivo de Drive.</p></section>';
+    const driveManage = s.file?.storageBackend === 'google_drive'
+      ? '<div class="manage"><p class="manage-t">' + ic('cloud', 18) + '<span>Biblioteca y Drive</span></p><div class="btn-row">' +
+        '<button class="btn btn-secondary btn-sm" data-action="cloud-visibility" data-id="' + P.esc(s.file.catalogId) + '" data-hidden="' + !s.hidden + '">' + ic(s.hidden ? 'eye' : 'eye-off', 18) + (s.hidden ? 'Volver a mostrar en mi biblioteca' : 'Ocultar de mi biblioteca') + '</button>' +
+        (s.remoteStatus !== 'remote_missing' && available ? '<button class="btn btn-danger-ghost btn-sm" data-action="cloud-trash" data-id="' + P.esc(s.file.catalogId) + '">Enviar a la papelera de Drive</button>' : '') +
+        '</div><p class="muted">Ocultar se sincroniza con tu cuenta y no elimina el archivo de Drive.</p></div>'
+      : '';
     if (s.remoteStatus === 'remote_missing') {
-      main += '<section class="card"><h2 class="card-title">Archivo no disponible en Drive</h2><p>El archivo se eliminó o dejó de estar disponible. Podés revisar la papelera de tu Google Drive. No lo restauramos automáticamente.</p></section>';
+      main += '<section class="card card-pending"><h2 class="card-title">Archivo no disponible en Drive</h2><p>El archivo se eliminó o dejó de estar disponible. Podés revisar la papelera de tu Google Drive. No lo restauramos automáticamente.</p></section>';
     } else if (!available) {
       main += '<section class="card card-pending"><div class="pending-row">' + ic('clock', 24) + '<div><h2 class="card-title">El resultado todavía no está listo</h2>' +
         '<p>' + inst.name + ' está procesando este estudio. Cuando esté disponible lo vas a ver acá y en Documentos.</p>' +
         '<p class="muted mt-2">Fecha estimada: <b class="num">' + P.fmt(s.expected) + '</b></p></div></div></section>';
     } else if (s.file && s.file.storageBackend === 'google_drive') {
-      main += '<section class="card"><h2 class="card-title">Original guardado en tu Google Drive</h2><p>' + (isDicomZip ? 'ZIP DICOM original. Este Portal no tiene visor DICOM.' : 'PDF original, sin interpretaciones ni conversiones.') + '</p><div class="btn-row mt-4"><button class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">' + (isDicomZip ? 'Abrir en Drive' : 'Ver PDF en el Portal') + '</button><button class="btn btn-danger-ghost" data-action="cloud-trash" data-id="' + P.esc(s.file.catalogId) + '">Enviar a la papelera de Drive</button></div></section>';
+      main += '<section class="card"><h2 class="card-title">Original guardado en tu Google Drive</h2><p>' + (isDicomZip ? 'ZIP DICOM original. Este Portal no tiene visor DICOM.' : 'PDF original, sin interpretaciones ni conversiones.') + '</p><div class="btn-row mt-4"><button class="btn btn-primary" data-action="doc-view" data-id="doc-' + s.id + '">' + ic(isDicomZip ? 'external' : 'eye', 18) + (isDicomZip ? 'Abrir en Drive' : 'Ver PDF en el Portal') + '</button></div>' +
+        '<p class="disclaimer">' + ic('info', 18) + '<span>Si tenés dudas sobre los resultados, consultá con tu profesional de salud.</span></p></section>';
     } else if (s.file) {
       main += '<section class="card" aria-labelledby="h-orig">' + cardHead(isDicomZip ? 'Estudio de imágenes' : 'Documento original', null, 'h-orig') +
         (isDicomZip
@@ -342,6 +354,7 @@
       (s.providerStatus ? '<div><dt>Estado en la institución</dt><dd>' + P.esc(s.providerStatus) + '</dd></div>' : '') +
       '<div><dt>Institución</dt><dd>' + P.instBadge(s.inst) + '</dd></div>' +
       '</dl></section>';
+    main += driveManage;
 
     const how = s.importedAt
       ? 'Lo trajiste vos con «Traer mis estudios» el <span class="num">' + P.fmt(s.importedAt) + '</span>.'
@@ -375,8 +388,8 @@
       '<nav class="crumbs" aria-label="Ruta"><a href="#/estudios">Estudios</a>' + ic('chevron-right', 16) + '<span aria-current="page">' + P.esc(s.name) + '</span></nav>' +
       '<header class="detail-head">' +
       '<div class="detail-title">' + P.typeTile(s.type, 'lg') +
-      '<div><p class="eyebrow">' + t.label + '</p><h1 class="page-title" tabindex="-1">' + P.esc(s.name) + '</h1>' +
-      '<p class="detail-meta"><span>' + ic('calendar', 18) + P.fmtLong(s.date) + '</span>' + P.instBadge(s.inst) + P.studyStatus(s) + '</p>' +
+      '<div><h1 class="page-title" tabindex="-1">' + P.esc(s.name) + '</h1>' +
+      '<p class="detail-meta"><span>' + t.label + '</span><span>' + ic('calendar', 18) + P.fmtLong(s.date) + '</span>' + P.instBadge(s.inst) + P.studyStatus(s, true) + '</p>' +
       (s.studyType ? '<p class="muted">' + P.esc(s.studyType) + ' · Documento PDF original</p>' : '') + '</div></div>' +
       (available
         ? '<div class="detail-actions">' +
@@ -477,7 +490,7 @@
 
   function events() {
     const ev = [];
-    P.studyHistory().forEach((s) => ev.push({ date: s.date, kind: 'estudio', icon: P.TYPES[s.type].icon, title: s.name, sub: P.TYPES[s.type].label, inst: s.inst, href: '#/estudios/' + s.id, tag: s.hidden ? 'Oculto de biblioteca' : s.remoteStatus === 'remote_missing' ? 'No disponible en Drive' : s.status === 'pendiente' ? 'Resultado pendiente' : s.importedAt ? 'Traído por vos' : '' }));
+    P.studyHistory().forEach((s) => ev.push({ date: s.date, kind: 'estudio', icon: P.TYPES[s.type].icon, title: s.name, sub: P.TYPES[s.type].label, inst: s.inst, href: '#/estudios/' + s.id, tag: s.hidden ? 'Oculto de biblioteca' : s.remoteStatus === 'remote_missing' ? 'No disponible en Drive' : s.status === 'pendiente' ? 'Resultado pendiente' : '' }));
     P.db.meds.forEach((m) => {
       ev.push({ date: m.start, kind: 'medicacion', icon: 'pill', title: 'Nueva medicación registrada', sub: m.name + ' ' + m.dose + ' · ' + m.how, inst: m.inst, href: '#/salud/medicacion' });
       if (m.end) ev.push({ date: m.end, kind: 'medicacion', icon: 'pill', title: 'Medicación finalizada', sub: m.name + ' ' + m.dose, inst: m.inst, href: '#/salud/medicacion' });
@@ -506,7 +519,7 @@
       g.items.map((e) => {
         const d = P.fmtDay(e.date);
         const inner = '<span class="tl-title">' + P.esc(e.title) + '</span><span class="tl-sub">' + P.esc(e.sub) + '</span>' +
-          '<span class="tl-foot">' + P.instBadge(e.inst) + (e.tag ? P.badge(e.tag === 'Resultado pendiente' ? 'warning' : 'new', e.tag) : '') + '</span>';
+          '<span class="tl-foot">' + P.instBadge(e.inst) + (e.tag ? P.badge(e.tag === 'Oculto de biblioteca' ? 'neutral' : 'warning', e.tag, e.tag === 'Oculto de biblioteca' ? 'eye-off' : 'alert') : '') + '</span>';
         const body = e.docId
           ? '<button type="button" class="tl-body" data-action="doc-view" data-id="' + e.docId + '">' + inner + '</button>'
           : '<a class="tl-body" href="' + e.href + '">' + inner + '</a>';
@@ -563,14 +576,14 @@
     const view = P.db.docView;
     const count = '<p class="result-count" role="status">' + P.plural(list.length, 'documento', 'documentos') + '</p>';
     if (view === 'list') {
-      return count + '<div class="card card-flush"><ul class="doc-rows">' + list.map((d) =>
+      return count + '<ul class="list doc-rows">' + list.map((d) =>
         '<li><button type="button" class="doc-row" data-action="doc-view" data-id="' + d.id + '">' +
         '<span class="ty ty-doc" aria-hidden="true">' + ic('file', 22) + '</span>' +
         '<span class="study-main"><span class="study-name">' + P.esc(d.title) + '</span><span class="study-meta">' + P.DOC_KINDS[d.kind] + ' · ' + P.fileMeta(d) + '</span>' +
         '<span class="study-meta-m">' + P.esc(P.inst(d.inst).name) + ' · <span class="num">' + P.fmt(d.date) + '</span></span></span>' +
         '<span class="study-inst">' + P.instBadge(d.inst) + '</span><span class="study-date num">' + P.fmt(d.date) + '</span>' +
         '<span class="study-status">' + (d.imported ? P.badge('new', 'Traído por vos') : '') + '</span>' + ic('eye', 20, 'chev') + '</button></li>'
-      ).join('') + '</ul></div>';
+      ).join('') + '</ul>';
     }
     return count + '<ul class="doc-grid">' + list.map((d) =>
       '<li><button type="button" class="doc-card-g" data-action="doc-view" data-id="' + d.id + '">' +
@@ -634,17 +647,19 @@
     const tabs = '<div class="tabs" role="tablist" aria-label="Secciones del perfil">' + PERFIL_TABS.map((t) =>
       '<a class="tab" role="tab" href="#/perfil/' + t[0] + '" aria-selected="' + (t[0] === tab) + '"' + (t[0] === tab ? ' aria-current="page"' : '') + '>' + t[1] + '</a>').join('') + '</div>';
     const head =
-      '<header class="profile-head"><span class="avatar avatar-lg" aria-hidden="true">' + P.PATIENT.initials + '</span>' +
-      '<div><h1 class="page-title" tabindex="-1">Mi cuenta</h1><p class="page-sub">Preferencias y privacidad de tus estudios importados.</p></div></header>';
+      '<header class="profile-head">' + P.avatar('lg') +
+      '<div><h1 class="page-title" tabindex="-1">' + (P.userName() ? P.esc(P.userName()) : 'Mi cuenta') + '</h1><p class="page-sub">' + (P.googleUser && P.googleUser.email ? P.esc(P.googleUser.email) : 'Preferencias y privacidad de tus estudios importados.') + '</p></div></header>';
     const body = { datos: perfilDatos, seguridad: perfilSeguridad, privacidad: perfilPrivacidad }[tab]() + (P.renderDrivePanel ? P.renderDrivePanel() : '');
     return { title: PERFIL_TABS.find((t) => t[0] === tab)[1] + ' · Mi perfil', html: head + tabs + '<div class="tab-panel" role="tabpanel">' + body + '</div>' };
   };
 
   function perfilDatos() {
-    return '<section class="card" aria-labelledby="h-lectura">' + cardHead('Tamaño del texto', null, 'h-lectura') +
-      '<p class="muted">Elegí cómo preferís leer el portal.</p><div class="seg seg-lg mt-4" role="radiogroup" aria-label="Tamaño del texto">' +
-      [['normal', 'Normal'], ['grande', 'Grande']].map(o => '<button type="button" role="radio" class="seg-btn" data-action="text-size" data-value="' + o[0] + '" aria-checked="' + (P.db.textSize === o[0]) + '">' + o[1] + '</button>').join('') +
-      '</div><p class="muted mt-4">' + (P.authMode === 'google' ? 'Los estudios guardados en Drive se sincronizan con tu cuenta Google. Las preferencias se conservan solo en este navegador.' : 'Tus archivos se guardan en este navegador y dispositivo. Si borrás sus datos, tendrás que volver a importarlos.') + '</p></section>';
+    return '<section class="settings" aria-labelledby="h-lectura"><h2 class="sec-title" id="h-lectura">Lectura</h2>' +
+      '<div class="set-row"><div class="set-t"><p class="set-name">Tamaño del texto</p><p class="muted">Elegí cómo preferís leer el portal. Se guarda en este navegador.</p></div>' +
+      '<div class="seg seg-type" role="radiogroup" aria-label="Tamaño del texto">' +
+      [['normal', 'Normal', 'aa'], ['grande', 'Grande', 'aa-lg']].map(o => '<button type="button" role="radio" class="seg-btn" data-action="text-size" data-value="' + o[0] + '" aria-checked="' + (P.db.textSize === o[0]) + '"><span class="' + o[2] + '" aria-hidden="true">Aa</span>' + o[1] + '</button>').join('') +
+      '</div></div>' +
+      (P.authMode === 'google' ? '' : '<p class="muted set-foot">Tus archivos se guardan en este navegador y dispositivo. Si borrás sus datos, tendrás que volver a importarlos.</p>') + '</section>';
   }
   function perfilSeguridad() {
     return '<div class="profile-grid"><section class="card">' + cardHead('Acceso al Portal') +
@@ -706,10 +721,10 @@
       title: 'Ayuda',
       html:
         pageHead('Ayuda', 'Respuestas a las preguntas más comunes.') +
-        '<div class="help-grid"><div class="faq">' + faq.map((f, i) =>
-          '<details class="faq-item"' + (i === 0 ? ' open' : '') + '><summary>' + f[0] + ic('chevron-down', 20) + '</summary><p>' + f[1] + '</p></details>').join('') + '</div>' +
-        '<aside class="card help-contact"><h2 class="card-title">Empezá con tus estudios</h2><p class="muted mt-2">Elegí una institución disponible e importá los archivos que quieras conservar.</p><a class="btn btn-accent mt-4" href="#/traer">Traer mis estudios</a>' +
-        '<p class="muted mt-4">Por consultas médicas, comunicate con tu institución de salud.</p></aside></div>',
+        '<div class="help-grid"><div class="qa">' + faq.map((f) =>
+          '<details class="qa-item"><summary><span>' + f[0] + '</span>' + ic('plus', 20, 'qa-ic') + '</summary><div class="qa-a"><p>' + f[1] + '</p></div></details>').join('') + '</div>' +
+        '<aside class="panel help-contact"><h2 class="sec-title">¿Tenés estudios en otra institución?</h2><p class="muted mt-2">Elegí una institución disponible e importá los archivos que quieras conservar.</p><a class="btn btn-accent mt-4" href="#/traer">' + ic('import', 20) + 'Traer mis estudios</a>' +
+        '<p class="help-med">' + ic('info', 18) + '<span>Por consultas médicas, comunicate con tu institución de salud.</span></p></aside></div>',
     };
   };
 })();

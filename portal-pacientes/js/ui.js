@@ -66,9 +66,11 @@
 
   P.badge = (tone, text, icon) => '<span class="badge b-' + tone + '">' + (icon ? P.icon(icon, 16) : '') + '<span>' + text + '</span></span>';
 
-  P.studyStatus = (s) => {
+  /* En listas solo se marca lo que pide atención; «Guardado en Drive» se muestra en el detalle
+     (con cuenta Google todos los estudios están en Drive y el aviso de sincronización ya lo dice). */
+  P.studyStatus = (s, full) => {
     if (s.remoteStatus === 'remote_missing') return P.badge('warning', 'No disponible en Drive', 'alert');
-    if (s.file && s.file.storageBackend === 'google_drive') return P.badge('success', 'Guardado en Drive', 'check');
+    if (s.file && s.file.storageBackend === 'google_drive') return full ? P.badge('success', 'Guardado en Drive', 'check') : '';
     if (s.status === 'pendiente') return P.badge('warning', 'Resultado pendiente', 'clock');
     if (s.isNew) return P.badge('new', 'Nuevo', 'sparkle');
     return '';
@@ -118,9 +120,81 @@
     (compact ? '' : '<span class="med-status">' + (m.status === 'activa' ? P.badge('success', 'Activa', 'check') : P.badge('neutral', 'Finalizada', 'clock')) + '</span>') +
     '</li>';
 
+  /* ---------- Identidad de la cuenta ---------- */
+  P.userLabel = () => (P.googleUser && (P.googleUser.email || P.googleUser.name)) || '';
+  P.userName = () => (P.googleUser && P.googleUser.name) || '';
+  P.firstName = () => P.userName().trim().split(/\s+/)[0] || '';
+  P.userInitials = () => {
+    const name = P.userName().trim();
+    if (name) return name.split(/\s+/).slice(0, 2).map((w) => w.charAt(0)).join('').toUpperCase();
+    const mail = P.googleUser && P.googleUser.email;
+    return mail ? mail.charAt(0).toUpperCase() : '';
+  };
+  P.avatar = (size) => {
+    const ini = P.userInitials();
+    return '<span class="avatar' + (size === 'lg' ? ' avatar-lg' : '') + '" aria-hidden="true">' + (ini ? P.esc(ini) : P.icon('user', size === 'lg' ? 26 : 18)) + '</span>';
+  };
+
+  /* ---------- Ilustraciones ----------
+     Vectoriales, livianas y en la paleta de marca. Se animan solo mientras están en pantalla
+     (P.mountArt agrega .is-playing) y quedan quietas con «reducir movimiento». */
+  const sheet = (x, y, tone, cls) =>
+    '<g class="' + cls + '"><rect x="' + x + '" y="' + y + '" width="46" height="58" rx="6" fill="#fff" stroke="#D5DEE7"/>' +
+    '<rect x="' + x + '" y="' + y + '" width="46" height="7" rx="3" fill="' + tone + '"/>' +
+    '<rect x="' + (x + 8) + '" y="' + (y + 17) + '" width="24" height="4" rx="2" fill="#C9D4DF"/>' +
+    '<rect x="' + (x + 8) + '" y="' + (y + 27) + '" width="30" height="3.5" rx="1.75" fill="#E3E9EF"/>' +
+    '<rect x="' + (x + 8) + '" y="' + (y + 35) + '" width="22" height="3.5" rx="1.75" fill="#E3E9EF"/>' +
+    '<rect x="' + (x + 8) + '" y="' + (y + 43) + '" width="27" height="3.5" rx="1.75" fill="#E3E9EF"/></g>';
+
+  P.art = {
+    /* Inicio: estudios de tres instituciones que llegan a una sola carpeta. */
+    gather: () =>
+      '<svg class="art art-gather" viewBox="0 0 320 196" aria-hidden="true" focusable="false">' +
+      '<defs><linearGradient id="ag-f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16A3A5"/><stop offset="1" stop-color="#0B7F82"/></linearGradient></defs>' +
+      '<path class="ag-path" d="M74 46 C 130 46, 150 92, 206 104 M74 98 C 128 98, 150 104, 206 108 M74 150 C 130 150, 150 116, 206 112" fill="none" stroke="#B9DCD6" stroke-width="1.6" stroke-dasharray="3 6" stroke-linecap="round"/>' +
+      [['PC', '#DCF1ED', '#0B6466', 28], ['CDM', '#E1EFF8', '#1D5A85', 80], ['RDC', '#E1EFF8', '#1D5A85', 132]].map((t, n) =>
+        '<g class="ag-inst" style="--n:' + n + '"><rect x="14" y="' + t[3] + '" width="60" height="36" rx="10" fill="#fff" stroke="#DCE4EC"/>' +
+        '<rect x="22" y="' + (t[3] + 8) + '" width="20" height="20" rx="6" fill="' + t[1] + '"/>' +
+        '<text x="32" y="' + (t[3] + 21.5) + '" text-anchor="middle" class="ag-mono" fill="' + t[2] + '">' + t[0].charAt(0) + '</text>' +
+        '<rect x="48" y="' + (t[3] + 12) + '" width="18" height="4" rx="2" fill="#C9D4DF"/><rect x="48" y="' + (t[3] + 20) + '" width="12" height="4" rx="2" fill="#E3E9EF"/></g>'
+      ).join('') +
+      '<g class="ag-folder">' +
+      '<path d="M196 62 h34 l10 10 h52 a10 10 0 0 1 10 10 v80 a10 10 0 0 1 -10 10 h-96 a10 10 0 0 1 -10 -10 v-90 a10 10 0 0 1 10 -10z" fill="#BFE3DD"/>' +
+      sheet(214, 50, '#1D5A85', 'ag-doc ag-doc-1') + sheet(236, 58, '#0B6466', 'ag-doc ag-doc-2') +
+      '<g class="ag-fly ag-fly-1">' + sheet(52, 18, '#0B6466', '') + '</g>' +
+      '<g class="ag-fly ag-fly-2">' + sheet(52, 70, '#1D5A85', '') + '</g>' +
+      '<g class="ag-fly ag-fly-3">' + sheet(52, 122, '#1D5A85', '') + '</g>' +
+      '<path class="ag-front" d="M186 104 a10 10 0 0 1 10 -10 h106 a10 10 0 0 1 10 10 v58 a10 10 0 0 1 -10 10 h-106 a10 10 0 0 1 -10 -10z" fill="url(#ag-f)"/>' +
+      '<rect x="202" y="146" width="34" height="5" rx="2.5" fill="#fff" fill-opacity=".5"/>' +
+      '<g class="ag-check"><circle cx="292" cy="98" r="15" fill="#fff" stroke="#BFE3DD"/><path d="M285.5 98.5l4.5 4.5 8-8.5" fill="none" stroke="#087477" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>' +
+      '</g></svg>',
+    /* Estado vacío: dos hojas y una insignia con el ícono del contexto. */
+    empty: (icon) =>
+      '<span class="empty-art art-empty" aria-hidden="true">' +
+      '<svg viewBox="0 0 168 124" focusable="false"><ellipse class="ae-glow" cx="84" cy="108" rx="58" ry="9" fill="#E6EEF4"/>' +
+      '<g class="ae-back"><rect x="38" y="20" width="62" height="78" rx="8" fill="#EEF3F7" stroke="#DCE4EC" transform="rotate(-8 69 59)"/></g>' +
+      '<g class="ae-front"><rect x="62" y="14" width="64" height="82" rx="8" fill="#fff" stroke="#D5DEE7"/>' +
+      '<rect x="62" y="14" width="64" height="9" rx="4" fill="#BFE3DD"/>' +
+      '<rect x="72" y="34" width="30" height="5" rx="2.5" fill="#C9D4DF"/><rect x="72" y="46" width="42" height="4" rx="2" fill="#E3E9EF"/>' +
+      '<rect x="72" y="56" width="34" height="4" rx="2" fill="#E3E9EF"/><rect x="72" y="66" width="38" height="4" rx="2" fill="#E3E9EF"/></g></svg>' +
+      '<span class="ae-badge">' + P.icon(icon || 'folder', 22) + '</span></span>',
+  };
+
+  /* Reproduce las ilustraciones solo mientras se ven. */
+  let artObserver = null;
+  P.mountArt = function (root) {
+    const items = (root || document).querySelectorAll('[data-art]');
+    if (!items.length) return;
+    if (!('IntersectionObserver' in window)) { items.forEach((el) => el.classList.add('is-playing')); return; }
+    if (!artObserver) {
+      artObserver = new IntersectionObserver((entries) => entries.forEach((e) => e.target.classList.toggle('is-playing', e.isIntersecting)), { threshold: 0.15 });
+    }
+    items.forEach((el) => artObserver.observe(el));
+  };
+
   P.empty = (o) =>
     '<div class="empty' + (o.compact ? ' empty-compact' : '') + '">' +
-    '<div class="empty-art" aria-hidden="true">' + P.icon(o.icon || 'folder', 28) + '</div>' +
+    P.art.empty(o.icon) +
     '<h3 class="empty-title">' + o.title + '</h3>' +
     (o.text ? '<p class="empty-text">' + o.text + '</p>' : '') +
     (o.action ? '<div class="empty-actions">' + o.action + '</div>' : '') +
@@ -130,7 +204,20 @@
   P.paper = (d, big) => {
     const i = P.inst(d.inst);
     if (d.isImage) {
-      return '<span class="paper paper-img' + (big ? ' paper-big' : '') + '" aria-hidden="true"><span class="paper-scan"></span><span class="paper-tag">' + i.mono + '</span></span>';
+      /* Estudio de imágenes: hoja del informe con la placa de la imagen (abanico de ecografía). */
+      return (
+        '<span class="paper paper-img t-' + i.tone + (big ? ' paper-big' : '') + '" aria-hidden="true">' +
+        '<span class="paper-band"></span>' +
+        '<span class="paper-head"><span class="paper-mono">' + i.mono + '</span><span class="bar w50"></span></span>' +
+        '<svg class="paper-plate" viewBox="0 0 120 64" preserveAspectRatio="xMidYMid slice" focusable="false">' +
+        '<rect width="120" height="64" fill="#15212E"/>' +
+        '<path d="M60 6 L104 58 A60 60 0 0 1 16 58 Z" fill="#22344A"/>' +
+        '<path d="M60 6 L94 50 A48 48 0 0 1 26 50 Z" fill="#2C4560" opacity=".8"/>' +
+        '<ellipse cx="52" cy="38" rx="11" ry="7" fill="#7A93AD" opacity=".55"/><ellipse cx="70" cy="42" rx="8" ry="5" fill="#9FB4C8" opacity=".45"/>' +
+        '<path d="M60 6 L60 58" stroke="#6F89A3" stroke-width=".6" stroke-dasharray="2 3" opacity=".6"/></svg>' +
+        '<span class="bar w80"></span><span class="bar w60"></span>' +
+        '</span>'
+      );
     }
     return (
       '<span class="paper t-' + i.tone + (big ? ' paper-big' : '') + '" aria-hidden="true">' +

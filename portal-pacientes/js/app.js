@@ -16,7 +16,7 @@
   let lastTop = null;
   let renderVersion = 0;
 
-  P.applyPrefs = () => document.documentElement.classList.toggle('text-lg', P.db.textSize === 'grande');
+  P.applyPrefs = () => { document.documentElement.classList.toggle('text-lg', P.db.textSize === 'grande'); requestAnimationFrame(() => moveNavIndicator()); };
 
   function parse() {
     const h = location.hash.replace(/^#\/?/, '') || 'inicio';
@@ -25,27 +25,43 @@
   }
 
   function shell() {
-    const link = (n) => '<a class="nav-link" href="#/' + n.key + '" data-nav="' + n.key + '">' + ic(n.icon, 22) + '<span>' + n.label + '</span></a>';
+    const link = (n) => '<a class="nav-link" href="#/' + n.key + '" data-nav="' + n.key + '">' + ic(n.icon, 20) + '<span>' + n.label + '</span></a>';
+    const who = P.userLabel();
     return (
       '<div class="shell">' +
       '<aside class="sidebar" aria-label="Navegación principal">' +
-      '<a class="brand" href="#/inicio" aria-label="Portal de Pacientes, ir al inicio">' + P.logo(36) + '<span class="brand-text"><span class="brand-name">Portal de Pacientes</span><span class="brand-sub">Vertical Salud</span></span></a>' +
-      '<nav class="nav">' + NAV.map(link).join('') + '</nav>' +
-      '<div class="side-bottom"><nav class="nav nav-sub" aria-label="Cuenta">' +
-      '<a class="nav-link" href="#/ayuda" data-nav="ayuda">' + ic('help', 22) + '<span>Ayuda</span></a>' +
-      '<a class="nav-link" href="#/perfil" data-nav="perfil">' + ic('user', 22) + '<span>Mi perfil</span></a>' +
-      '<button type="button" class="nav-link" data-action="logout">' + ic('logout', 22) + '<span>Cerrar sesión</span></button></nav>' +
-      '<a class="side-user" href="#/perfil"><span class="avatar" aria-hidden="true">' + ic('user', 20) + '</span><span class="side-user-t"><b>Mi cuenta</b><span>Preferencias y privacidad</span></span></a>' +
+      '<a class="brand" href="#/inicio" aria-label="Portal de Pacientes, ir al inicio">' + P.logo(34) + '<span class="brand-text"><span class="brand-name">Portal de Pacientes</span><span class="brand-sub">Vertical Salud</span></span></a>' +
+      '<nav class="nav nav-main"><span class="nav-ind" aria-hidden="true"></span>' + NAV.map(link).join('') + '</nav>' +
+      '<div class="side-bottom"><nav class="nav nav-sub" aria-label="Ayuda">' +
+      '<a class="nav-link" href="#/ayuda" data-nav="ayuda">' + ic('help', 20) + '<span>Ayuda</span></a></nav>' +
+      '<div class="side-account">' +
+      '<a class="side-user" href="#/perfil" data-nav="perfil">' + P.avatar() + '<span class="side-user-t"><b>Mi cuenta</b>' + (who ? '<span>' + P.esc(who) + '</span>' : '<span>Preferencias y privacidad</span>') + '</span></a>' +
+      '<button type="button" class="icon-btn side-logout" data-action="logout" aria-label="Cerrar sesión" title="Cerrar sesión">' + ic('logout', 20) + '</button></div>' +
       '<p class="side-endorse">Una solución de 7Ideas</p></div>' +
       '</aside>' +
-      '<header class="topbar"><a class="brand brand-top" href="#/inicio" aria-label="Portal de Pacientes, ir al inicio">' + P.logo(32) + '<span class="brand-name">Portal de Pacientes</span></a>' +
-      '<a class="avatar avatar-btn" href="#/perfil" aria-label="Mi cuenta">' + ic('user', 20) + '</a></header>' +
+      '<header class="topbar"><a class="brand brand-top" href="#/inicio" aria-label="Portal de Pacientes, ir al inicio">' + P.logo(30) + '<span class="brand-name">Portal de Pacientes</span></a>' +
+      '<a class="avatar-btn" href="#/perfil" aria-label="Mi cuenta">' + P.avatar() + '</a></header>' +
       '<main class="main" id="main" tabindex="-1"><div class="view" id="view"></div></main>' +
       '<nav class="bottomnav" aria-label="Navegación principal">' +
-      MOBILE_NAV.map((k) => { const n = NAV.find((x) => x.key === k); return '<a class="bn" href="#/' + k + '" data-nav="' + k + '">' + ic(n.icon, 24) + '<span>' + n.label + '</span></a>'; }).join('') +
-      '<button type="button" class="bn" data-action="more" data-nav="more" aria-haspopup="dialog">' + ic('menu', 24) + '<span>Más</span></button></nav>' +
+      MOBILE_NAV.map((k) => { const n = NAV.find((x) => x.key === k); return '<a class="bn" href="#/' + k + '" data-nav="' + k + '"><span class="bn-ic">' + ic(n.icon, 22) + '</span><span>' + n.label + '</span></a>'; }).join('') +
+      '<button type="button" class="bn" data-action="more" data-nav="more" aria-haspopup="dialog"><span class="bn-ic">' + ic('menu', 22) + '</span><span>Más</span></button></nav>' +
       '</div>'
     );
+  }
+
+  /* Indicador de la sección activa: una sola pieza que se desliza entre los ítems de la sidebar. */
+  function moveNavIndicator() {
+    const nav = document.querySelector('.nav-main');
+    if (!nav) return;
+    const ind = nav.querySelector('.nav-ind');
+    const on = nav.querySelector('.nav-link[aria-current="page"]');
+    if (!on) { ind.style.opacity = '0'; return; }
+    const first = !ind.dataset.placed;
+    if (first) ind.style.transition = 'none';
+    ind.style.opacity = '1';
+    ind.style.height = on.offsetHeight + 'px';
+    ind.style.transform = 'translateY(' + on.offsetTop + 'px)';
+    if (first) { void ind.offsetWidth; ind.style.transition = ''; ind.dataset.placed = '1'; }
   }
 
   function skeleton(kind) {
@@ -79,6 +95,7 @@
       const on = a.dataset.nav === top || (a.dataset.nav === 'more' && ['historial', 'perfil', 'ayuda'].includes(top));
       if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
+    moveNavIndicator();
 
     const paint = () => {
       if (identityGeneration !== P.identityGeneration || !P.db.session) return;
@@ -89,6 +106,7 @@
         view.classList.add('is-entering');
       }
       if (out.mount) out.mount(view);
+      P.mountArt(view);
     };
 
     const skKey = key === 'inicio' ? 'home' : out.skeleton;
@@ -121,11 +139,16 @@
 
     if (!P.db.session && !isAuth) { location.replace('#/login'); return; }
     if (P.db.session && isAuth) { location.replace('#/inicio'); return; }
+    // Al volver el foco a la ventana se re-verifica la sesión; si nada cambió, la pantalla de acceso queda
+    // como está (desplegables, modal abierto, scroll y estado del botón).
+    const authSignature = location.hash + '|' + P.authMode + '|' + P.portalAuthUnavailable;
+    if (isAuth && lastTop === top && app.dataset.authView === authSignature && app.querySelector('.auth')) return;
     P.closeAllOverlays();
     // Salir de «Traer mis estudios» (por ejemplo con el botón Atrás) cancela una importación real en curso.
     if (lastTop === 'traer' && top !== 'traer' && P.leaveFlow) P.leaveFlow();
 
     if (isAuth) {
+      app.dataset.authView = authSignature;
       if (top === 'login' && lastTop !== 'login') P.resetRecover();
       app.innerHTML = top === 'login' ? P.renderLogin() : P.renderRecover();
       if (top === 'login') P.mountLogin(); else P.mountRecover();
@@ -229,6 +252,7 @@
   });
 
   window.addEventListener('hashchange', P.route);
+  window.addEventListener('resize', () => moveNavIndicator());
   window.addEventListener('storage', event => {
     if (event.key === 'pp_auth_changed') {
       app.textContent = 'Verificando tu sesión…';

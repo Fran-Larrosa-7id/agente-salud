@@ -41,23 +41,28 @@
     } finally { if (generation === P.identityGeneration) P.cloudSyncBusy = false; }
   };
   const labels = { disconnected: 'Desconectado', connected: 'Conectado', reconnect_required: 'Necesita reconexión', storage_full: 'Sin espacio', temporary_error: 'Error temporal' };
+  const tones = { connected: 'success', reconnect_required: 'warning', storage_full: 'warning', temporary_error: 'warning', disconnected: 'neutral' };
   P.renderDrivePanel = function () {
     if (P.authMode !== 'google') return '';
     const status = P.driveStatus || 'disconnected';
     const reconnect = status === 'reconnect_required';
-    return '<section class="card mt-4"><h2 class="card-title">Tu Google Drive</h2><p><b>' + (labels[status] || 'Desconectado') + '</b>' +
-      (P.googleUser ? ' · ' + P.esc(P.googleUser.email) : '') + '</p><p>Los archivos se guardan en TU cuenta de Google. Podés desconectarla cuando quieras.</p>' +
-      (P.cloudSyncError ? '<p role="alert" class="field-error">' + P.esc(P.cloudMessage(P.cloudSyncError)) + '</p>' : '') +
+    return '<section class="settings" aria-labelledby="h-drive"><h2 class="sec-title" id="h-drive">Google Drive</h2>' +
+      '<div class="set-row set-row-top"><span class="drive-mark" aria-hidden="true">' + P.icon('cloud', 22) + '</span><div class="set-t"><p class="set-name">Tus estudios se guardan en tu Drive ' +
+      P.badge(tones[status] || 'neutral', labels[status] || 'Desconectado', status === 'connected' ? 'check' : status === 'disconnected' ? '' : 'alert') + '</p>' +
+      (P.googleUser ? '<p class="muted">' + P.esc(P.googleUser.email) + '</p>' : '') +
+      '<p class="muted mt-2">Los archivos se guardan en TU cuenta de Google. Podés desconectarla cuando quieras.</p>' +
+      (P.cloudSyncError ? '<p role="alert" class="field-error mt-2">' + P.icon('alert', 16) + P.esc(P.cloudMessage(P.cloudSyncError)) + '</p>' : '') +
       '<div class="btn-row mt-4">' + (status === 'disconnected' || reconnect ? '<a class="btn btn-primary" href="/api/drive/connect">' + (reconnect ? 'Reconectar Google Drive' : 'Conectar mi Google Drive') + '</a>' : '') +
-      '<button type="button" class="btn btn-secondary" data-action="cloud-sync"' + (P.cloudSyncBusy ? ' disabled' : '') + '>Actualizar mis estudios</button>' +
-      (status !== 'disconnected' ? '<button type="button" class="btn btn-secondary" data-action="drive-disconnect">Desconectar Drive</button>' : '') + '</div>' +
-      '<p class="muted mt-4">Tus medicamentos, alergias y vacunas de esta cuenta permanecen en este navegador. Los estudios de Drive y la opción de ocultarlos de tu biblioteca se sincronizan con tu cuenta.</p>' +
-      '<p class="muted">Los archivos anteriores del piloto quedan separados. No se asignan ni se suben automáticamente a esta cuenta.</p></section>';
+      '<button type="button" class="btn btn-secondary" data-action="cloud-sync"' + (P.cloudSyncBusy ? ' disabled' : '') + '>' + P.icon('retry', 18) + 'Actualizar mis estudios</button>' +
+      (status !== 'disconnected' ? '<button type="button" class="btn btn-ghost" data-action="drive-disconnect">Desconectar Drive</button>' : '') + '</div></div></div>' +
+      '<div class="set-foot"><p class="muted">Tus medicamentos, alergias y vacunas de esta cuenta permanecen en este navegador. Los estudios de Drive y la opción de ocultarlos de tu biblioteca se sincronizan con tu cuenta.</p>' +
+      '<p class="muted">Los archivos anteriores del piloto quedan separados. No se asignan ni se suben automáticamente a esta cuenta.</p></div></section>';
   };
   P.cloudBanner = function () {
     if (P.authMode !== 'google') return '';
-    return '<div class="alert mt-4" role="status">' + (P.cloudSyncError ? P.esc(P.cloudMessage(P.cloudSyncError)) : P.driveStatus === 'connected' ? 'Tus estudios guardados en Drive están sincronizados con esta cuenta.' : 'Google Drive: ' + (labels[P.driveStatus] || 'Desconectado')) +
-      ' <a class="link" href="#/perfil">Administrar Drive</a> <button type="button" class="link" data-action="cloud-sync">Actualizar</button></div>';
+    const ok = !P.cloudSyncError && P.driveStatus === 'connected';
+    return '<div class="sync' + (ok ? '' : ' sync-warn') + '" role="status">' + P.icon(ok ? 'cloud' : 'alert', 18) + '<span class="sync-t">' + (P.cloudSyncError ? P.esc(P.cloudMessage(P.cloudSyncError)) : ok ? 'Sincronizado con tu Google Drive.' : 'Google Drive: ' + (labels[P.driveStatus] || 'Desconectado')) + '</span>' +
+      '<span class="sync-a"><button type="button" class="link" data-action="cloud-sync">' + P.icon('retry', 16) + 'Actualizar</button><a class="link" href="#/perfil">Administrar Drive</a></span></div>';
   };
   P.actions['cloud-sync'] = async button => {
     const done = P.busy(button, 'Sincronizando…');

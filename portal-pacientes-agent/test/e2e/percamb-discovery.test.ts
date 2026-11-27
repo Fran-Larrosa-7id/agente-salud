@@ -110,6 +110,28 @@ test('prioriza links ver_resultado y conserva estudios aunque falte metadata', {
   assert.ok(!JSON.stringify(result).includes('ver_resultado'), 'el href interno no se publica');
 });
 
+for (const layout of ['table', 'split-table', 'div', 'bootstrap']) {
+  test(`asocia fecha y protocolo a cada resultado con encabezados separados (${layout})`, { timeout: 60_000 }, async () => {
+    const session = await openResults(`/lwcloud/fake/resultados-columnas?layout=${layout}`);
+    const result = await session.listStudies();
+    assert.ok(result);
+    assert.deepEqual(result.studies.map(({ date, protocol, deliveryDate, status }) => ({ date, protocol, deliveryDate, status })), [
+      { date: '2025-04-07', protocol: '8-70001', deliveryDate: '2025-04-12', status: 'Completo' },
+      { date: '2025-06-23', protocol: '8-70002', deliveryDate: '2025-06-26', status: 'Completo' },
+    ]);
+    assert.doesNotMatch(JSON.stringify(result.studies), /de prueba|11122333/);
+    if (layout === 'bootstrap') {
+      const page = session.activePage();
+      await page.setViewportSize({ width: 390, height: 720 });
+      assert.equal(await page.locator('.table-header').isVisible(), false);
+      assert.deepEqual((await session.listStudies())?.studies.map(({ date, protocol, sourceKey }) => ({ date, protocol, sourceKey })),
+        result.studies.map(({ date, protocol, sourceKey }) => ({ date, protocol, sourceKey })));
+    }
+    assert.equal(await session.openStudy(result.studies[1].id), true);
+    assert.match(session.currentUrl(), /\/ver_resultado\/5002$/);
+  });
+}
+
 test('rechaza abrir un detalle cuyo protocolo contradice al de la fila original', { timeout: 60_000 }, async () => {
   const session = await openResults('/lwcloud/fake/resultados-reference-mismatch');
   const result = await session.listStudies();

@@ -94,6 +94,49 @@ export async function startFakePortal() {
     res.send(page('Resultado', `<main><h1>Resultado ${req.params.id}</h1><p>Detalle de demostración</p></main>`));
   });
 
+  app.get('/lwcloud/fake/resultados-columnas', (req, res) => {
+    if (!authed(req)) return void res.redirect('/lwcloud/fake/login');
+    const headers = ['Fecha', 'Hora recepción', 'Protocolo', 'Médico', 'Apellido y nombre', 'Documento', 'Entrega', 'Diagnóstico', 'Estado'];
+    const results = [
+      ['07/04/2025', '08/04/2025<br>09:30', '8-70001', 'Profesional de prueba', 'Paciente de prueba', '11122333', '12/04/2025', '', 'Completo'],
+      ['23/06/2025', '24/06/2025<br>10:45', '8-70002', 'Profesional de prueba', 'Paciente de prueba', '11122333', '26/06/2025', '', 'Completo'],
+    ];
+    const openResult = (i: number) => `<div><div><a href="/lwcloud/fake/ver_resultado/${5001 + i}" aria-label="Ver resultado"><svg class="icon-eye" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5"/></svg></a></div></div>`;
+    if (req.query.layout === 'bootstrap') {
+      const widths = [1, 1, 1, 2, 2, 1, 1, 1, 2];
+      const mobileWidths = [4, 4, 4, 3, 4, 3, 3, 3, 5];
+      const heading = headers.map((label, i) => `<div class="col-lg-${widths[i]}"><p>${label}</p></div>`).join('');
+      const rows = results.map((result, rowIndex) => {
+        const cells = result.map((value, i) => {
+          const responsive = [0, 5, 6, 7].includes(i) ? ' hidden-xs hidden-sm' : '';
+          const action = i === 8 ? `<div class="pull-right">${openResult(rowIndex)}</div>` : '';
+          return `<div class="col-lg-${widths[i]} col-xs-${mobileWidths[i]} word-break${responsive} ng-binding">${value}${action}</div>`;
+        }).join('');
+        return `<div class="col-lg-12 col-xs-12 custom-form-control no-padding ng-scope" ng-repeat="derivacion in getDerivaciones() | orderBy:orden">
+          <div class="col-lg-12 no-padding">${cells}</div><!-- ngIf -->
+        </div>`;
+      }).join('');
+      res.send(page('Resultados', `<style>@media (max-width: 767px) { .hidden-xs { display: none } }</style><main><h1>RESULTADOS ONLINE</h1><section>
+        <div class="col-lg-12 table-header hidden-xs hidden-sm hidden-md no-padding">${heading}</div>
+        <p class="pull-right"><label><input type="checkbox"> No leídos</label></p>
+        ${rows}</section></main>`));
+      return;
+    }
+    const head = `<thead><tr><th colspan="10">Resultados</th></tr><tr>${headers.map((value) => `<th>${value}</th>`).join('')}</tr>
+      <tr><td colspan="10"><label><input type="checkbox"> No leídos</label></td></tr></thead>`;
+    const body = `<tbody>${results.map((result, i) => `<tr>${result.map((value) => `<td>${value}</td>`).join('')}<td>${openResult(i)}</td></tr>`).join('')}</tbody>`;
+    const grid = req.query.layout === 'div'
+      ? `<div class="results-grid" style="display:grid;gap:4px">
+          <div><div class="row" style="display:flex;gap:4px">${headers.map((value) => `<div>${value}</div>`).join('')}</div></div>
+          <div><label><input type="checkbox"> No leídos</label></div>
+          <div>${results.map((result, i) => `<div class="row" style="display:flex;gap:4px">${result.map((value) => `<div>${value}</div>`).join('')}<div>${openResult(i)}</div></div>`).join('')}</div>
+        </div>`
+      : req.query.layout === 'split-table'
+        ? `<section><div><table>${head}</table></div><div><table>${body}</table></div></section>`
+        : `<table>${head}${body}</table>`;
+    res.send(page('Resultados', `<main><h1>RESULTADOS ONLINE</h1>${grid}</main>`));
+  });
+
   app.get('/lwcloud/fake/resultados-mismatch', (req, res) => {
     if (!authed(req)) return void res.redirect('/lwcloud/fake/login');
     const rows = [0, 1].map((i) => `<div class="study-row"><span>Disponible</span>

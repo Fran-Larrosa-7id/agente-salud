@@ -133,6 +133,35 @@ export const LABWIN_EXTRACTOR_SOURCE = String.raw`(function (args) {
     return 'other';
   }
   function hasMetadata(text) { return dateMatches(text).length > 0 || statusLike(text) || protocolLike(text); }
+  var studyDateHeader = /^FECHA(?:\s*:)?$/;
+  var labwinProtocolHeader = /^PROTOCOLO\s*:?$/;
+  var protocolHeader = /PROTOCOLO|ORDEN|PEDIDO|^(?:NRO\.?|NUMERO)$/;
+  function desktopColumns(container) {
+    return Array.prototype.filter.call(container.children, function (cell) {
+      return /(?:^|\s)col-lg-\d+(?:\s|$)/.test(cell.getAttribute('class') || '');
+    });
+  }
+  var desktopHeaders = Array.prototype.map.call(document.querySelectorAll('.table-header'), function (header) {
+    return { element: header, labels: desktopColumns(header).map(headerText) };
+  }).filter(function (header) {
+    return header.labels.some(function (label) { return studyDateHeader.test(label); }) &&
+      header.labels.some(function (label) { return labwinProtocolHeader.test(label); });
+  });
+  function findDesktopRow(action) {
+    var record = action.closest('[ng-repeat^="derivacion in getDerivaciones()"]');
+    var row = record && record.querySelector(':scope > .col-lg-12.no-padding');
+    if (!row || !row.contains(action)) return null;
+    var cells = desktopColumns(row);
+    // Bootstrap mantiene todas las columnas en el DOM, incluso las ocultas en móvil.
+    for (var group = record.parentElement; group; group = group.parentElement) {
+      var header = desktopHeaders.findLast(function (candidate) {
+        return group.contains(candidate.element) &&
+          (candidate.element.compareDocumentPosition(record) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (header) return header.labels.length === cells.length ? { row: row, cells: cells, headers: header.labels } : null;
+    }
+    return null;
+  }
   var structure = [];
   function findRow(action, index, isResultLink) {
     var node = action;
@@ -148,30 +177,51 @@ export const LABWIN_EXTRACTOR_SOURCE = String.raw`(function (args) {
         textNodes: Math.min(textNodes, 999), siblings: node.parentElement ? node.parentElement.children.length : 0,
         classType: classType(node), hrefMatch: isResultLink });
       if (isResultLink && links !== 1) continue;
+      if (!isResultLink && actions.some(function (other) { return other !== action && node.contains(other); })) break;
       if (text.length <= 1800) {
         if (!fallback) fallback = node;
         if (!metadataRow && hasMetadata(text)) metadataRow = node;
-        if (!isResultLink && !semanticRow && rowHint(node)) semanticRow = node;
+        if (node.matches('tr,[role=row]')) return node;
+        if (!semanticRow && hasMetadata(text) && rowHint(node)) semanticRow = node;
       }
     }
-    return metadataRow || semanticRow || fallback || (isResultLink ? action : null);
+    return semanticRow || metadataRow || fallback || (isResultLink ? action : null);
   }
-  function cellValues(row) {
-    if (row.tagName === 'TR') return Array.prototype.slice.call(row.children).map(function (c) { return norm(c.innerText || c.textContent); });
-    var cells = Array.prototype.slice.call(row.querySelectorAll('[role=cell],[role=gridcell],[data-label],[data-field],td,th'))
-      .filter(function (el) { return visible(el); });
-    if (cells.length) return cells.map(function (c) { return norm(c.innerText || c.textContent); });
-    return Array.prototype.slice.call(row.children).map(function (c) { return norm(c.innerText || c.textContent); });
+  function headerText(cell) {
+    return fold(cell.innerText || cell.textContent);
   }
-  function headerValues(row) {
-    if (row.tagName === 'TR') {
-      var table = row.closest('table');
-      var header = table && (table.querySelector('thead tr') || table.querySelector('tr th') && table.querySelector('tr'));
-      if (header) return Array.prototype.slice.call(header.children).map(function (c) { return fold(c.innerText || c.textContent); });
+  function columnHeaders(row, columnCount) {
+    var table = row.closest('table');
+    var candidates = table && row.tagName === 'TR'
+      ? Array.prototype.filter.call(table.rows, function (candidate) {
+          return (candidate.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+            (candidate.parentElement.tagName === 'THEAD' || candidate.querySelector(':scope > th'));
+        })
+      : [];
+    // LabWin también puede presentar la grilla con DIV y encabezados fuera del cuerpo.
+    if (!candidates.length) {
+      var group = row.tagName === 'TR' && table ? table : row;
+      for (var depth = 0; group.parentElement && group.parentElement !== document.body && depth < 3; depth++, group = group.parentElement) {
+        var siblings = Array.prototype.slice.call(group.parentElement.children, 0, 4);
+        siblings.some(function (sibling) {
+          if (sibling === group) return true;
+          var headerTable = sibling.matches('table') ? sibling : sibling.querySelector('table');
+          candidates.push(sibling);
+          candidates.push.apply(candidates, Array.prototype.slice.call(headerTable ? headerTable.rows : sibling.children, 0, 4));
+          return false;
+        });
+      }
     }
-    return Array.prototype.slice.call(row.querySelectorAll('[data-label],[data-field],[aria-label]'))
-      .filter(function (c) { return !c.matches('a,button,input,[role=button],[onclick],[ng-click]'); })
-      .map(function (c) { return fold(c.getAttribute('data-label') || c.getAttribute('data-field') || c.getAttribute('aria-label') || ''); });
+    for (var i = 0; i < candidates.length; i++) {
+      var cells = Array.prototype.slice.call(candidates[i].children);
+      // La columna del ojo puede no tener encabezado.
+      if (cells.length !== columnCount && cells.length !== columnCount - 1) continue;
+      if (cells.some(function (cell) { return cell.colSpan > 1 || Number(cell.getAttribute('aria-colspan')) > 1; })) continue;
+      var headers = cells.map(headerText);
+      if (headers.some(function (label) { return studyDateHeader.test(label); }) &&
+          headers.some(function (label) { return labwinProtocolHeader.test(label); })) return headers;
+    }
+    return [];
   }
   function field(values, headers, pattern) {
     for (var i = 0; i < values.length; i++) if (headers[i] && pattern.test(headers[i])) return values[i] || '';
@@ -185,21 +235,32 @@ export const LABWIN_EXTRACTOR_SOURCE = String.raw`(function (args) {
     var anchor = action.tagName === 'A' ? action : action.closest('a[href]');
     var href = isResultLink ? sameOriginHref(anchor) : (anchor ? (function () { try { var u = new URL(anchor.href, location.href); return u.origin === location.origin && /^https?:$/.test(u.protocol) ? u.href : ''; } catch (e) { return ''; } })() : '');
     if (isResultLink && !href) return;
-    var row = findRow(action, index, isResultLink);
+    var desktopRow = desktopHeaders.length ? findDesktopRow(action) : null;
+    var row = desktopRow ? desktopRow.row : findRow(action, index, isResultLink);
     if (!row) return;
     candidateRows++;
-    var values = cellValues(row);
-    var headers = headerValues(row);
-    var rowText = norm(row.innerText || row.textContent || '');
-    var dates = dateMatches(rowText);
-    var date = field(values, headers, /FECHA|INGRESO|RECEPCION|EXTRACCION|ATENCION/) || (!headers.length && dates.length === 1 ? dates[0] : '');
-    var deliveryDate = field(values, headers, /ENTREGA|INFORME|DISPONIBLE/) || (!headers.length && dates.length === 2 ? dates[1] : '');
+    var cells = desktopRow ? desktopRow.cells : Array.prototype.slice.call(row.children);
+    var headers = desktopRow ? desktopRow.headers : columnHeaders(row, cells.length);
+    var labels = cells.map(function (cell, i) {
+      return fold(headers[i] || cell.getAttribute('data-label') || cell.getAttribute('data-field') || '');
+    });
+    var values = cells.map(function (cell, i) {
+      if (!desktopRow) return norm(cell.innerText || cell.textContent);
+      if (/^ESTADO\s*:?$/.test(labels[i]) && cell.contains(action)) {
+        return norm(Array.prototype.filter.call(cell.childNodes, function (node) { return node.nodeType === Node.TEXT_NODE; })
+          .map(function (node) { return node.textContent; }).join(' '));
+      }
+      return /^(FECHA|PROTOCOLO|ENTREGA|ESTADO)\s*:?$/.test(labels[i]) ? norm(cell.innerText || cell.textContent) : '';
+    });
+    var hasLabels = labels.some(Boolean);
+    var dates = hasLabels ? [] : dateMatches(row.innerText || row.textContent);
+    var date = field(values, labels, studyDateHeader) || field(values, labels, /^(?:FECHA (?:DE )?)?(?:INGRESO|RECEPCION|EXTRACCION|ATENCION)\s*:?$/) || (!hasLabels && dates.length === 1 ? dates[0] : '');
+    var deliveryDate = field(values, labels, /ENTREGA|INFORME|DISPONIBLE/) || (!hasLabels && dates.length === 2 ? dates[1] : '');
     if (!dateMatches(date).length) date = '';
     if (!dateMatches(deliveryDate).length) deliveryDate = '';
-    var status = field(values, headers, /ESTADO|SITUACION|CONDICION/);
+    var status = field(values, labels, /ESTADO|SITUACION|CONDICION/);
     if (!statusLike(status)) status = values.find(statusLike) || '';
-    var protocol = field(values, headers, /PROTOCOLO|ORDEN|PEDIDO|NRO|NUMERO/);
-    if (!protocolLike(protocol) && !headers.length) protocol = values.find(protocolLike) || '';
+    var protocol = field(values, labels, protocolHeader);
     var rowToken = args.prefix + '-r' + index;
     var actionToken = args.prefix + '-a' + index;
     row.setAttribute('data-pp-study-row', rowToken);
